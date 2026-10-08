@@ -4,6 +4,7 @@ import { BarChart3, ClipboardCheck, MessageCircle, School, Wand2 } from 'lucide-
 import { useTranslations } from 'next-intl';
 import { AdultShell } from '@/components/app/adult-shell';
 import { RoleGate } from '@/components/app/role-gate';
+import { Toaster } from '@/components/teacher/toast';
 import { useApi } from '@/lib/hooks';
 
 export default function TeacherLayout({ children }: { children: React.ReactNode }) {
@@ -23,6 +24,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
         ]}
       >
         {children}
+        <Toaster />
       </AdultShell>
     </RoleGate>
   );

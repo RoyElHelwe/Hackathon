@@ -150,7 +150,7 @@ export class SubmissionsService {
       photoUploadIds: s.photoUploadIds,
       gradeSynced: s.gradeSynced,
       evaluatorFirstName: s.peerEvaluations[0]?.evaluator.name.split(' ')[0] ?? null,
-      mission: { id: s.mission.id, title: s.mission.title, audience: s.mission.audience, topicKey: s.mission.topic.key, topicName: s.mission.topic.name, subjectKey: s.mission.topic.subject.key },
+      mission: { id: s.mission.id, title: s.mission.title, audience: s.mission.audience, topicKey: s.mission.topic.key, topicName: s.mission.topic.name, subjectKey: s.mission.topic.subject.key, classroomCourseWorkId: s.mission.classroomCourseWorkId },
     }));
   }
 
