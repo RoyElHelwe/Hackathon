@@ -7,3 +7,4 @@ export * from './check-follow-up';
 export * from './peer-sheet';
 export * from './parent-summary';
 export * from './group-session';
+export * from './translate-name';
