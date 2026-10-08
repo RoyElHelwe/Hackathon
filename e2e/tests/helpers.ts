@@ -12,7 +12,10 @@ export function reseed() {
 /** One-click dev login (DEV_LOGIN=true) through the web proxy so the cookie lands on the web origin. */
 export async function loginAs(page: Page, handle: string, next?: string) {
   await page.context().clearCookies();
-  await page.goto(`/api/auth/dev?as=${handle}${next ? `&next=${encodeURIComponent(next)}` : ''}`);
+  const res = await page.request.get(`/api/auth/dev?as=${handle}&json=1${next ? `&next=${encodeURIComponent(next)}` : ''}`);
+  expect(res.ok()).toBeTruthy();
+  const { redirect } = (await res.json()) as { redirect: string };
+  await page.goto(redirect);
 }
 
 export async function apiAs(request: APIRequestContext, handle: string) {

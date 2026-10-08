@@ -3,13 +3,13 @@ import type { AiMission, VisualSpec } from '@tajriba/shared';
 export const SHADOW_VISUAL: VisualSpec = {
   caption: 'Same sun angle → similar triangles: h / s = H / S',
   shapes: [
-    { kind: 'circle', cx: 88, cy: 12, r: 7, color: 'sunny', label: 'Sun' },
+    { kind: 'circle', cx: 94, cy: 10, r: 6, color: 'sunny' },
     { kind: 'rect', x: 52, y: 30, w: 14, h: 50, color: 'violet', label: 'Building H' },
     { kind: 'polygon', points: [[66, 80], [66, 30], [8, 80]], color: 'violet' },
     { kind: 'line', x1: 8, y1: 80, x2: 66, y2: 80, color: 'ink', label: 'Shadow S' },
-    { kind: 'rect', x: 80, y: 66, w: 3, h: 14, color: 'mint', label: 'You h' },
-    { kind: 'line', x1: 66, y1: 82, x2: 80, y2: 82, color: 'mint', dashed: true, label: 's' },
-    { kind: 'line', x1: 95, y1: 15, x2: 8, y2: 80, color: 'sunny', dashed: true },
+    { kind: 'rect', x: 89, y: 66, w: 3, h: 14, color: 'mint', label: 'You h' },
+    { kind: 'line', x1: 76, y1: 80, x2: 89, y2: 80, color: 'mint', label: 's' },
+    { kind: 'line', x1: 94, y1: 10, x2: 8, y2: 80, color: 'sunny', dashed: true },
   ],
 };
 
