@@ -11,7 +11,7 @@ export class NotificationsService {
   async notify(userId: string, type: NotificationType, payload: Record<string, unknown>, dedupeKey?: string) {
     if (dedupeKey) {
       const existing = await this.prisma.notification.findUnique({ where: { dedupeKey } });
-      if (existing) return existing;
+      if (existing) return null;
     }
     try {
       return await this.prisma.notification.create({
