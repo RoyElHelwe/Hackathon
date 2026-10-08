@@ -1,7 +1,7 @@
 'use client';
 
 import { GraduationCap, Heart, School, Sparkles } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { BouslaSays, Bousla } from '@/components/bousla';
@@ -9,6 +9,7 @@ import { FamilyKeypad } from '@/components/app/family-keypad';
 import { LanguageSwitch } from '@/components/app/locale';
 import { Logo } from '@/components/app/logo';
 import { PageSkeleton } from '@/components/app/states';
+import { SubjectPicker } from '@/components/director/subject-picker';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input, Label } from '@/components/ui/input';
@@ -17,9 +18,11 @@ import { useMe } from '@/lib/hooks';
 import { cn } from '@/lib/cn';
 
 type Mode = null | 'create' | 'join' | 'child' | 'student';
+type SchoolPreview = { school: { name: string }; subjects: { id: string; name: { en: string; ar?: string } }[] };
 
 export default function Onboarding() {
   const t = useTranslations('auth');
+  const locale = useLocale();
   const router = useRouter();
   const { data: me, isLoading, error, refetch } = useMe();
   const [mode, setMode] = useState<Mode>(null);
@@ -27,6 +30,8 @@ export default function Onboarding() {
   const [err, setErr] = useState<string | null>(null);
   const [form, setForm] = useState({ name: '', city: '', code: '' });
   const [pending, setPending] = useState<string | null>(null);
+  const [schoolPreview, setSchoolPreview] = useState<SchoolPreview | null>(null);
+  const [subjectIds, setSubjectIds] = useState<string[]>([]);
 
   useEffect(() => {
     if (error instanceof ApiError && error.status === 401) router.replace('/login?next=/onboarding');
@@ -84,6 +89,8 @@ export default function Onboarding() {
                   onClick={() => {
                     setMode(o.id);
                     setErr(null);
+                    setSchoolPreview(null);
+                    setSubjectIds([]);
                   }}
                   className={cn('rounded-[20px] border-2 p-5 text-start transition-all', o.color, mode === o.id ? 'border-primary shadow-lg' : 'border-transparent')}
                   data-testid={`onboard-${o.id}`}
@@ -121,21 +128,21 @@ export default function Onboarding() {
                     </Button>
                   </form>
                 )}
-                {(mode === 'join' || mode === 'student') && (
+                {mode === 'student' && (
                   <form
                     className="space-y-4"
                     onSubmit={(e) => {
                       e.preventDefault();
                       run(async () => {
                         const r = await api<{ school: { name: string }; membership: { status: string } }>('/schools/join', {
-                          body: { code: form.code, role: mode === 'join' ? 'TEACHER' : 'STUDENT' },
+                          body: { code: form.code, role: 'STUDENT' },
                         });
                         setPending(r.school.name);
                         refetch();
                       });
                     }}
                   >
-                    {mode === 'student' && <p className="text-sm text-muted-foreground">{t('imStudentBody')}</p>}
+                    <p className="text-sm text-muted-foreground">{t('imStudentBody')}</p>
                     <div>
                       <Label htmlFor="code">{t('schoolCode')}</Label>
                       <Input id="code" required placeholder="TRP-2036" dir="ltr" className="font-mono uppercase tracking-widest" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })} />
@@ -144,6 +151,73 @@ export default function Onboarding() {
                       {t('join')}
                     </Button>
                   </form>
+                )}
+                {mode === 'join' && (
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="code">{t('schoolCode')}</Label>
+                      <Input
+                        id="code"
+                        required
+                        placeholder="TRP-2036"
+                        dir="ltr"
+                        className="font-mono uppercase tracking-widest"
+                        value={form.code}
+                        onChange={(e) => {
+                          setForm({ ...form, code: e.target.value.toUpperCase() });
+                          setSchoolPreview(null);
+                          setSubjectIds([]);
+                        }}
+                      />
+                    </div>
+                    {!schoolPreview ? (
+                      <Button
+                        type="button"
+                        loading={busy}
+                        disabled={!form.code.trim()}
+                        className="w-full"
+                        data-testid="find-school"
+                        onClick={() =>
+                          run(async () => {
+                            const r = await api<SchoolPreview>(`/schools/by-code/${form.code}/subjects`);
+                            setSchoolPreview(r);
+                            setSubjectIds([]);
+                          })
+                        }
+                      >
+                        {t('findSchool')}
+                      </Button>
+                    ) : (
+                      <>
+                        <p className="font-display text-lg font-extrabold" data-testid="join-school-name">
+                          {schoolPreview.school.name}
+                        </p>
+                        {schoolPreview.subjects.length > 0 && (
+                          <div>
+                            <Label>{t('teacherSubjects')}</Label>
+                            <SubjectPicker options={schoolPreview.subjects} value={subjectIds} onChange={setSubjectIds} locale={locale} className="mt-1" />
+                          </div>
+                        )}
+                        <Button
+                          type="button"
+                          loading={busy}
+                          className="w-full"
+                          data-testid="join-school"
+                          onClick={() =>
+                            run(async () => {
+                              const r = await api<{ school: { name: string }; membership: { status: string } }>('/schools/join', {
+                                body: { code: form.code, role: 'TEACHER', subjectIds },
+                              });
+                              setPending(r.school.name);
+                              refetch();
+                            })
+                          }
+                        >
+                          {t('join')}
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 )}
                 {mode === 'child' && (
                   <FamilyKeypad

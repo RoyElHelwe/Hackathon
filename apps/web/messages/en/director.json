@@ -84,7 +84,12 @@
     "inviteHint": "Send this link to the teacher. It's valid for 14 days.",
     "copyLink": "Copy link",
     "invalidEmail": "Please enter a valid email address.",
-    "error": "That didn't work. Please try again."
+    "error": "That didn't work. Please try again.",
+    "subjectsLabel": "Subjects they teach",
+    "subjectsRequired": "Choose at least one subject",
+    "noSubjectsYet": "Add your school's subjects first",
+    "editSubjects": "Edit subjects",
+    "saveSubjects": "Save"
   },
   "subjects": {
     "title": "Subjects",

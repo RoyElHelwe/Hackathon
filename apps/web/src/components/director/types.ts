@@ -71,4 +71,5 @@ export interface Member {
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
   createdAt: string;
   user: { id: string; name: string; email: string; avatarUrl: string | null };
+  subjects: { id: string; name: { en: string; ar?: string } }[];
 }

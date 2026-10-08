@@ -31,7 +31,7 @@ export default function MembersPage() {
           <MemberGroups schoolId={schoolId} />
         </div>
         <div className="space-y-5">
-          <InviteTeacher />
+          <InviteTeacher schoolId={schoolId} />
           {school.data && <SchoolCodeCard code={school.data.schoolCode} />}
         </div>
       </div>
