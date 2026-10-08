@@ -1,8 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { BASE_XP, dayKey, Difficulty, I18nText, pickText } from '@tajriba/shared';
-import { uploadRoot } from '../config';
 import { encrypt } from '../common/crypto';
 import { averageHash } from '../uploads/phash';
 import type { PrismaClient } from '../generated/prisma/client';
@@ -25,13 +23,14 @@ export const SEED_USERS = [
 
 type Ids = Record<string, string>;
 
+/** Seeded photos live in the DB (`data`), like real uploads: survives ephemeral filesystems. */
 async function saveIllustration(prisma: PrismaClient, ownerId: string, schoolId: string, name: string): Promise<string> {
   const buf = await illustrationJpeg(name);
-  const rel = path.join(schoolId, 'seed', `${name}-${randomUUID()}.jpg`);
-  const abs = path.join(uploadRoot(), rel);
-  await mkdir(path.dirname(abs), { recursive: true });
-  await writeFile(abs, buf);
-  const up = await prisma.upload.create({ data: { ownerId, schoolId, kind: 'IMAGE', path: rel, mime: 'image/jpeg', bytes: buf.length, phash: await averageHash(buf) } });
+  const rel = path.posix.join(schoolId, 'seed', `${name}-${randomUUID()}.jpg`);
+  const up = await prisma.upload.create({
+    data: { ownerId, schoolId, kind: 'IMAGE', path: rel, mime: 'image/jpeg', bytes: buf.length, phash: await averageHash(buf), data: new Uint8Array(buf) },
+    select: { id: true },
+  });
   return up.id;
 }
 

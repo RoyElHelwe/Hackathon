@@ -185,7 +185,7 @@ export class SubmissionsService {
   /** Same or near-same photo from a different student in the same class → possible_copy. */
   private async copyFlag(studentId: string, classId: string | null, photoIds: string[]): Promise<boolean> {
     if (!classId || !photoIds.length) return false;
-    const mine = await this.prisma.upload.findMany({ where: { id: { in: photoIds }, phash: { not: null } } });
+    const mine = await this.prisma.upload.findMany({ where: { id: { in: photoIds }, phash: { not: null } }, select: { phash: true } });
     if (!mine.length) return false;
     const classmates = await this.prisma.enrollment.findMany({ where: { classId, studentId: { not: studentId } } });
     const others = await this.prisma.upload.findMany({
@@ -232,7 +232,7 @@ export class SubmissionsService {
     const locale = a.user.locale || 'en';
     const images: Buffer[] = [];
     for (const pid of s.photoUploadIds) {
-      const up = await this.prisma.upload.findUnique({ where: { id: pid } });
+      const up = await this.prisma.upload.findUnique({ where: { id: pid }, select: { path: true } });
       if (up) images.push(await this.uploads.readFile(up.path).catch(() => Buffer.alloc(0)));
     }
     let check;

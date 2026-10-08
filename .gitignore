@@ -3,7 +3,9 @@ dist
 .next
 .env
 .env.local
-uploads
+# runtime upload dirs only (NOT apps/api/src/uploads, which is source)
+/uploads
+/apps/api/uploads
 coverage
 *.tsbuildinfo
 apps/api/src/generated

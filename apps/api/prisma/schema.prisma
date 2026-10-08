@@ -379,6 +379,8 @@ model Upload {
   mime      String
   bytes     Int
   phash     String?
+  /// File bytes (EXIF-stripped for images). Source of truth; `path` is a logical key.
+  data      Bytes?
   createdAt DateTime @default(now())
 
   owner  User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)

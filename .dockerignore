@@ -1,7 +1,9 @@
 **/node_modules
 **/.next
 **/dist
-**/uploads
+# runtime upload dirs only (NOT apps/api/src/uploads, which is source)
+/uploads
+/apps/api/uploads
 .env
 e2e/test-results
 e2e/playwright-report

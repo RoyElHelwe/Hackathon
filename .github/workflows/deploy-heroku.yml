@@ -1,0 +1,26 @@
+# Every push to the default branch redeploys https://tajriba.rmtekra.com.
+# Heroku builds Dockerfile.heroku (see heroku.yml) and runs migrations in the release phase;
+# the push fails, and so does this job, if the build or the release fails.
+name: Deploy to Heroku
+
+on:
+  push:
+    branches: [ccr-9989b182-0vtrhp, main]
+  workflow_dispatch:
+
+concurrency:
+  group: heroku-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Push to Heroku
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+        run: git push --force "https://heroku:${HEROKU_API_KEY}@git.heroku.com/tajriba-school.git" HEAD:refs/heads/main
