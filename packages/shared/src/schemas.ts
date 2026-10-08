@@ -99,13 +99,27 @@ export const createSchoolBody = z.object({
   city: z.string().trim().min(2).max(80),
   gradeLevels: z.array(z.number().int().min(1).max(12)).default([]),
 });
-export const joinSchoolBody = z.object({ code: z.string().trim().toUpperCase().regex(/^[A-Z]{3}-\d{4}$/), role: z.enum(['TEACHER', 'STUDENT']).default('TEACHER') });
+export const joinSchoolBody = z.object({
+  code: z.string().trim().toUpperCase().regex(/^[A-Z]{3}-\d{4}$/),
+  role: z.enum(['TEACHER', 'STUDENT']).default('TEACHER'),
+  subjectIds: z.array(z.string()).max(20).optional(),
+});
 export const activeRoleBody = z.object({ membershipId: z.string() });
 export const createInviteBody = z.object({
   email: z.email(),
   role: z.enum(ROLES),
   studentId: z.string().optional(),
+  subjectIds: z.array(z.string()).max(20).optional(),
 });
+export const SUBJECT_COLORS = ['violet', 'sky', 'mint', 'green', 'coral', 'sunny', 'pink', 'slate'] as const;
+export const SUBJECT_ICONS = ['triangle', 'zap', 'flask', 'leaf', 'landmark', 'languages', 'book', 'globe', 'music', 'palette', 'cpu', 'dumbbell'] as const;
+export const createSubjectBody = z.object({
+  name: z.string().trim().min(1).max(60),
+  color: z.enum(SUBJECT_COLORS).optional(),
+  icon: z.enum(SUBJECT_ICONS).optional(),
+});
+export const updateSubjectBody = createSubjectBody.partial();
+export const setTeacherSubjectsBody = z.object({ subjectIds: z.array(z.string()).min(1).max(20) });
 export const importClassesBody = z.object({ courseIds: z.array(z.string()).min(1) });
 export const classSettingsBody = z.object({
   leaderboardEnabled: z.boolean().optional(),

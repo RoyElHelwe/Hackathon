@@ -19,6 +19,7 @@ export const RESOURCES = [
   'message',
   'notification',
   'self',
+  'subject',
 ] as const;
 export type Resource = (typeof RESOURCES)[number];
 
@@ -66,6 +67,7 @@ const ROLE_TABLE: Record<Role, Partial<Record<Resource, Action[]>>> = {
     message: ['read', 'write'],
     notification: ['read', 'write'],
     self: ['read', 'write'],
+    subject: ['read', 'write'],
   },
   ADMIN: {
     school: ['read', 'write'],
@@ -80,6 +82,7 @@ const ROLE_TABLE: Record<Role, Partial<Record<Resource, Action[]>>> = {
     message: ['read', 'write'],
     notification: ['read', 'write'],
     self: ['read', 'write'],
+    subject: ['read', 'write'],
   },
   TEACHER: {
     school: ['read'],
@@ -95,6 +98,7 @@ const ROLE_TABLE: Record<Role, Partial<Record<Resource, Action[]>>> = {
     message: ['read', 'write'],
     notification: ['read', 'write'],
     self: ['read', 'write'],
+    subject: ['read'],
   },
   STUDENT: {
     class: ['read'],
@@ -106,6 +110,7 @@ const ROLE_TABLE: Record<Role, Partial<Record<Resource, Action[]>>> = {
     family: ['write'],
     notification: ['read', 'write'],
     self: ['read', 'write'],
+    subject: ['read'],
   },
   PARENT: {
     class: ['read'],
@@ -118,6 +123,7 @@ const ROLE_TABLE: Record<Role, Partial<Record<Resource, Action[]>>> = {
     message: ['read', 'write'],
     notification: ['read', 'write'],
     self: ['read', 'write'],
+    subject: ['read'],
   },
 };
 
@@ -195,6 +201,10 @@ export function can(actor: Actor, action: Action, resource: Resource, target: Ta
       if (actor.role === 'STUDENT') return own || !!target.assignedToActor;
       if (actor.role === 'PARENT') return child;
       return false;
+
+    case 'subject':
+      if (isAdmin) return true;
+      return action === 'read';
 
     case 'family':
     case 'message':

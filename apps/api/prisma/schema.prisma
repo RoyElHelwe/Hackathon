@@ -1,6 +1,6 @@
 generator client {
-  provider     = "prisma-client"
-  output       = "../src/generated/prisma"
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
   moduleFormat        = "cjs"
   importFileExtension = ""
 }
@@ -94,10 +94,12 @@ model School {
   settings   Json     @default("{}")
   createdAt  DateTime @default(now())
 
-  memberships Membership[]
-  invites     Invite[]
-  classes     Class[]
-  uploads     Upload[]
+  memberships     Membership[]
+  invites         Invite[]
+  classes         Class[]
+  uploads         Upload[]
+  subjects        Subject[]
+  teacherSubjects TeacherSubject[]
 }
 
 model User {
@@ -112,26 +114,27 @@ model User {
   devHandle          String?    @unique
   createdAt          DateTime   @default(now())
 
-  memberships       Membership[]
-  teaching          ClassTeacher[]
-  enrollments       Enrollment[]
-  parentLinks       ParentLink[]   @relation("ParentLinkParent")
-  childLinks        ParentLink[]   @relation("ParentLinkStudent")
-  familyCodes       FamilyCode[]
-  missionsCreated   Mission[]
-  submissions       Submission[]
-  peerEvaluations   PeerEvaluation[]
-  teacherReviews    TeacherReview[]
-  topicProgress     TopicProgress[]
-  xpEvents          XpEvent[]
-  wallet            Wallet?
-  walletTxs         WalletTx[]
-  badges            StudentBadge[]
-  streak            Streak?
-  notifications     Notification[]
-  messagesSent      Message[]      @relation("MessageFrom")
-  messagesReceived  Message[]      @relation("MessageTo")
-  uploads           Upload[]
+  memberships      Membership[]
+  teaching         ClassTeacher[]
+  enrollments      Enrollment[]
+  parentLinks      ParentLink[]     @relation("ParentLinkParent")
+  childLinks       ParentLink[]     @relation("ParentLinkStudent")
+  familyCodes      FamilyCode[]
+  missionsCreated  Mission[]
+  submissions      Submission[]
+  peerEvaluations  PeerEvaluation[]
+  teacherReviews   TeacherReview[]
+  topicProgress    TopicProgress[]
+  xpEvents         XpEvent[]
+  wallet           Wallet?
+  walletTxs        WalletTx[]
+  badges           StudentBadge[]
+  streak           Streak?
+  notifications    Notification[]
+  messagesSent     Message[]        @relation("MessageFrom")
+  messagesReceived Message[]        @relation("MessageTo")
+  uploads          Upload[]
+  teacherSubjects  TeacherSubject[]
 }
 
 model Membership {
@@ -150,14 +153,15 @@ model Membership {
 }
 
 model Invite {
-  id        String    @id @default(cuid())
-  schoolId  String
-  email     String
-  role      Role
-  studentId String?
-  token     String    @unique
-  expiresAt DateTime
-  usedAt    DateTime?
+  id         String    @id @default(cuid())
+  schoolId   String
+  email      String
+  role       Role
+  studentId  String?
+  subjectIds String[]  @default([])
+  token      String    @unique
+  expiresAt  DateTime
+  usedAt     DateTime?
 
   school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
 
@@ -167,6 +171,7 @@ model Invite {
 model Class {
   id                String    @id @default(cuid())
   schoolId          String
+  subjectId         String?
   name              String
   gradeLevel        Int?
   classroomCourseId String?   @unique
@@ -175,6 +180,7 @@ model Class {
   syncError         String?
 
   school      School         @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  subject     Subject?       @relation(fields: [subjectId], references: [id], onDelete: SetNull)
   teachers    ClassTeacher[]
   enrollments Enrollment[]
   missions    Mission[]
@@ -231,13 +237,32 @@ model FamilyCode {
 }
 
 model Subject {
-  id    String @id @default(cuid())
-  key   String @unique
-  name  Json
-  color String
-  icon  String
+  id       String  @id @default(cuid())
+  key      String  @unique
+  schoolId String?
+  name     Json
+  color    String
+  icon     String
 
-  topics Topic[]
+  school   School?          @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  topics   Topic[]
+  classes  Class[]
+  teachers TeacherSubject[]
+
+  @@index([schoolId])
+}
+
+model TeacherSubject {
+  teacherId String
+  schoolId  String
+  subjectId String
+
+  teacher User    @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  school  School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@id([teacherId, subjectId])
+  @@index([schoolId])
 }
 
 model Topic {
@@ -323,11 +348,11 @@ model Submission {
   submittedAt     DateTime?
   validatedAt     DateTime?
 
-  mission                  Mission                    @relation(fields: [missionId], references: [id], onDelete: Cascade)
-  student                  User                       @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  peerEvaluations          PeerEvaluation[]
-  teacherReviews           TeacherReview[]
-  familyConfirmation       FamilyMissionConfirmation?
+  mission            Mission                    @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  student            User                       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  peerEvaluations    PeerEvaluation[]
+  teacherReviews     TeacherReview[]
+  familyConfirmation FamilyMissionConfirmation?
 
   @@index([studentId, status])
   @@index([missionId])

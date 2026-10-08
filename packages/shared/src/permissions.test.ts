@@ -129,6 +129,24 @@ describe('permissions — progress, peer evaluation, summaries, uploads', () => 
   });
 });
 
+describe('permissions — subject', () => {
+  it('director/admin read & write school subjects', () => {
+    for (const a of [director, admin]) {
+      expect(can(a, 'read', 'subject', { schoolId: S })).toBe(true);
+      expect(can(a, 'write', 'subject', { schoolId: S })).toBe(true);
+    }
+  });
+  it('everyone else reads only', () => {
+    for (const a of [teacher, student, parent]) {
+      expect(can(a, 'read', 'subject', { schoolId: S })).toBe(true);
+      expect(can(a, 'write', 'subject', { schoolId: S })).toBe(false);
+    }
+  });
+  it('other school denied', () => {
+    expect(can(director, 'write', 'subject', { schoolId: 'other' })).toBe(false);
+  });
+});
+
 describe('peer assignment', () => {
   const c = (userId: string, over: Partial<Parameters<typeof isEligibleEvaluator>[0]> = {}) => ({
     userId,
