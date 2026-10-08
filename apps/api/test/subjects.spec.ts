@@ -45,6 +45,8 @@ describe('school subjects (integration)', () => {
 
     const renamed = (await ctx.http().patch(`/schools/${sid}/subjects/${phys.id}`).set('Cookie', c).send({ name: 'Physics & Science' }).expect(200)).body;
     expect(renamed.name.en).toBe('Physics & Science');
+    expect(renamed.classCount).toBe(0);
+    expect(renamed.teacherCount).toBe(0);
 
     const list = (await ctx.http().get(`/schools/${sid}/subjects`).set('Cookie', c).expect(200)).body;
     expect(list).toHaveLength(1);

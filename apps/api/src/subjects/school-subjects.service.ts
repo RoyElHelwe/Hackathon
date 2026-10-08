@@ -67,8 +67,12 @@ export class SchoolSubjectsService {
       await this.assertUnique(schoolId, body.name, subjectId);
       data.name = await this.bilingual(body.name);
     }
-    const s = await this.prisma.subject.update({ where: { id: subjectId }, data });
-    return { id: s.id, key: s.key, name: s.name, color: s.color, icon: s.icon };
+    const s = await this.prisma.subject.update({
+      where: { id: subjectId },
+      data,
+      include: { _count: { select: { classes: true, teachers: true } } },
+    });
+    return { id: s.id, key: s.key, name: s.name, color: s.color, icon: s.icon, classCount: s._count.classes, teacherCount: s._count.teachers };
   }
 
   async remove(a: AuthContext, schoolId: string, subjectId: string) {
