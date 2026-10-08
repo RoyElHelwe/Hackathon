@@ -147,6 +147,9 @@ export interface ClassSummary {
   id: string;
   name: string;
   gradeLevel: number | null;
+  subjectId: string | null;
+  courseId: string | null;
+  sectionLabel: string | null;
   classroomCourseId: string | null;
   lastSyncedAt: string | null;
   syncError: string | null;

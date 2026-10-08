@@ -2,15 +2,17 @@
 
 import { AlertTriangle, ArrowLeft, CheckCircle2, ClipboardCheck, Gauge, Link2, Users, Wand2 } from 'lucide-react';
 import Link from 'next/link';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { use } from 'react';
 import { PageHeader } from '@/components/app/adult-shell';
 import { ErrorState, PageSkeleton } from '@/components/app/states';
+import { SubjectChip, subjectLabel } from '@/components/director/subject-chip';
 import { ActivityFeed } from '@/components/teacher/activity-feed';
 import { GroupSessionDialog } from '@/components/teacher/group-session-dialog';
 import { Heatmap } from '@/components/teacher/heatmap';
 import { LeaderboardCard } from '@/components/teacher/leaderboard-card';
 import { ReconnectBanner } from '@/components/teacher/reconnect-banner';
+import { SetCourseDialog } from '@/components/teacher/set-course-dialog';
 import { StatTile } from '@/components/teacher/stat-tile';
 import { StudentsTable } from '@/components/teacher/students-table';
 import { StuckAlertList } from '@/components/teacher/stuck-alerts';
@@ -26,6 +28,8 @@ import { useRelativeTime } from '@/components/teacher/use-relative-time';
 export default function ClassOverviewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const t = useTranslations('teacher.class');
+  const tc = useTranslations('teacher.courses');
+  const locale = useLocale();
   const ago = useRelativeTime();
   const { data, isLoading, error, refetch } = useApi<TeacherDashboard>(`/dashboards/teacher/${id}`);
   const students = useApi<ClassStudent[]>(`/classes/${id}/students`);
@@ -43,6 +47,29 @@ export default function ClassOverviewPage({ params }: { params: Promise<{ id: st
         title={data.class.name}
         subtitle={
           <span className="flex flex-wrap items-center gap-2">
+            {data.class.course ? (
+              <>
+              <Link
+                href={`/teacher/courses/${data.class.course.id}`}
+                className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card py-0.5 pe-2.5 ps-0.5 text-xs font-bold hover:border-primary/50"
+                data-testid="class-course-link"
+              >
+                <SubjectChip name={data.class.course.subject.name} color={data.class.course.subject.color} locale={locale} />
+                {tc('title', { grade: data.class.course.gradeLevel, subject: subjectLabel(data.class.course.subject.name, locale) })}
+                {data.class.sectionLabel && <span className="text-muted-foreground">· {tc('sectionShort', { label: data.class.sectionLabel })}</span>}
+              </Link>
+              <SetCourseDialog
+                classId={id}
+                label={tc('changeCourse')}
+                initial={{ subjectId: data.class.course.subject.id, gradeLevel: data.class.course.gradeLevel, sectionLabel: data.class.sectionLabel }}
+              />
+              </>
+            ) : (
+              <SetCourseDialog
+                classId={id}
+                initial={{ subjectId: data.class.subjectId, gradeLevel: data.class.gradeLevel, sectionLabel: data.class.sectionLabel }}
+              />
+            )}
             {data.class.classroomCourseId && (
               <Badge variant="mint">
                 <Link2 /> {t('classroomLinked')}

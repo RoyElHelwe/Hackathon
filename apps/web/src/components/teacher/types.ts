@@ -51,6 +51,10 @@ export interface TeacherDashboard {
     lastSyncedAt: string | null;
     settings: { leaderboardEnabled?: boolean };
     classroomCourseId: string | null;
+    subjectId: string | null;
+    gradeLevel: number | null;
+    sectionLabel: string | null;
+    course: { id: string; gradeLevel: number; subject: { id: string; name: I18nText; color: string } } | null;
   };
   topics: DashTopic[];
   students: DashStudent[];
@@ -80,16 +84,36 @@ export interface ClassroomCourse {
   studentCount: number;
   imported: boolean;
   classId: string | null;
+  suggestion: CourseSuggestion;
+}
+
+export interface CourseSuggestion {
+  subjectId: string | null;
+  gradeLevel: number | null;
+  sectionLabel: string | null;
+  /** existing course with the same subject + grade */
+  courseId: string | null;
+}
+
+export interface SchoolSubjectOption {
+  id: string;
+  key: string;
+  name: I18nText;
+  color: string;
+  icon: string;
 }
 
 export interface CoursesResponse {
   connected: boolean;
   reconnect?: boolean;
   courses: ClassroomCourse[];
+  subjects: SchoolSubjectOption[];
+  schoolCourses: { id: string; subjectId: string; gradeLevel: number }[];
 }
 
 export interface ImportResult {
   classId: string;
+  courseId?: string | null;
   name: string;
   added: number;
   archived: number;
@@ -145,3 +169,57 @@ export interface ApproveResult {
 }
 
 export type SafetyResult = NonNullable<Mission['safetyCheck']>;
+
+export interface CourseSection {
+  id: string;
+  name: string;
+  sectionLabel: string | null;
+  studentCount: number;
+  syncError: string | null;
+  lastSyncedAt: string | null;
+  classroomLinked: boolean;
+}
+
+/** A course = one grade + subject; sections are the Classroom classes that share its lessons. */
+export interface CourseSummary {
+  id: string;
+  gradeLevel: number;
+  subject: SchoolSubjectOption;
+  sectionCount: number;
+  sections: CourseSection[];
+  lessonCount: number;
+  gamifiedCount: number;
+  canEdit: boolean;
+}
+
+export interface LessonMaterial {
+  type: 'drive' | 'youtube' | 'link' | 'form';
+  id?: string;
+  title: string;
+  url: string;
+  mimeType?: string | null;
+  thumbnailUrl?: string | null;
+}
+
+export type LessonStatus = 'NOT_GAMIFIED' | 'GAMIFYING' | 'READY' | 'FAILED';
+
+export interface CourseLesson {
+  id: string;
+  title: string;
+  description: string;
+  kind: 'MATERIAL' | 'ASSIGNMENT';
+  materials: LessonMaterial[];
+  position: number;
+  postedAt: string;
+  status: LessonStatus;
+  contentChangedAt: string | null;
+  sources: { classId: string; classroomUrl: string | null }[];
+}
+
+export interface LessonSyncResult {
+  lessons: number;
+  added: number;
+  archived: number;
+  reconnect: boolean;
+  failedSections: number;
+}
