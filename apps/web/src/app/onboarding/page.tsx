@@ -53,6 +53,13 @@ export default function Onboarding() {
     }
   };
 
+  const findSchool = () =>
+    run(async () => {
+      const r = await api<SchoolPreview>(`/schools/by-code/${encodeURIComponent(form.code.trim())}/subjects`);
+      setSchoolPreview(r);
+      setSubjectIds([]);
+    });
+
   const options = [
     { id: 'create' as const, icon: School, title: t('createSchool'), body: t('createSchoolBody'), color: 'bg-violet-soft' },
     { id: 'join' as const, icon: GraduationCap, title: t('joinSchool'), body: t('joinSchoolBody'), color: 'bg-mint-soft' },
@@ -168,6 +175,11 @@ export default function Onboarding() {
                           setSchoolPreview(null);
                           setSubjectIds([]);
                         }}
+                        onKeyDown={(e) => {
+                          if (e.key !== 'Enter') return;
+                          e.preventDefault();
+                          if (!schoolPreview && form.code.trim() && !busy) findSchool();
+                        }}
                       />
                     </div>
                     {!schoolPreview ? (
@@ -177,13 +189,7 @@ export default function Onboarding() {
                         disabled={!form.code.trim()}
                         className="w-full"
                         data-testid="find-school"
-                        onClick={() =>
-                          run(async () => {
-                            const r = await api<SchoolPreview>(`/schools/by-code/${form.code}/subjects`);
-                            setSchoolPreview(r);
-                            setSubjectIds([]);
-                          })
-                        }
+                        onClick={findSchool}
                       >
                         {t('findSchool')}
                       </Button>

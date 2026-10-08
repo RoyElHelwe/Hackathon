@@ -12,6 +12,7 @@ import type { SchoolSubject } from '@/components/director/types';
 import { useSchoolId } from '@/components/director/use-school';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { api, ApiError } from '@/lib/api';
 import { useApi } from '@/lib/hooks';
 
@@ -28,6 +29,7 @@ export default function SubjectsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editBusy, setEditBusy] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState<SchoolSubject | null>(null);
 
   if (q.isLoading || !schoolId) return <PageSkeleton />;
   if (q.error) return <ErrorState message={q.error instanceof ApiError ? q.error.message : undefined} onRetry={() => q.refetch()} />;
@@ -48,10 +50,12 @@ export default function SubjectsPage() {
     }
   };
 
-  const editSubject = async (id: string, v: SubjectFormValue) => {
+  const editSubject = async (id: string, initialName: string, v: SubjectFormValue) => {
     setEditBusy(true);
     try {
-      await api(`/schools/${schoolId}/subjects/${id}`, { method: 'PATCH', body: v });
+      // Send the name only when it changed: a recolour / re-icon must not re-translate (and overwrite) the bilingual name.
+      const body = v.name.trim() === initialName.trim() ? { color: v.color, icon: v.icon } : v;
+      await api(`/schools/${schoolId}/subjects/${id}`, { method: 'PATCH', body });
       await q.refetch();
       setEditingId(null);
     } catch (e) {
@@ -65,8 +69,10 @@ export default function SubjectsPage() {
     setDeletingId(s.id);
     try {
       await api(`/schools/${schoolId}/subjects/${s.id}`, { method: 'DELETE' });
+      setConfirming(null);
       await q.refetch();
     } catch (e) {
+      setConfirming(null);
       toast(errMsg(e), 'error');
     } finally {
       setDeletingId(null);
@@ -94,10 +100,13 @@ export default function SubjectsPage() {
               </p>
             ) : (
               <ul className="divide-y divide-border">
-                {subjects.map((s) => (
+                {subjects.map((s) => {
+                  const initialName = subjectLabel(s.name, locale);
+                  const blocked = s.classCount > 0 ? t('deleteBlocked') : s.topicCount > 0 ? t('deleteBlockedTopics') : undefined;
+                  return (
                   <li key={s.id} className="p-4" data-testid="subject-row">
                     {editingId === s.id ? (
-                      <SubjectForm initial={{ name: subjectLabel(s.name, locale), color: s.color, icon: s.icon }} busy={editBusy} onSubmit={(v) => editSubject(s.id, v)} onCancel={() => setEditingId(null)} />
+                      <SubjectForm initial={{ name: initialName, color: s.color, icon: s.icon }} busy={editBusy} onSubmit={(v) => editSubject(s.id, initialName, v)} onCancel={() => setEditingId(null)} />
                     ) : (
                       <div className="flex flex-wrap items-center gap-3">
                         <SubjectChip name={s.name} color={s.color} locale={locale} />
@@ -111,9 +120,9 @@ export default function SubjectsPage() {
                             variant="ghost"
                             size="icon"
                             aria-label={t('delete')}
-                            disabled={s.classCount > 0 || deletingId === s.id}
-                            title={s.classCount > 0 ? t('deleteBlocked') : undefined}
-                            onClick={() => deleteSubject(s)}
+                            disabled={!!blocked || deletingId === s.id}
+                            title={blocked}
+                            onClick={() => setConfirming(s)}
                             data-testid="subject-delete"
                           >
                             <Trash2 className="size-4 text-danger" />
@@ -122,12 +131,29 @@ export default function SubjectsPage() {
                       </div>
                     )}
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             )}
           </CardContent>
         </Card>
       </div>
+      <Dialog open={!!confirming} onOpenChange={(open) => !open && !deletingId && setConfirming(null)}>
+        <DialogContent data-testid="subject-delete-dialog">
+          <DialogTitle>{t('deleteConfirmTitle', { name: confirming ? subjectLabel(confirming.name, locale) : '' })}</DialogTitle>
+          <DialogDescription className="mt-2">{t('deleteConfirmBody')}</DialogDescription>
+          <div className="mt-6 flex justify-end gap-2">
+            <DialogClose asChild>
+              <Button type="button" variant="ghost" disabled={!!deletingId}>
+                {tc('cancel')}
+              </Button>
+            </DialogClose>
+            <Button type="button" variant="destructive" loading={!!deletingId} onClick={() => confirming && deleteSubject(confirming)} data-testid="subject-delete-confirm">
+              {t('delete')}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       {node}
     </div>
   );

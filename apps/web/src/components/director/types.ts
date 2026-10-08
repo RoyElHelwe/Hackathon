@@ -63,6 +63,7 @@ export interface SchoolSubject {
   icon: string;
   classCount: number;
   teacherCount: number;
+  topicCount: number;
 }
 
 export interface Member {
