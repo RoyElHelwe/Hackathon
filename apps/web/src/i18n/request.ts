@@ -38,5 +38,5 @@ export default getRequestConfig(async () => {
   const merged = fallback
     ? Object.fromEntries(Object.keys(fallback).map((ns) => [ns, deepMerge(fallback[ns] as Tree, messages[ns] as Tree)]))
     : messages;
-  return { locale, messages: merged, timeZone: 'Asia/Beirut' };
+  return { locale, messages: merged, timeZone: 'Asia/Beirut', now: new Date() };
 });

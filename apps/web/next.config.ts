@@ -18,6 +18,7 @@ const withSerwist = withSerwistInit({
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  devIndicators: false,
   transpilePackages: ['@tajriba/shared'],
   outputFileTracingRoot: path.resolve(__dirname, '../..'),
   eslint: { dirs: ['src'] },

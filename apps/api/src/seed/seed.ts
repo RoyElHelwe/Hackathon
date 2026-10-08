@@ -129,6 +129,8 @@ export async function seed(prisma: PrismaClient, opts: { quiet?: boolean } = {})
   }
 
   // ---------- Missions ----------
+  // Remove missions created while rehearsing (AI drafts etc.) so every reset starts from the same demo state.
+  await prisma.mission.deleteMany({ where: { classId: cls.id, key: null } });
   const missions: Record<string, { id: string; difficulty: Difficulty; topic: string; title: I18nText }> = {};
   for (const m of MISSIONS) {
     const { key, topic, audience, ...content } = m;

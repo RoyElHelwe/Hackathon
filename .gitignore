@@ -13,3 +13,5 @@ apps/web/public/sw.js
 apps/web/public/sw.js.map
 apps/web/public/swe-worker*
 .turbo
+e2e/test-results
+e2e/playwright-report
