@@ -147,6 +147,28 @@ describe('permissions — subject', () => {
   });
 });
 
+describe('permissions — course', () => {
+  it('director/admin read & write any course in school', () => {
+    for (const a of [director, admin]) {
+      expect(can(a, 'write', 'course', { schoolId: S, courseClassIds: ['c9'] })).toBe(true);
+      expect(can(a, 'read', 'course', { schoolId: 'other', courseClassIds: ['c9'] })).toBe(false);
+    }
+  });
+  it('teacher reads/writes a course only when teaching one of its sections', () => {
+    expect(can(teacher, 'write', 'course', { courseClassIds: ['c2', 'c1'] })).toBe(true);
+    expect(can(teacher, 'read', 'course', { courseClassIds: ['c2'] })).toBe(false);
+    expect(can(teacher, 'read', 'course', {})).toBe(false);
+  });
+  it('student/parent read only via an enrolled section, never write', () => {
+    expect(can(student, 'read', 'course', { courseClassIds: ['c1', 'c3'] })).toBe(true);
+    expect(can(student, 'read', 'course', { courseClassIds: ['c3'] })).toBe(false);
+    expect(can(student, 'write', 'course', { courseClassIds: ['c1'] })).toBe(false);
+    expect(can(parent, 'read', 'course', { courseClassIds: ['c1'] })).toBe(true);
+    expect(can(parent, 'read', 'course', { courseClassIds: ['c2'] })).toBe(false);
+    expect(can(parent, 'write', 'course', { courseClassIds: ['c1'] })).toBe(false);
+  });
+});
+
 describe('peer assignment', () => {
   const c = (userId: string, over: Partial<Parameters<typeof isEligibleEvaluator>[0]> = {}) => ({
     userId,

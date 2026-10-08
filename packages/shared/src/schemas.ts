@@ -120,7 +120,26 @@ export const createSubjectBody = z.object({
 });
 export const updateSubjectBody = createSubjectBody.partial();
 export const setTeacherSubjectsBody = z.object({ subjectIds: z.array(z.string()).min(1).max(20) });
-export const importClassesBody = z.object({ courseIds: z.array(z.string()).min(1) });
+export const importItem = z.object({
+  courseId: z.string().min(1),
+  subjectId: z.string().min(1),
+  gradeLevel: z.number().int().min(1).max(12),
+  sectionLabel: z.string().trim().max(20).nullish(),
+});
+/** `items` (preferred) carries the teacher's subject + grade per Classroom course; legacy `courseIds` uses the AI suggestions. */
+export const importClassesBody = z
+  .object({
+    courseIds: z.array(z.string().min(1)).max(100).optional(),
+    items: z.array(importItem).max(100).optional(),
+  })
+  .refine((b) => (b.items?.length ?? 0) + (b.courseIds?.length ?? 0) > 0, { message: 'Select at least one course.' });
+export type ImportClassesBody = z.infer<typeof importClassesBody>;
+export const setClassCourseBody = z.object({
+  subjectId: z.string().min(1),
+  gradeLevel: z.number().int().min(1).max(12),
+  sectionLabel: z.string().trim().max(20).nullish(),
+});
+export type SetClassCourseBody = z.infer<typeof setClassCourseBody>;
 export const classSettingsBody = z.object({
   leaderboardEnabled: z.boolean().optional(),
   difficulty: z.enum(DIFFICULTIES).optional(),

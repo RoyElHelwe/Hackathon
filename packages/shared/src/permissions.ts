@@ -20,6 +20,7 @@ export const RESOURCES = [
   'notification',
   'self',
   'subject',
+  'course',
 ] as const;
 export type Resource = (typeof RESOURCES)[number];
 
@@ -47,6 +48,8 @@ export interface Target {
   assignedToActor?: boolean;
   audience?: MissionAudience;
   membershipUserId?: string;
+  /** section (class) ids of a course */
+  courseClassIds?: string[];
 }
 
 /**
@@ -68,6 +71,7 @@ const ROLE_TABLE: Record<Role, Partial<Record<Resource, Action[]>>> = {
     notification: ['read', 'write'],
     self: ['read', 'write'],
     subject: ['read', 'write'],
+    course: ['read', 'write'],
   },
   ADMIN: {
     school: ['read', 'write'],
@@ -83,6 +87,7 @@ const ROLE_TABLE: Record<Role, Partial<Record<Resource, Action[]>>> = {
     notification: ['read', 'write'],
     self: ['read', 'write'],
     subject: ['read', 'write'],
+    course: ['read', 'write'],
   },
   TEACHER: {
     school: ['read'],
@@ -99,6 +104,7 @@ const ROLE_TABLE: Record<Role, Partial<Record<Resource, Action[]>>> = {
     notification: ['read', 'write'],
     self: ['read', 'write'],
     subject: ['read'],
+    course: ['read', 'write'],
   },
   STUDENT: {
     class: ['read'],
@@ -111,6 +117,7 @@ const ROLE_TABLE: Record<Role, Partial<Record<Resource, Action[]>>> = {
     notification: ['read', 'write'],
     self: ['read', 'write'],
     subject: ['read'],
+    course: ['read'],
   },
   PARENT: {
     class: ['read'],
@@ -124,6 +131,7 @@ const ROLE_TABLE: Record<Role, Partial<Record<Resource, Action[]>>> = {
     notification: ['read', 'write'],
     self: ['read', 'write'],
     subject: ['read'],
+    course: ['read'],
   },
 };
 
@@ -205,6 +213,13 @@ export function can(actor: Actor, action: Action, resource: Resource, target: Ta
     case 'subject':
       if (isAdmin) return true;
       return action === 'read';
+
+    case 'course':
+      if (isAdmin) return true;
+      if (actor.role === 'TEACHER') return intersects(actor.classIdsTaught, target.courseClassIds);
+      if (actor.role === 'STUDENT') return action === 'read' && intersects(actor.classIdsEnrolled, target.courseClassIds);
+      if (actor.role === 'PARENT') return action === 'read' && intersects(actor.childClassIds, target.courseClassIds);
+      return false;
 
     case 'family':
     case 'message':
