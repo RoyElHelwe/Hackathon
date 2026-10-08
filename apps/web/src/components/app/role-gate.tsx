@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { ApiError } from '@/lib/api';
 import { useMe } from '@/lib/hooks';
+import { LocaleSync } from './locale-sync';
 import { PageSkeleton } from './states';
 
 /** Client-side mirror of the API permissions: redirects users who don't have the active role. */
@@ -32,7 +33,12 @@ export function RoleGate({ roles, children }: { roles: Role[]; children: React.R
     }
     return <PageSkeleton />;
   }
-  return <>{children}</>;
+  return (
+    <>
+      <LocaleSync />
+      {children}
+    </>
+  );
 }
 
 function SwitchPrompt({ membershipId }: { membershipId: string }) {

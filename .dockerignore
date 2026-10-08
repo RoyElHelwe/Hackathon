@@ -1,0 +1,7 @@
+**/node_modules
+**/.next
+**/dist
+**/uploads
+.env
+e2e/test-results
+e2e/playwright-report

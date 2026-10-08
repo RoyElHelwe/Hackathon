@@ -1,0 +1,49 @@
+# One-command run: `docker compose up --build` → web http://localhost:3000, api http://localhost:4000
+# Postgres only (for local dev with pnpm dev): `docker compose up -d db`
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: tajriba
+      POSTGRES_PASSWORD: tajriba
+      POSTGRES_DB: tajriba
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U tajriba']
+      interval: 3s
+      retries: 20
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://tajriba:tajriba@db:5432/tajriba
+      WEB_URL: http://localhost:3000
+      UPLOAD_DIR: /data/uploads
+    ports:
+      - '4000:4000'
+    volumes:
+      - uploads:/data/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    environment:
+      API_URL: http://api:4000
+    ports:
+      - '3000:3000'
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
+  uploads:
