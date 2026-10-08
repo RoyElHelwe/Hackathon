@@ -1,7 +1,7 @@
 'use client';
 
 import { Bell } from 'lucide-react';
-import { useFormatter, useTranslations } from 'next-intl';
+import { useFormatter, useNow, useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useState } from 'react';
 import { Dialog, DialogTitle, SheetContent, DialogTrigger } from '@/components/ui/dialog';
@@ -44,6 +44,7 @@ export function NotificationsBell({ className }: { className?: string }) {
   const t = useTranslations('common');
   const l = useL();
   const format = useFormatter();
+  const now = useNow({ updateInterval: 60_000 });
   const [open, setOpen] = useState(false);
   const { data } = useApi<NotificationItem[]>('/notifications', { refetchInterval: 20_000 });
   const invalidate = useInvalidate();
@@ -93,7 +94,7 @@ export function NotificationsBell({ className }: { className?: string }) {
                   </span>
                   <div className="min-w-0">
                     <p className="text-sm font-semibold">{text(n)}</p>
-                    <p className="text-xs text-muted-foreground">{format.relativeTime(new Date(n.createdAt))}</p>
+                    <p className="text-xs text-muted-foreground">{format.relativeTime(new Date(n.createdAt), now)}</p>
                   </div>
                 </div>
               );

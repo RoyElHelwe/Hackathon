@@ -104,12 +104,14 @@ export class AiService {
   /** overridable for tests */
   provider: 'openrouter' | 'mock' = config.AI_PROVIDER;
   cacheEnabled = config.AI_CACHE;
+  apiKey = config.OPENROUTER_API_KEY;
+  models = { fast: config.AI_MODEL_FAST, vision: config.AI_MODEL_VISION };
 
   constructor(private readonly prisma: PrismaService) {}
 
   modelFor(kind: 'fast' | 'vision'): string {
     if (this.provider === 'mock') return `mock-${kind}`;
-    return (kind === 'vision' ? config.AI_MODEL_VISION : config.AI_MODEL_FAST) || config.AI_MODEL_FAST || config.AI_MODEL_VISION;
+    return (kind === 'vision' ? this.models.vision : this.models.fast) || this.models.fast || this.models.vision;
   }
 
   /** Resize to max 1280px and compress before sending to the model. */
@@ -153,7 +155,7 @@ export class AiService {
   }
 
   private async callModel<I, O>(task: TaskDef<I, O>, input: I, model: string, images: Buffer[], started: number): Promise<O> {
-    if (!config.OPENROUTER_API_KEY || !model) {
+    if (!this.apiKey || !model) {
       await this.log(task.name, model || 'unset', started, false, 'OpenRouter not configured');
       throw new AiUnavailableError();
     }

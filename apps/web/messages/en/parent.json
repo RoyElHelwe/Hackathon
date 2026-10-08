@@ -1,1 +1,115 @@
-{ "nav": { "home": "My child", "family": "Family missions", "messages": "Messages", "link": "Link a child" } }
+{
+  "nav": {
+    "home": "My child",
+    "family": "Family missions",
+    "messages": "Messages",
+    "link": "Link a child"
+  },
+  "dashboard": {
+    "title": "{name}'s week",
+    "subtitle": "Here's how {name} is learning by living.",
+    "switchChild": "Choose a child",
+    "noChildrenTitle": "Let's link your child",
+    "noChildrenBody": "Ask your child to open Tajriba → Me → “Invite my family” and read you the 6-digit code.",
+    "linkChild": "Link my child",
+    "level": "Level {level}",
+    "xp": "{xp} XP",
+    "streak": "{days, plural, =0 {No streak yet} one {# day in a row} other {# days in a row}}",
+    "badges": "Badges",
+    "noBadges": "The first badge is just one mission away!",
+    "classes": "Classes",
+    "teacher": "with {names}",
+    "message": "Message the teacher"
+  },
+  "summary": {
+    "title": "This week",
+    "subtitle": "Written by Bousla for you",
+    "weekOf": "Week of {date}",
+    "highlights": "Highlights",
+    "struggles": "Where a little help goes far",
+    "noStruggles": "Nothing to worry about this week. Keep cheering!",
+    "howToHelp": "How you can help (10 min)",
+    "familyMission": "Try together",
+    "regenerate": "Refresh summary",
+    "thinking": "Bousla is writing your weekly summary…",
+    "error": "We couldn't prepare the summary right now."
+  },
+  "work": {
+    "title": "Recent work",
+    "subtitle": "Real photos from real missions",
+    "empty": "No missions yet this week. They'll appear here as photos.",
+    "score": "{score}/100",
+    "family": "Family mission",
+    "noPhoto": "No photo",
+    "close": "Close"
+  },
+  "progress": {
+    "strengths": "Shining at",
+    "struggles": "Still practicing",
+    "noStrengths": "Strengths will appear after the first validated mission.",
+    "noStruggles": "No struggles spotted — great!",
+    "bestScore": "Best score {score}",
+    "reason": {
+      "RETRIES": "is giving it several tries — perseverance is a skill!",
+      "HINTS": "is using hints to find the way",
+      "IDLE": "started a mission and could use a gentle nudge"
+    }
+  },
+  "map": {
+    "title": "Skill map",
+    "subtitle": "Mathematics — from first steps to what's next",
+    "mastered": "{count} of {total} skills mastered",
+    "empty": "The skill map is not available yet."
+  },
+  "familyCallout": {
+    "title": "{name} is waiting for you!",
+    "body": "A family mission needs your “We did it together!”.",
+    "cta": "Open family missions"
+  },
+  "family": {
+    "title": "Family missions",
+    "subtitle": "Small real-life challenges to do together at home.",
+    "empty": "No family missions yet",
+    "emptyBody": "When the teacher shares a family mission, it will appear here.",
+    "minutes": "{n} min",
+    "xp": "+{xp} XP",
+    "steps": "Steps",
+    "safety": "Safety",
+    "notStarted": "{name} hasn't started this one yet.",
+    "inProgress": "{name} is working on it.",
+    "childSays": "{name} explains",
+    "answers": "Results",
+    "waiting": "Waiting for your confirmation",
+    "noteLabel": "A note for {name} (optional)",
+    "notePlaceholder": "e.g. You measured so carefully — proud of you!",
+    "confirm": "We did it together!",
+    "confirmedTitle": "Mission confirmed!",
+    "confirmedBody": "{name} earned +{xp} XP. Thank you for learning together.",
+    "confirmedOn": "Confirmed {date}",
+    "yourNote": "Your note",
+    "photoAlt": "Photo of {name}'s work",
+    "submitted": "Sent {date}",
+    "noSubmissions": "Your child hasn't started this one yet. Ask them about it tonight!"
+  },
+  "messages": {
+    "title": "Messages",
+    "subtitle": "Talk with your child's teachers."
+  },
+  "link": {
+    "title": "Link your child",
+    "subtitle": "Enter the 6-digit family code from your child's Tajriba app.",
+    "how": "Where's the code? On your child's phone: Me → “Invite my family”.",
+    "linking": "Linking…",
+    "successTitle": "You're linked to {name}!",
+    "successBody": "You can now follow {name}'s progress at {school}.",
+    "seeProgress": "See {name}'s progress",
+    "another": "Link another child",
+    "tryAgain": "Try again",
+    "errors": {
+      "not_found": "That code doesn't exist. Check the 6 digits with your child.",
+      "expired": "This code has expired. Ask your child to make a new one (Me → Invite my family).",
+      "used": "This code was already used. Ask your child for a new one.",
+      "generic": "We couldn't link right now. Please try again."
+    }
+  }
+}

@@ -1,7 +1,7 @@
 'use client';
 
 import { ChevronRight } from 'lucide-react';
-import { useFormatter, useTranslations } from 'next-intl';
+import { useFormatter, useNow, useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { BouslaSays } from '@/components/bousla';
 import { ErrorState, PageSkeleton } from '@/components/app/states';
@@ -23,6 +23,7 @@ interface Assigned {
 export default function ReviewsPage() {
   const t = useTranslations('student');
   const format = useFormatter();
+  const now = useNow({ updateInterval: 60_000 });
   const l = useL();
   const { data, isLoading, error, refetch } = useApi<Assigned[]>('/peer-reviews/assigned');
   if (isLoading) return <PageSkeleton />;
@@ -40,7 +41,7 @@ export default function ReviewsPage() {
       <div className="min-w-0 flex-1">
         <p className="font-display text-lg font-extrabold leading-tight">{l(r.mission.title)}</p>
         <p className="text-sm text-muted-foreground">{t('from', { name: r.submitter.firstName })}</p>
-        {r.status === 'ASSIGNED' ? <Badge variant="sunny">⏰ {t('dueIn', { time: format.relativeTime(new Date(r.dueAt)) })}</Badge> : <Badge variant="mint">✓ {r.score}/100</Badge>}
+        {r.status === 'ASSIGNED' ? <Badge variant="sunny">⏰ {t('dueIn', { time: format.relativeTime(new Date(r.dueAt), now) })}</Badge> : <Badge variant="mint">✓ {r.score}/100</Badge>}
       </div>
       <ChevronRight className="rtl-flip size-6 text-muted-foreground" />
     </Link>

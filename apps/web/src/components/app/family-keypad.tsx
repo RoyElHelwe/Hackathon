@@ -23,8 +23,7 @@ export function FamilyKeypad({ onComplete, disabled, error }: { onComplete: (cod
             key={i}
             className={cn(
               'flex h-14 w-11 items-center justify-center rounded-[14px] border-2 font-display text-3xl font-extrabold',
-              code[i] ? 'border-primary bg-violet-soft text-primary dark:text-white' : 'border-border bg-card',
-              error && 'border-danger',
+              error ? 'border-danger bg-coral-soft' : code[i] ? 'border-primary bg-violet-soft text-primary dark:text-white' : 'border-border bg-card',
             )}
             data-testid={`code-digit-${i}`}
           >

@@ -1,7 +1,7 @@
 'use client';
 
 import { Share2, Settings } from 'lucide-react';
-import { useFormatter, useLocale, useTranslations } from 'next-intl';
+import { useFormatter, useNow, useLocale, useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useState } from 'react';
 import { ErrorState, PageSkeleton } from '@/components/app/states';
@@ -22,6 +22,7 @@ export default function MePage() {
   const l = useL();
   const locale = useLocale();
   const format = useFormatter();
+  const now = useNow({ updateInterval: 60_000 });
   const { data: me } = useMe();
   const { data: g, isLoading, error, refetch } = useApi<Gamification>('/gamification/me');
   const [code, setCode] = useState<{ code: string; expiresAt: string } | null>(null);
@@ -135,7 +136,7 @@ export default function MePage() {
             <li key={tx.id} className="flex items-center justify-between py-2 text-sm">
               <span>{t.has(`walletReasons.${tx.reason}`) ? t(`walletReasons.${tx.reason}`) : tx.reason}</span>
               <span className="flex items-center gap-3">
-                <span className="text-muted-foreground">{format.relativeTime(new Date(tx.createdAt))}</span>
+                <span className="text-muted-foreground">{format.relativeTime(new Date(tx.createdAt), now)}</span>
                 <span className={cn('font-extrabold', tx.delta > 0 ? 'text-success' : 'text-danger')}>
                   {tx.delta > 0 ? '+' : ''}
                   {tx.delta} 🪙

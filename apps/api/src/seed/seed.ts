@@ -41,15 +41,11 @@ export async function seed(prisma: PrismaClient, opts: { quiet?: boolean } = {})
   const now = Date.now();
 
   // ---------- School ----------
+  const schoolSettings = { gradeLevels: [7, 8, 9], leaderboardPolicy: 'TEACHER_CHOICE', defaultLocale: 'en', safetyRules: ['No heights', 'Adult present outdoors'] };
   const school = await prisma.school.upsert({
     where: { schoolCode: SCHOOL_CODE },
-    update: {},
-    create: {
-      name: 'Tripoli Future School',
-      city: 'Tripoli',
-      schoolCode: SCHOOL_CODE,
-      settings: { gradeLevels: [7, 8, 9], leaderboardPolicy: 'TEACHER_CHOICE', defaultLocale: 'en', safetyRules: ['No heights', 'Adult present outdoors'] },
-    },
+    update: { settings: schoolSettings },
+    create: { name: 'Tripoli Future School', city: 'Tripoli', schoolCode: SCHOOL_CODE, settings: schoolSettings },
   });
 
   // ---------- Users ----------
@@ -116,7 +112,7 @@ export async function seed(prisma: PrismaClient, opts: { quiet?: boolean } = {})
   // ---------- Class ----------
   const cls = await prisma.class.upsert({
     where: { classroomCourseId: 'fake-8b-math' },
-    update: { syncError: null, lastSyncedAt: new Date(now - 5 * 60_000) },
+    update: { syncError: null, lastSyncedAt: new Date(now - 5 * 60_000), settings: { leaderboardEnabled: false } },
     create: { schoolId: school.id, name: '8B Math', gradeLevel: 8, classroomCourseId: 'fake-8b-math', settings: { leaderboardEnabled: false }, lastSyncedAt: new Date(now - 5 * 60_000) },
   });
   await prisma.classTeacher.upsert({
