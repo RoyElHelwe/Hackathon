@@ -1,14 +1,27 @@
 import { BadRequestException, ForbiddenException, Inject, Injectable, Logger } from '@nestjs/common';
-import { pickText } from '@tajriba/shared';
+import { ImportClassesBody, pickText } from '@tajriba/shared';
+import { AiService } from '../ai/ai.service';
+import { heuristicParseCourses, parseCourses, ParseCoursesOutput } from '../ai/tasks';
 import { config } from '../config';
 import { AuthContext } from '../common/auth-context';
 import { ActorService } from '../common/actor.service';
-import { decrypt, encrypt } from '../common/crypto';
+import { encrypt } from '../common/crypto';
+import { CoursesService } from '../courses/courses.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { ClassroomAuthError, CLASSROOM_PROVIDER, ClassroomPerson, ClassroomProvider, TeacherCredentials } from './classroom.provider';
+import { loadTeacherCredentials } from './credentials';
+import { ClassroomAuthError, ClassroomCourse, CLASSROOM_PROVIDER, ClassroomPerson, ClassroomProvider, TeacherCredentials } from './classroom.provider';
+
+interface Suggestion {
+  subjectId: string | null;
+  gradeLevel: number | null;
+  sectionLabel: string | null;
+  /** existing Course with the same subject + grade */
+  courseId: string | null;
+}
 
 export interface SyncResult {
   classId: string;
+  courseId?: string | null;
   name: string;
   added: number;
   archived: number;
@@ -23,6 +36,8 @@ export class ClassroomService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly actors: ActorService,
+    private readonly ai: AiService,
+    private readonly courses: CoursesService,
     @Inject(CLASSROOM_PROVIDER) private readonly provider: ClassroomProvider,
   ) {}
 
@@ -30,17 +45,8 @@ export class ClassroomService {
     return this.provider.kind;
   }
 
-  async credentials(userId: string): Promise<TeacherCredentials> {
-    const u = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
-    let refreshToken: string | null = null;
-    if (u.googleRefreshToken) {
-      try {
-        refreshToken = decrypt(u.googleRefreshToken);
-      } catch {
-        refreshToken = null;
-      }
-    }
-    return { userId: u.id, googleId: u.googleId, refreshToken };
+  credentials(userId: string): Promise<TeacherCredentials> {
+    return loadTeacherCredentials(this.prisma, userId);
   }
 
   /** Fake mode: connecting is instant. */
@@ -53,40 +59,95 @@ export class ClassroomService {
     await this.prisma.class.updateMany({ where: { teachers: { some: { teacherId: userId } } }, data: { syncError: 'RECONNECT' } });
   }
 
-  async listCourses(a: AuthContext) {
-    const creds = await this.credentials(a.userId);
-    if (this.provider.kind === 'google' && !creds.refreshToken) return { connected: false, courses: [] };
-    try {
-      const courses = await this.provider.listCourses(creds);
-      const existing = await this.prisma.class.findMany({
-        where: { classroomCourseId: { in: courses.map((c) => c.id) } },
-        include: { teachers: true },
-      });
-      return {
-        connected: true,
-        courses: courses.map((c) => {
-          const cls = existing.find((e) => e.classroomCourseId === c.id);
-          return { ...c, imported: !!cls?.teachers.some((t) => t.teacherId === a.userId), classId: cls?.id ?? null };
+  /** Loads the school's subjects + courses and asks AI (one batched call) to classify each Classroom course. */
+  private async suggest(schoolId: string, courses: ClassroomCourse[]) {
+    const subjects = await this.prisma.subject.findMany({ where: { schoolId }, select: { id: true, key: true, name: true, color: true, icon: true } });
+    const schoolCourses = await this.prisma.course.findMany({ where: { schoolId }, select: { id: true, subjectId: true, gradeLevel: true } });
+    const existing = await this.prisma.class.findMany({
+      where: { classroomCourseId: { in: courses.map((c) => c.id) } },
+      include: { teachers: true, course: true },
+    });
+    let parsed: ParseCoursesOutput = { items: [] };
+    const toParse = courses.filter((c) => !existing.some((e) => e.classroomCourseId === c.id && e.course));
+    if (toParse.length && subjects.length) {
+      const input = {
+        // course names/sections only — never rosters
+        courses: toParse.map((c) => ({ id: c.id, name: c.name, section: c.section ?? '' })),
+        subjects: subjects.map((s) => {
+          const n = s.name as { en?: string; ar?: string };
+          return { id: s.id, name: [n.en, n.ar].filter(Boolean).join(' | ') };
         }),
       };
+      try {
+        parsed = await this.ai.run(parseCourses, input);
+      } catch (e) {
+        this.logger.warn(`parseCourses failed, using heuristic: ${e instanceof Error ? e.message : e}`);
+        parsed = heuristicParseCourses(input);
+      }
+    }
+    const subjectIds = new Set(subjects.map((s) => s.id));
+    const suggestions = new Map<string, Suggestion>();
+    for (const c of courses) {
+      const cls = existing.find((e) => e.classroomCourseId === c.id);
+      if (cls?.course) {
+        suggestions.set(c.id, { subjectId: cls.course.subjectId, gradeLevel: cls.course.gradeLevel, sectionLabel: cls.sectionLabel, courseId: cls.course.id });
+        continue;
+      }
+      const item = parsed.items.find((i) => i.id === c.id);
+      const sure = !!item && item.confidence >= 0.5;
+      const subjectId = sure && item.subjectId && subjectIds.has(item.subjectId) ? item.subjectId : null;
+      const aiGrade = sure && item.gradeLevel && item.gradeLevel >= 1 && item.gradeLevel <= 12 ? item.gradeLevel : null;
+      const providerGrade = c.gradeLevel && c.gradeLevel >= 1 && c.gradeLevel <= 12 ? c.gradeLevel : null;
+      const gradeLevel = aiGrade ?? providerGrade;
+      const sectionLabel = item?.sectionLabel ? item.sectionLabel.trim().toUpperCase().slice(0, 20) || null : null;
+      const courseId = schoolCourses.find((sc) => sc.subjectId === subjectId && sc.gradeLevel === gradeLevel)?.id ?? null;
+      suggestions.set(c.id, { subjectId, gradeLevel, sectionLabel, courseId });
+    }
+    return { subjects, schoolCourses, existing, suggestions };
+  }
+
+  async listCourses(a: AuthContext) {
+    const actor = await this.actors.actor(a);
+    const creds = await this.credentials(a.userId);
+    const empty = { courses: [], subjects: [], schoolCourses: [] };
+    if (this.provider.kind === 'google' && !creds.refreshToken) return { connected: false, ...empty };
+    let courses: ClassroomCourse[];
+    try {
+      courses = await this.provider.listCourses(creds);
     } catch (e) {
       if (e instanceof ClassroomAuthError) {
         await this.markReconnect(a.userId);
-        return { connected: false, reconnect: true, courses: [] };
+        return { connected: false, reconnect: true, ...empty };
       }
       throw e;
     }
+    const { subjects, schoolCourses, existing, suggestions } = await this.suggest(actor.schoolId, courses);
+    return {
+      connected: true,
+      courses: courses.map((c) => {
+        const cls = existing.find((e) => e.classroomCourseId === c.id);
+        return {
+          ...c,
+          imported: !!cls?.teachers.some((t) => t.teacherId === a.userId),
+          classId: cls?.id ?? null,
+          suggestion: suggestions.get(c.id)!,
+        };
+      }),
+      subjects,
+      schoolCourses,
+    };
   }
 
   /**
    * Imports courses. Golden rule: one Class per Classroom course. A second teacher importing
-   * the same course becomes CO_TEACHER instead of duplicating it.
+   * the same course becomes CO_TEACHER instead of duplicating it. Each section joins the Course
+   * for its (subject, grade) — `items` carry the teacher's choice; legacy `courseIds` use the AI suggestions.
    */
-  async import(a: AuthContext, courseIds: string[]): Promise<SyncResult[]> {
+  async import(a: AuthContext, body: ImportClassesBody): Promise<SyncResult[]> {
     const actor = await this.actors.actor(a);
     if (actor.role !== 'TEACHER') throw new ForbiddenException('Only teachers import classes.');
     const creds = await this.credentials(a.userId);
-    let courses;
+    let courses: ClassroomCourse[];
     try {
       courses = await this.provider.listCourses(creds);
     } catch (e) {
@@ -96,11 +157,32 @@ export class ClassroomService {
       }
       throw e;
     }
+
+    type Entry = { courseId: string; explicit: boolean; subjectId: string | null; gradeLevel: number | null; sectionLabel?: string | null };
+    const entries: Entry[] = (body.items ?? []).map((i) => ({ ...i, explicit: true }));
+    const legacy = [...new Set(body.courseIds ?? [])].filter((id) => !entries.some((e) => e.courseId === id));
+    if (legacy.length) {
+      const { suggestions } = await this.suggest(actor.schoolId, courses.filter((c) => legacy.includes(c.id)));
+      for (const id of legacy) {
+        const s = suggestions.get(id);
+        const ok = !!s?.subjectId && !!s.gradeLevel;
+        entries.push({ courseId: id, explicit: false, subjectId: ok ? s!.subjectId : null, gradeLevel: ok ? s!.gradeLevel : null, sectionLabel: s?.sectionLabel ?? null });
+      }
+    }
+    if (new Set(entries.map((e) => e.courseId)).size !== entries.length) throw new BadRequestException('Each course can only be imported once.');
+    for (const e of entries) {
+      if (!courses.some((c) => c.id === e.courseId)) throw new BadRequestException(`Course ${e.courseId} is not one of your Classroom courses.`);
+    }
+    const schoolSubjects = new Set((await this.prisma.subject.findMany({ where: { schoolId: actor.schoolId }, select: { id: true } })).map((s) => s.id));
+    for (const e of entries) {
+      if (e.subjectId && !schoolSubjects.has(e.subjectId)) throw new BadRequestException('Unknown subject for this school.');
+    }
+
     const results: SyncResult[] = [];
-    for (const courseId of courseIds) {
-      const course = courses.find((c) => c.id === courseId);
-      if (!course) throw new BadRequestException(`Course ${courseId} is not one of your Classroom courses.`);
-      let cls = await this.prisma.class.findUnique({ where: { classroomCourseId: courseId } });
+    const touched = new Set<string>();
+    for (const entry of entries) {
+      const course = courses.find((c) => c.id === entry.courseId)!;
+      let cls = await this.prisma.class.findUnique({ where: { classroomCourseId: entry.courseId } });
       if (cls) {
         if (cls.schoolId !== actor.schoolId) throw new ForbiddenException('This course belongs to another school.');
         const link = await this.prisma.classTeacher.findUnique({ where: { classId_teacherId: { classId: cls.id, teacherId: a.userId } } });
@@ -110,15 +192,24 @@ export class ClassroomService {
           data: {
             schoolId: actor.schoolId,
             name: course.name,
-            gradeLevel: course.gradeLevel ?? null,
-            classroomCourseId: courseId,
+            gradeLevel: entry.gradeLevel ?? course.gradeLevel ?? null,
+            classroomCourseId: entry.courseId,
             teachers: { create: { teacherId: a.userId, type: 'OWNER' } },
           },
         });
       }
-      results.push(await this.syncClass(cls.id, creds));
+      // Explicit choices move the section; suggestions only fill sections that have no course yet.
+      let courseId = cls.courseId;
+      if (entry.subjectId && entry.gradeLevel && (entry.explicit || !cls.courseId)) {
+        const target = await this.courses.findOrCreate(actor.schoolId, entry.subjectId, entry.gradeLevel);
+        await this.courses.attach(cls.id, target, entry.sectionLabel ?? cls.sectionLabel ?? null);
+        courseId = target.id;
+      }
+      if (courseId) touched.add(courseId);
+      results.push({ ...(await this.syncClass(cls.id, creds)), courseId });
     }
     a.actor = undefined;
+    for (const id of touched) await this.courses.syncQuietly(id);
     return results;
   }
 

@@ -8,3 +8,4 @@ export * from './peer-sheet';
 export * from './parent-summary';
 export * from './group-session';
 export * from './translate-name';
+export * from './parse-courses';

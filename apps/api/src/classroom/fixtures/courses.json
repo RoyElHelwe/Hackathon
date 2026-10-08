@@ -31,6 +31,48 @@
           "name": "Omar Tannous",
           "email": "omar@students.tripoli-future.school"
         }
+      ],
+      "lessons": [
+        {
+          "kind": "ASSIGNMENT",
+          "title": "Angles worksheet",
+          "description": "Complete the worksheet.",
+          "materials": [
+            {
+              "type": "drive",
+              "id": "drive-angles-ws",
+              "title": "Angles worksheet",
+              "url": "https://docs.google.com/document/d/drive-angles-ws/edit",
+              "mimeType": "application/vnd.google-apps.document"
+            }
+          ],
+          "creationTime": "2026-09-17T09:00:00.000Z",
+          "id": "8b-item-1",
+          "alternateLink": "https://classroom.google.com/c/8b/m/8b-item-1"
+        },
+        {
+          "kind": "MATERIAL",
+          "title": "Areas of triangles",
+          "description": "Read the notes and watch the video before class.",
+          "materials": [
+            {
+              "type": "drive",
+              "id": "drive-area-notes",
+              "title": "Area notes.pdf",
+              "url": "https://drive.google.com/file/d/drive-area-notes/view",
+              "mimeType": "application/pdf"
+            },
+            {
+              "type": "youtube",
+              "id": "yt-area-1",
+              "title": "Area of a triangle",
+              "url": "https://www.youtube.com/watch?v=yt-area-1"
+            }
+          ],
+          "creationTime": "2026-09-10T09:00:00.000Z",
+          "id": "8b-item-2",
+          "alternateLink": "https://classroom.google.com/c/8b/m/8b-item-2"
+        }
       ]
     },
     {
@@ -170,6 +212,65 @@
           "name": "Lynn Sabbagh",
           "email": "lynn.sabbagh@students.tripoli-future.school"
         }
+      ],
+      "lessons": [
+        {
+          "kind": "MATERIAL",
+          "title": "Areas of triangles",
+          "description": "Read the notes and watch the video before class.",
+          "materials": [
+            {
+              "type": "drive",
+              "id": "drive-area-notes",
+              "title": "Area notes.pdf",
+              "url": "https://drive.google.com/file/d/drive-area-notes/view",
+              "mimeType": "application/pdf"
+            },
+            {
+              "type": "youtube",
+              "id": "yt-area-1",
+              "title": "Area of a triangle",
+              "url": "https://www.youtube.com/watch?v=yt-area-1"
+            }
+          ],
+          "creationTime": "2026-09-10T08:00:00.000Z",
+          "id": "8a-item-1",
+          "alternateLink": "https://classroom.google.com/c/8a/m/8a-item-1"
+        },
+        {
+          "kind": "ASSIGNMENT",
+          "title": "Angles worksheet",
+          "description": "Complete the worksheet.",
+          "materials": [
+            {
+              "type": "drive",
+              "id": "drive-angles-ws",
+              "title": "Angles worksheet",
+              "url": "https://docs.google.com/document/d/drive-angles-ws/edit",
+              "mimeType": "application/vnd.google-apps.document"
+            }
+          ],
+          "creationTime": "2026-09-17T08:00:00.000Z",
+          "id": "8a-item-2",
+          "alternateLink": "https://classroom.google.com/c/8a/m/8a-item-2"
+        },
+        {
+          "kind": "MATERIAL",
+          "title": "Similar triangles slides",
+          "description": "Slides from Tuesday.",
+          "materials": [
+            {
+              "type": "drive",
+              "id": "drive-similar-slides",
+              "title": "Similar triangles",
+              "url": "https://docs.google.com/presentation/d/drive-similar-slides/edit",
+              "mimeType": "application/vnd.google-apps.presentation"
+            }
+          ],
+          "creationTime": "2026-09-24T08:00:00.000Z",
+          "id": "8a-item-3",
+          "alternateLink": "https://classroom.google.com/c/8a/m/8a-item-3"
+        }
       ]
     },
     {
@@ -248,6 +349,95 @@
           "userId": "fake-9a-12",
           "name": "Lara Hamdan",
           "email": "lara.9a@students.tripoli-future.school"
+        }
+      ],
+      "lessons": []
+    },
+    {
+      "id": "fake-6a-math",
+      "name": "Grade 6 Math - A",
+      "section": "6A",
+      "teacherGoogleIds": [
+        "*"
+      ],
+      "teachers": [
+        {
+          "userId": "seed-rana",
+          "name": "Rana Khoury",
+          "email": "rana@tripoli-future.school"
+        }
+      ],
+      "students": [
+        {
+          "userId": "fake-6a-01",
+          "name": "Adam Rahal",
+          "email": "adam.6a@students.tripoli-future.school"
+        },
+        {
+          "userId": "fake-6a-02",
+          "name": "Celine Bou Saab",
+          "email": "celine.6a@students.tripoli-future.school"
+        }
+      ],
+      "lessons": [
+        {
+          "kind": "MATERIAL",
+          "title": "Fractions intro",
+          "description": "",
+          "materials": [
+            {
+              "type": "link",
+              "title": "Fractions game",
+              "url": "https://example.org/fractions"
+            }
+          ],
+          "creationTime": "2026-09-12T08:00:00.000Z",
+          "id": "6a-item-1",
+          "alternateLink": "https://classroom.google.com/c/6a/m/6a-item-1"
+        }
+      ]
+    },
+    {
+      "id": "fake-6b-math",
+      "name": "رياضيات السادس ب",
+      "section": "",
+      "teacherGoogleIds": [
+        "*"
+      ],
+      "teachers": [
+        {
+          "userId": "seed-rana",
+          "name": "Rana Khoury",
+          "email": "rana@tripoli-future.school"
+        }
+      ],
+      "students": [
+        {
+          "userId": "fake-6b-01",
+          "name": "Ali Merhi",
+          "email": "ali.6b@students.tripoli-future.school"
+        },
+        {
+          "userId": "fake-6b-02",
+          "name": "Lama Fakhoury",
+          "email": "lama.6b@students.tripoli-future.school"
+        }
+      ],
+      "lessons": [
+        {
+          "kind": "MATERIAL",
+          "title": "Fractions intro",
+          "description": "",
+          "materials": [
+            {
+              "type": "link",
+              "title": "Fractions game",
+              "url": "https://example.org/fractions"
+            }
+          ],
+          "creationTime": "2026-09-12T08:00:00.000Z",
+          "id": "6b-item-1",
+          "alternateLink": "https://classroom.google.com/c/6b/m/6b-item-1"
         }
       ]
     }

@@ -85,6 +85,8 @@ export class SchoolSubjectsService {
     await this.own(schoolId, subjectId);
     if (await this.prisma.class.count({ where: { subjectId } }))
       throw new ConflictException({ message: 'Classes still use this subject. Move them to another subject first.' });
+    if (await this.prisma.course.count({ where: { subjectId } }))
+      throw new ConflictException({ message: 'Courses still use this subject. Move their sections to another subject first.' });
     // Skills carry student work (missions, submissions, progress); the FK is RESTRICT as a backstop.
     if (await this.prisma.topic.count({ where: { subjectId } }))
       throw new ConflictException({ message: "This subject has skills and student work. It can't be deleted." });

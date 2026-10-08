@@ -79,6 +79,18 @@ enum SubmissionStatus {
   RETRY
 }
 
+enum LessonKind {
+  MATERIAL
+  ASSIGNMENT
+}
+
+enum LessonStatus {
+  NOT_GAMIFIED
+  GAMIFYING
+  READY
+  FAILED
+}
+
 enum MasteryState {
   LOCKED
   AVAILABLE
@@ -100,6 +112,7 @@ model School {
   uploads         Upload[]
   subjects        Subject[]
   teacherSubjects TeacherSubject[]
+  courses         Course[]
 }
 
 model User {
@@ -178,14 +191,74 @@ model Class {
   settings          Json      @default("{}")
   lastSyncedAt      DateTime?
   syncError         String?
+  courseId          String?
+  sectionLabel      String?
 
-  school      School         @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  subject     Subject?       @relation(fields: [subjectId], references: [id], onDelete: SetNull)
-  teachers    ClassTeacher[]
-  enrollments Enrollment[]
-  missions    Mission[]
+  school        School         @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  subject       Subject?       @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  course        Course?        @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  teachers      ClassTeacher[]
+  enrollments   Enrollment[]
+  missions      Mission[]
+  lessonSources LessonSource[]
 
   @@index([schoolId])
+  @@index([courseId])
+}
+
+/// One grade + subject in a school (e.g. "Grade 6 · Mathematics"). Sections (Classes) share its lessons.
+model Course {
+  id         String   @id @default(cuid())
+  schoolId   String
+  subjectId  String
+  gradeLevel Int
+  createdAt  DateTime @default(now())
+
+  school  School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  subject Subject  @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+  classes Class[]
+  lessons Lesson[]
+
+  @@unique([schoolId, subjectId, gradeLevel])
+}
+
+/// A Classroom post (material or assignment), deduped across the course's sections.
+model Lesson {
+  id               String       @id @default(cuid())
+  courseId         String
+  fingerprint      String
+  kind             LessonKind
+  title            String
+  description      String       @default("")
+  materials        Json         @default("[]")
+  position         Int          @default(0)
+  postedAt         DateTime
+  archivedAt       DateTime?
+  status           LessonStatus @default(NOT_GAMIFIED)
+  gamifyError      String?
+  contentChangedAt DateTime?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  course  Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  sources LessonSource[]
+
+  @@unique([courseId, fingerprint])
+  @@index([courseId, position])
+}
+
+model LessonSource {
+  id              String  @id @default(cuid())
+  lessonId        String
+  classId         String
+  classroomItemId String
+  classroomUrl    String?
+
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  class  Class  @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@unique([classId, classroomItemId])
+  @@index([lessonId])
 }
 
 model ClassTeacher {
@@ -248,6 +321,7 @@ model Subject {
   topics   Topic[]
   classes  Class[]
   teachers TeacherSubject[]
+  courses  Course[]
 
   @@index([schoolId])
 }

@@ -31,6 +31,27 @@ export interface CourseWorkInput {
   link: string;
 }
 
+export interface LessonMaterial {
+  type: 'drive' | 'youtube' | 'link' | 'form';
+  id?: string;
+  title: string;
+  url: string;
+  mimeType?: string | null;
+  thumbnailUrl?: string | null;
+}
+
+/** A published Classroom post: a Material (courseWorkMaterials) or an Assignment/question (courseWork). */
+export interface ClassroomLessonItem {
+  id: string;
+  kind: 'MATERIAL' | 'ASSIGNMENT';
+  title: string;
+  description: string;
+  materials: LessonMaterial[];
+  alternateLink: string | null;
+  /** ISO timestamp */
+  creationTime: string;
+}
+
 /** Raised when the teacher's Google token is expired or revoked (invalid_grant). */
 export class ClassroomAuthError extends Error {
   constructor(message = 'Google Classroom access expired') {
@@ -45,6 +66,8 @@ export interface ClassroomProvider {
   listTeachers(t: TeacherCredentials, courseId: string): Promise<ClassroomPerson[]>;
   createCourseWork(t: TeacherCredentials, courseId: string, input: CourseWorkInput): Promise<{ id: string }>;
   patchGrade(t: TeacherCredentials, courseId: string, courseWorkId: string, studentGoogleId: string, grade: number): Promise<void>;
+  /** Published materials + coursework of a course. */
+  listLessons(t: TeacherCredentials, courseId: string): Promise<ClassroomLessonItem[]>;
 }
 
 export const CLASSROOM_PROVIDER = Symbol('CLASSROOM_PROVIDER');

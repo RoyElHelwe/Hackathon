@@ -1,14 +1,24 @@
 import fixtures from './fixtures/courses.json';
-import { ClassroomAuthError, ClassroomCourse, ClassroomPerson, ClassroomProvider, CourseWorkInput, TeacherCredentials } from './classroom.provider';
+import {
+  ClassroomAuthError,
+  ClassroomCourse,
+  ClassroomLessonItem,
+  ClassroomPerson,
+  ClassroomProvider,
+  CourseWorkInput,
+  TeacherCredentials,
+} from './classroom.provider';
 
 interface FixtureCourse {
   id: string;
   name: string;
   section: string;
-  gradeLevel: number;
+  gradeLevel?: number;
   teacherGoogleIds: string[];
   teachers: ClassroomPerson[];
   students: ClassroomPerson[];
+  /** published posts (materials + assignments); mutable in tests */
+  lessons?: ClassroomLessonItem[];
 }
 
 export interface GradeCall {
@@ -20,7 +30,7 @@ export interface GradeCall {
 
 /**
  * Fixture-backed Classroom used in tests and as a demo fallback (CLASSROOM_PROVIDER=fake).
- * Rosters are mutable in memory so tests can add/remove students.
+ * Rosters and lessons are mutable in memory so tests can add/remove students and posts.
  */
 export class FakeClassroomProvider implements ClassroomProvider {
   readonly kind = 'fake' as const;
@@ -71,6 +81,22 @@ export class FakeClassroomProvider implements ClassroomProvider {
     const id = `fake-cw-${this.courseWork.length + 1}-${Date.now()}`;
     this.courseWork.push({ id, courseId, input });
     return { id };
+  }
+
+  async listLessons(t: TeacherCredentials, courseId: string): Promise<ClassroomLessonItem[]> {
+    this.check(t);
+    const own = this.courseWork
+      .filter((w) => w.courseId === courseId)
+      .map((w) => ({
+        id: w.id,
+        kind: 'ASSIGNMENT' as const,
+        title: w.input.title,
+        description: w.input.description,
+        materials: [{ type: 'link' as const, title: w.input.title, url: w.input.link }],
+        alternateLink: null,
+        creationTime: new Date().toISOString(),
+      }));
+    return [...structuredClone(this.course(courseId).lessons ?? []), ...own];
   }
 
   async patchGrade(t: TeacherCredentials, courseId: string, courseWorkId: string, studentGoogleId: string, grade: number) {

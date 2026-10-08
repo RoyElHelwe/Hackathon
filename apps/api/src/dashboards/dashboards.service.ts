@@ -41,7 +41,10 @@ export class DashboardsService {
     await this.actors.assert(a, 'read', 'class', { classId });
     const actor = await this.actors.actor(a);
     if (actor.role !== 'TEACHER' && actor.role !== 'DIRECTOR' && actor.role !== 'ADMIN') throw new ForbiddenException();
-    const cls = await this.prisma.class.findUniqueOrThrow({ where: { id: classId } });
+    const cls = await this.prisma.class.findUniqueOrThrow({
+      where: { id: classId },
+      include: { course: { include: { subject: { select: { id: true, name: true, color: true } } } } },
+    });
     const topics = await this.classTopics(classId);
     const enr = await this.prisma.enrollment.findMany({ where: { classId, status: 'ACTIVE' }, include: { student: true }, orderBy: { student: { name: 'asc' } } });
     const stuck = await this.stuck.forClass(classId);
@@ -66,7 +69,18 @@ export class DashboardsService {
     const validatedWeek = await this.prisma.submission.count({ where: { mission: { classId }, studentId: { in: studentIds }, status: 'VALIDATED', validatedAt: { gte: since } } });
     const pendingReviews = await this.prisma.submission.count({ where: { mission: { classId }, studentId: { in: studentIds }, status: 'TEACHER_REVIEW' } });
     return {
-      class: { id: cls.id, name: cls.name, syncError: cls.syncError, lastSyncedAt: cls.lastSyncedAt, settings: cls.settings, classroomCourseId: cls.classroomCourseId },
+      class: {
+        id: cls.id,
+        name: cls.name,
+        syncError: cls.syncError,
+        lastSyncedAt: cls.lastSyncedAt,
+        settings: cls.settings,
+        classroomCourseId: cls.classroomCourseId,
+        subjectId: cls.subjectId,
+        gradeLevel: cls.gradeLevel,
+        sectionLabel: cls.sectionLabel,
+        course: cls.course ? { id: cls.course.id, gradeLevel: cls.course.gradeLevel, subject: cls.course.subject } : null,
+      },
       topics: topics.map((t) => ({ id: t.id, key: t.key, name: t.name, subjectKey: t.subject.key, color: t.subject.color })),
       students: enr.map((e) => ({ id: e.studentId, name: e.student.name, avatarUrl: e.student.avatarUrl, stuck: stuck.some((s) => s.studentId === e.studentId) })),
       cells,

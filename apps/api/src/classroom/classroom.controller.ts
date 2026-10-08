@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Post, Res } from '@nestjs/common';
 import type { Response } from 'express';
-import { importClassesBody } from '@tajriba/shared';
+import { importClassesBody, ImportClassesBody } from '@tajriba/shared';
 import { classroomAuthUrl } from '../auth/auth.controller';
 import { AuthService } from '../auth/auth.service';
 import { config } from '../config';
@@ -35,7 +35,7 @@ export class ClassroomController {
 
   @Can('write', 'class')
   @Post('import')
-  import(@Auth() a: AuthContext, @Body(new ZodPipe(importClassesBody)) body: { courseIds: string[] }) {
-    return this.classroom.import(a, body.courseIds);
+  import(@Auth() a: AuthContext, @Body(new ZodPipe(importClassesBody)) body: ImportClassesBody) {
+    return this.classroom.import(a, body);
   }
 }

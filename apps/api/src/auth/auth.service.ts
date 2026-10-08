@@ -13,6 +13,9 @@ export const CLASSROOM_SCOPES = [
   'https://www.googleapis.com/auth/classroom.rosters.readonly',
   'https://www.googleapis.com/auth/classroom.profile.emails',
   'https://www.googleapis.com/auth/classroom.coursework.students',
+  // Lesson sync (Phase 2): read published Materials; Drive is used to read lesson files (Phase 3).
+  'https://www.googleapis.com/auth/classroom.courseworkmaterials.readonly',
+  'https://www.googleapis.com/auth/drive.readonly',
 ];
 
 export interface GoogleProfile {

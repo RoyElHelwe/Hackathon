@@ -34,6 +34,16 @@ async function saveIllustration(prisma: PrismaClient, ownerId: string, schoolId:
   return up.id;
 }
 
+/** Demo sections join their "Grade N · Mathematics" course (same upsert as CoursesService.findOrCreate). */
+async function attachCourse(prisma: PrismaClient, classId: string, schoolId: string, subjectId: string, gradeLevel: number, sectionLabel: string) {
+  const course = await prisma.course.upsert({
+    where: { schoolId_subjectId_gradeLevel: { schoolId, subjectId, gradeLevel } },
+    update: {},
+    create: { schoolId, subjectId, gradeLevel },
+  });
+  await prisma.class.update({ where: { id: classId }, data: { courseId: course.id, subjectId, gradeLevel, sectionLabel } });
+}
+
 /** Idempotent demo world (CLAUDE.md §13). Static data is upserted; seeded users' activity is reset and recreated. */
 export async function seed(prisma: PrismaClient, opts: { quiet?: boolean } = {}) {
   const log = (m: string) => !opts.quiet && console.log(m);
@@ -127,6 +137,7 @@ export async function seed(prisma: PrismaClient, opts: { quiet?: boolean } = {})
     update: { syncError: null, lastSyncedAt: new Date(now - 5 * 60_000), settings: { leaderboardEnabled: false }, subjectId: subjects.math },
     create: { schoolId: school.id, name: '8B Math', gradeLevel: 8, classroomCourseId: 'fake-8b-math', settings: { leaderboardEnabled: false }, lastSyncedAt: new Date(now - 5 * 60_000), subjectId: subjects.math },
   });
+  await attachCourse(prisma, cls.id, school.id, subjects.math, 8, 'B');
   await prisma.classTeacher.upsert({
     where: { classId_teacherId: { classId: cls.id, teacherId: users.rana } },
     update: { type: 'OWNER' },
@@ -326,14 +337,15 @@ async function seedSchoolLife(
   const rand = rng(2036);
   const geoOrder = ['geo.area', 'geo.angles', 'geo.similar', 'geo.circles', 'geo.volume', 'geo.pythagoras'];
   const classes = [
-    { name: '7A Math', grade: 7, size: 12, skill: 0.35 },
-    { name: '9B Math', grade: 9, size: 10, skill: 0.7 },
+    { name: '7A Math', grade: 7, section: 'A', size: 12, skill: 0.35 },
+    { name: '9B Math', grade: 9, section: 'B', size: 10, skill: 0.7 },
   ];
   let n = 0;
   for (const c of classes) {
     const existing = await prisma.class.findFirst({ where: { schoolId: ctx.schoolId, name: c.name } });
     const cls = existing ?? (await prisma.class.create({ data: { schoolId: ctx.schoolId, name: c.name, gradeLevel: c.grade, settings: { leaderboardEnabled: true }, subjectId: ctx.mathSubjectId } }));
     if (existing) await prisma.class.update({ where: { id: cls.id }, data: { subjectId: ctx.mathSubjectId } });
+    await attachCourse(prisma, cls.id, ctx.schoolId, ctx.mathSubjectId, c.grade, c.section);
     await prisma.classTeacher.upsert({
       where: { classId_teacherId: { classId: cls.id, teacherId: ctx.teacherId } },
       update: {},

@@ -6,6 +6,7 @@ import { AuthModule } from './auth/auth.module';
 import { ClassesModule } from './classes/classes.module';
 import { ClassroomModule } from './classroom/classroom.module';
 import { PolicyGuard, SessionGuard } from './common/guards';
+import { CoursesModule } from './courses/courses.module';
 import { DashboardsModule } from './dashboards/dashboards.module';
 import { FamiliesModule } from './families/families.module';
 import { GamificationModule } from './gamification/gamification.module';
@@ -30,6 +31,7 @@ import { UploadsModule } from './uploads/uploads.module';
     NotificationsModule,
     AiModule,
     ClassroomModule,
+    CoursesModule,
     ProgressModule,
     GamificationModule,
     UploadsModule,
