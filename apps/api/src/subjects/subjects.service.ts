@@ -4,6 +4,8 @@ import { ActorService } from '../common/actor.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProgressService } from '../progress/progress.service';
 
+const pickName = (n: unknown) => ((n as { en?: string })?.en ?? '');
+
 @Injectable()
 export class SubjectsService {
   constructor(
@@ -12,12 +14,19 @@ export class SubjectsService {
     private readonly progress: ProgressService,
   ) {}
 
-  async list() {
-    const subjects = await this.prisma.subject.findMany({ include: { _count: { select: { topics: true } } }, orderBy: { key: 'asc' } });
-    const order = ['math', 'physics', 'chemistry', 'biology', 'history', 'languages'];
+  async list(a: AuthContext) {
+    const actor = await this.actors.actor(a);
+    const subjects = await this.prisma.subject.findMany({
+      where: { schoolId: actor.schoolId },
+      include: { _count: { select: { topics: true } } },
+    });
     return subjects
-      .sort((a, b) => order.indexOf(a.key) - order.indexOf(b.key))
+      .sort((x, y) => pickName(x.name).localeCompare(pickName(y.name)))
       .map((s) => ({ id: s.id, key: s.key, name: s.name, color: s.color, icon: s.icon, topicCount: s._count.topics }));
+  }
+
+  async schoolSubjectIds(schoolId: string) {
+    return (await this.prisma.subject.findMany({ where: { schoolId }, select: { id: true } })).map((s) => s.id);
   }
 
   async enrolledClassIds(studentId: string) {

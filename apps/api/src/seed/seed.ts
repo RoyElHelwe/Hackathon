@@ -86,8 +86,19 @@ export async function seed(prisma: PrismaClient, opts: { quiet?: boolean } = {})
   // ---------- Content ----------
   const subjects: Ids = {};
   for (const s of SUBJECTS) {
-    const row = await prisma.subject.upsert({ where: { key: s.key }, update: { name: s.name, color: s.color, icon: s.icon }, create: s });
+    const row = await prisma.subject.upsert({
+      where: { key: s.key },
+      update: { name: s.name, color: s.color, icon: s.icon, schoolId: school.id },
+      create: { ...s, schoolId: school.id },
+    });
     subjects[s.key] = row.id;
+  }
+  for (const handle of ['rana', 'hassan'] as const) {
+    await prisma.teacherSubject.upsert({
+      where: { teacherId_subjectId: { teacherId: users[handle], subjectId: subjects.math } },
+      update: {},
+      create: { teacherId: users[handle], schoolId: school.id, subjectId: subjects.math },
+    });
   }
   const topics: Ids = {};
   for (const t of TOPICS) {
@@ -111,8 +122,8 @@ export async function seed(prisma: PrismaClient, opts: { quiet?: boolean } = {})
   // ---------- Class ----------
   const cls = await prisma.class.upsert({
     where: { classroomCourseId: 'fake-8b-math' },
-    update: { syncError: null, lastSyncedAt: new Date(now - 5 * 60_000), settings: { leaderboardEnabled: false } },
-    create: { schoolId: school.id, name: '8B Math', gradeLevel: 8, classroomCourseId: 'fake-8b-math', settings: { leaderboardEnabled: false }, lastSyncedAt: new Date(now - 5 * 60_000) },
+    update: { syncError: null, lastSyncedAt: new Date(now - 5 * 60_000), settings: { leaderboardEnabled: false }, subjectId: subjects.math },
+    create: { schoolId: school.id, name: '8B Math', gradeLevel: 8, classroomCourseId: 'fake-8b-math', settings: { leaderboardEnabled: false }, lastSyncedAt: new Date(now - 5 * 60_000), subjectId: subjects.math },
   });
   await prisma.classTeacher.upsert({
     where: { classId_teacherId: { classId: cls.id, teacherId: users.rana } },
@@ -284,7 +295,7 @@ export async function seed(prisma: PrismaClient, opts: { quiet?: boolean } = {})
     data: { userId: users.director, type: 'MEMBER_PENDING', payload: { membershipId: pendingMembership.id, name: 'Nadine Fakhoury', role: 'TEACHER' }, dedupeKey: `pending:${pendingMembership.id}:${users.director}` },
   });
 
-  await seedSchoolLife(prisma, { schoolId: school.id, teacherId: users.hassan, topics, missions: Object.fromEntries(Object.entries(missions).map(([k, v]) => [k, v.id])), now });
+  await seedSchoolLife(prisma, { schoolId: school.id, teacherId: users.hassan, topics, missions: Object.fromEntries(Object.entries(missions).map(([k, v]) => [k, v.id])), now, mathSubjectId: subjects.math });
 
   log(`Seeded "${school.name}" (${school.schoolCode}): ${Object.keys(users).length} users, ${Object.keys(missions).length} missions, class ${cls.name}.`);
   return { school, users, class: cls, missions, topics, subjects };
@@ -308,7 +319,7 @@ const LAST = ['Khoury', 'Haddad', 'Daher', 'Rizk', 'Salam', 'Karam', 'Nasr', 'Ha
 /** A second teacher with two more classes and realistic progress, so the director dashboard has a school to show. */
 async function seedSchoolLife(
   prisma: PrismaClient,
-  ctx: { schoolId: string; teacherId: string; topics: Ids; missions: Record<string, string>; now: number },
+  ctx: { schoolId: string; teacherId: string; topics: Ids; missions: Record<string, string>; now: number; mathSubjectId: string },
 ) {
   const rand = rng(2036);
   const geoOrder = ['geo.area', 'geo.angles', 'geo.similar', 'geo.circles', 'geo.volume', 'geo.pythagoras'];
@@ -319,7 +330,8 @@ async function seedSchoolLife(
   let n = 0;
   for (const c of classes) {
     const existing = await prisma.class.findFirst({ where: { schoolId: ctx.schoolId, name: c.name } });
-    const cls = existing ?? (await prisma.class.create({ data: { schoolId: ctx.schoolId, name: c.name, gradeLevel: c.grade, settings: { leaderboardEnabled: true } } }));
+    const cls = existing ?? (await prisma.class.create({ data: { schoolId: ctx.schoolId, name: c.name, gradeLevel: c.grade, settings: { leaderboardEnabled: true }, subjectId: ctx.mathSubjectId } }));
+    if (existing) await prisma.class.update({ where: { id: cls.id }, data: { subjectId: ctx.mathSubjectId } });
     await prisma.classTeacher.upsert({
       where: { classId_teacherId: { classId: cls.id, teacherId: ctx.teacherId } },
       update: {},
