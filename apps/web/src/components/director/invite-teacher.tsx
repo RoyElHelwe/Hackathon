@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input, Label } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/misc';
 import { api, ApiError } from '@/lib/api';
 import { useApi } from '@/lib/hooks';
 import { CopyButton } from './copy-button';
@@ -19,8 +20,14 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export function InviteTeacher({ schoolId }: { schoolId: string }) {
   const t = useTranslations('director.members');
   const ts = useTranslations('director.subjects');
+  const tc = useTranslations('common');
   const locale = useLocale();
-  const { data: subjects } = useApi<SchoolSubject[]>(`/schools/${schoolId}/subjects`);
+  const {
+    data: subjects,
+    isLoading: subjectsLoading,
+    error: subjectsError,
+    refetch: refetchSubjects,
+  } = useApi<SchoolSubject[]>(`/schools/${schoolId}/subjects`);
   const options = subjects ?? [];
   const [email, setEmail] = useState('');
   const [subjectIds, setSubjectIds] = useState<string[]>([]);
@@ -73,7 +80,16 @@ export function InviteTeacher({ schoolId }: { schoolId: string }) {
           </div>
           <div>
             <Label>{t('subjectsLabel')}</Label>
-            {options.length === 0 ? (
+            {subjectsLoading ? (
+              <Skeleton className="mt-1 h-10 w-full" />
+            ) : subjectsError ? (
+              <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-danger">
+                <span>{subjectsError instanceof ApiError ? subjectsError.message : tc('error')}</span>
+                <Button type="button" variant="ghost" size="sm" onClick={() => refetchSubjects()}>
+                  {tc('retry')}
+                </Button>
+              </div>
+            ) : options.length === 0 ? (
               <p className="mt-1 text-sm text-muted-foreground">
                 {t('noSubjectsYet')}{' '}
                 <Link href="/director/subjects" className="font-bold text-primary underline">

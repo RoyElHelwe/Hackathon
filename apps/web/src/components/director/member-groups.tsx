@@ -26,7 +26,12 @@ export function MemberGroups({ schoolId }: { schoolId: string }) {
   const tr = useTranslations('common.roles');
   const locale = useLocale();
   const { data, isLoading, error, refetch } = useApi<Member[]>(membersPath(schoolId, 'APPROVED'));
-  const { data: subjectData } = useApi<SchoolSubject[]>(`/schools/${schoolId}/subjects`);
+  const {
+    data: subjectData,
+    isLoading: subjectsLoading,
+    error: subjectsError,
+    refetch: refetchSubjects,
+  } = useApi<SchoolSubject[]>(`/schools/${schoolId}/subjects`);
   const subjectOptions = subjectData ?? [];
   const groups = ORDER.map((role) => ({ role, items: (data ?? []).filter((m) => m.role === role).sort((a, b) => a.user.name.localeCompare(b.user.name)) })).filter(
     (g) => g.items.length || g.role === 'TEACHER',
@@ -53,7 +58,16 @@ export function MemberGroups({ schoolId }: { schoolId: string }) {
             </TabsList>
             {groups.map((g) => (
               <TabsContent key={g.role} value={g.role}>
-                <RoleList items={g.items} role={g.role} locale={locale} subjectOptions={subjectOptions} onSubjectsSaved={refetch} />
+                <RoleList
+                  items={g.items}
+                  role={g.role}
+                  locale={locale}
+                  subjectOptions={subjectOptions}
+                  subjectsLoading={subjectsLoading}
+                  subjectsError={subjectsError}
+                  onRetrySubjects={refetchSubjects}
+                  onSubjectsSaved={refetch}
+                />
               </TabsContent>
             ))}
           </Tabs>
@@ -68,12 +82,18 @@ function RoleList({
   role,
   locale,
   subjectOptions,
+  subjectsLoading,
+  subjectsError,
+  onRetrySubjects,
   onSubjectsSaved,
 }: {
   items: Member[];
   role: Role;
   locale: string;
   subjectOptions: SchoolSubject[];
+  subjectsLoading: boolean;
+  subjectsError: unknown;
+  onRetrySubjects: () => void;
   onSubjectsSaved: () => void;
 }) {
   const t = useTranslations('director.members');
@@ -97,7 +117,15 @@ function RoleList({
                   {m.subjects.map((s) => (
                     <SubjectChip key={s.id} name={s.name} color={subjectOptions.find((o) => o.id === s.id)?.color ?? 'violet'} locale={locale} />
                   ))}
-                  <TeacherSubjectsEditor member={m} options={subjectOptions} locale={locale} onSaved={onSubjectsSaved} />
+                  <TeacherSubjectsEditor
+                    member={m}
+                    options={subjectOptions}
+                    optionsLoading={subjectsLoading}
+                    optionsError={subjectsError}
+                    onRetryOptions={onRetrySubjects}
+                    locale={locale}
+                    onSaved={onSubjectsSaved}
+                  />
                 </div>
               )}
             </div>
@@ -117,8 +145,25 @@ function RoleList({
 }
 
 /** Ghost button + dialog to edit which subjects a teacher is assigned. */
-function TeacherSubjectsEditor({ member, options, locale, onSaved }: { member: Member; options: SchoolSubject[]; locale: string; onSaved: () => void }) {
+function TeacherSubjectsEditor({
+  member,
+  options,
+  optionsLoading,
+  optionsError,
+  onRetryOptions,
+  locale,
+  onSaved,
+}: {
+  member: Member;
+  options: SchoolSubject[];
+  optionsLoading: boolean;
+  optionsError: unknown;
+  onRetryOptions: () => void;
+  locale: string;
+  onSaved: () => void;
+}) {
   const t = useTranslations('director.members');
+  const tc = useTranslations('common');
   const [open, setOpen] = useState(false);
   const [ids, setIds] = useState<string[]>(member.subjects.map((s) => s.id));
   const [busy, setBusy] = useState(false);
@@ -157,7 +202,16 @@ function TeacherSubjectsEditor({ member, options, locale, onSaved }: { member: M
         <DialogTitle>{t('editSubjects')}</DialogTitle>
         <DialogDescription>{member.user.name}</DialogDescription>
         <div className="mt-4 space-y-3">
-          {options.length === 0 ? (
+          {optionsLoading ? (
+            <Skeleton className="h-10 w-full" />
+          ) : optionsError ? (
+            <div className="flex flex-wrap items-center gap-2 text-sm text-danger">
+              <span>{optionsError instanceof ApiError ? optionsError.message : tc('error')}</span>
+              <Button type="button" variant="ghost" size="sm" onClick={onRetryOptions}>
+                {tc('retry')}
+              </Button>
+            </div>
+          ) : options.length === 0 ? (
             <p className="text-sm text-muted-foreground">{t('noSubjectsYet')}</p>
           ) : (
             <SubjectPicker options={options} value={ids} onChange={setIds} locale={locale} />
