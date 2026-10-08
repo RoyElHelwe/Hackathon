@@ -3,7 +3,8 @@
 set -euo pipefail
 WEB_PORT="${PORT:-3000}"
 
-trap 'kill 0' TERM INT
+# Reset the trap first: `kill 0` also signals this shell, which would otherwise re-enter the trap forever.
+trap 'trap - TERM INT; kill 0' TERM INT
 
 (cd /app/apps/api && PORT=4000 exec node --max-old-space-size=192 dist/main.js) &
 (cd /app/apps/web && PORT="$WEB_PORT" exec node --max-old-space-size=224 node_modules/next/dist/bin/next start -p "$WEB_PORT" -H 0.0.0.0) &
