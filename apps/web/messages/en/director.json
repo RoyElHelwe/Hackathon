@@ -1,5 +1,5 @@
 {
-  "nav": { "overview": "Overview", "coverage": "Coverage", "classes": "Classes", "members": "Members", "settings": "Settings" },
+  "nav": { "overview": "Overview", "subjects": "Subjects", "coverage": "Coverage", "classes": "Classes", "members": "Members", "settings": "Settings" },
   "overview": {
     "title": "School overview",
     "subtitle": "{school} · {city}",
@@ -85,6 +85,24 @@
     "copyLink": "Copy link",
     "invalidEmail": "Please enter a valid email address.",
     "error": "That didn't work. Please try again."
+  },
+  "subjects": {
+    "title": "Subjects",
+    "subtitle": "The subjects your school teaches. Teachers are invited per subject, and imported classes are matched to them.",
+    "add": "Add subject",
+    "namePlaceholder": "e.g. Physics",
+    "color": "Color",
+    "icon": "Icon",
+    "save": "Save",
+    "rename": "Edit",
+    "delete": "Delete",
+    "deleteBlocked": "Classes still use this subject",
+    "empty": "No subjects yet. Add the subjects your school teaches.",
+    "classes": "{n, plural, one {# class} other {# classes}}",
+    "teachers": "{n, plural, one {# teacher} other {# teachers}}",
+    "nudgeTitle": "Add your school's subjects",
+    "nudgeBody": "Teachers are invited per subject, and Tajriba uses them to sort imported classes.",
+    "nudgeCta": "Add subjects"
   },
   "settings": {
     "title": "School settings",

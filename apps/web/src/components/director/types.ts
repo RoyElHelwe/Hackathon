@@ -55,6 +55,16 @@ export interface DirectorDashboard {
   classList: { id: string; name: string }[];
 }
 
+export interface SchoolSubject {
+  id: string;
+  key: string;
+  name: { en: string; ar?: string };
+  color: string;
+  icon: string;
+  classCount: number;
+  teacherCount: number;
+}
+
 export interface Member {
   id: string;
   role: Role;
