@@ -313,14 +313,6 @@ async function seedSchoolLife(
 ) {
   const rand = rng(2036);
   const geoOrder = ['geo.area', 'geo.angles', 'geo.similar', 'geo.circles', 'geo.volume', 'geo.pythagoras'];
-  const topicMission: Record<string, string> = {
-    'geo.area': ctx.missions['m.area.tile'],
-    'geo.angles': ctx.missions['m.angles.ramp'],
-    'geo.similar': ctx.missions['m.similar.shadows'],
-    'geo.circles': ctx.missions['m.circles.pizza'],
-    'geo.volume': ctx.missions['m.volume.tank'],
-    'geo.pythagoras': ctx.missions['m.pythagoras.tv'],
-  };
   const classes = [
     { name: '7A Math', grade: 7, size: 12, skill: 0.35 },
     { name: '9B Math', grade: 9, size: 10, skill: 0.7 },
@@ -334,6 +326,18 @@ async function seedSchoolLife(
       update: {},
       create: { classId: cls.id, teacherId: ctx.teacherId, type: 'OWNER' },
     });
+    // Each class gets its own copy of the geometry missions.
+    const topicMission: Record<string, string> = {};
+    const slug = c.name.toLowerCase().replace(/\s+/g, '');
+    for (const [key, src] of Object.entries(ctx.missions)) {
+      if (!key.startsWith('m.') || key === 'm.family.balcony') continue;
+      const base = await prisma.mission.findUniqueOrThrow({ where: { id: src } });
+      if (!geoOrder.some((g) => g === (TOPICS.find((t) => ctx.topics[t.key] === base.topicId)?.key))) continue;
+      const { id: _id, key: _k, classId: _c, createdAt: _ca, classroomCourseWorkId: _cw, ...rest } = base;
+      const data = { ...rest, createdById: ctx.teacherId, classId: cls.id, title: rest.title as object, story: rest.story as object, steps: rest.steps as object, miniLesson: rest.miniLesson as object, proofSpec: rest.proofSpec as object, rubric: rest.rubric as object, safetyNotes: rest.safetyNotes as object, safetyCheck: (rest.safetyCheck ?? undefined) as object | undefined };
+      const copy = await prisma.mission.upsert({ where: { key: `${key}.${slug}` }, update: data, create: { key: `${key}.${slug}`, ...data } });
+      topicMission[TOPICS.find((t) => ctx.topics[t.key] === base.topicId)!.key] = copy.id;
+    }
     for (let i = 0; i < c.size; i++, n++) {
       const name = `${FIRST[n % FIRST.length]} ${LAST[(n * 7) % LAST.length]}`;
       const googleId = `seed-life-${n}`;

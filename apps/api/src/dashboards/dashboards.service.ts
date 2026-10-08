@@ -56,14 +56,15 @@ export class DashboardsService {
       }
     }
     const recent = await this.prisma.submission.findMany({
-      where: { mission: { classId }, status: { not: 'IN_PROGRESS' } },
+      where: { mission: { classId }, studentId: { in: enr.map((e) => e.studentId) }, status: { not: 'IN_PROGRESS' } },
       include: { student: { select: { name: true, avatarUrl: true } }, mission: { select: { title: true } } },
       orderBy: [{ validatedAt: { sort: 'desc', nulls: 'last' } }, { submittedAt: { sort: 'desc', nulls: 'last' } }],
       take: 12,
     });
     const since = new Date(Date.now() - WEEK_MS);
-    const validatedWeek = await this.prisma.submission.count({ where: { mission: { classId }, status: 'VALIDATED', validatedAt: { gte: since } } });
-    const pendingReviews = await this.prisma.submission.count({ where: { mission: { classId }, status: 'TEACHER_REVIEW' } });
+    const studentIds = enr.map((e) => e.studentId);
+    const validatedWeek = await this.prisma.submission.count({ where: { mission: { classId }, studentId: { in: studentIds }, status: 'VALIDATED', validatedAt: { gte: since } } });
+    const pendingReviews = await this.prisma.submission.count({ where: { mission: { classId }, studentId: { in: studentIds }, status: 'TEACHER_REVIEW' } });
     return {
       class: { id: cls.id, name: cls.name, syncError: cls.syncError, lastSyncedAt: cls.lastSyncedAt, settings: cls.settings, classroomCourseId: cls.classroomCourseId },
       topics: topics.map((t) => ({ id: t.id, key: t.key, name: t.name, subjectKey: t.subject.key, color: t.subject.color })),
