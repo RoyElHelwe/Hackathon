@@ -1,0 +1,10 @@
+{
+  "tabs": { "home": "الرئيسية", "map": "الخريطة", "missions": "المهمّات", "reviews": "التقييمات", "me": "أنا" },
+  "level": "المستوى",
+  "levelUp": "مستوى جديد!",
+  "levelUpBody": "وصلت إلى المستوى {level}. تابع الاستكشاف!",
+  "awesome": "رائع!",
+  "nextLevelAt": "المستوى التالي عند {xp} نقطة",
+  "streakDays": "سلسلة {days} أيام",
+  "walletPoints": "{points} نقاط تقييم"
+}

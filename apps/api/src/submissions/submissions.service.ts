@@ -129,6 +129,31 @@ export class SubmissionsService {
     }));
   }
 
+  /** A student's mission history, for their teachers, parents and the director. */
+  async forStudent(a: AuthContext, studentId: string) {
+    const enr = await this.prisma.enrollment.findMany({ where: { studentId } });
+    await this.actors.assert(a, 'read', 'progress', { ownerId: studentId, ownerClassIds: enr.map((e) => e.classId) });
+    const subs = await this.prisma.submission.findMany({
+      where: { studentId },
+      include: { mission: { include: { topic: { include: { subject: true } } } }, peerEvaluations: { include: { evaluator: { select: { name: true } } }, orderBy: { assignedAt: 'desc' }, take: 1 } },
+      orderBy: { startedAt: 'desc' },
+    });
+    return subs.map((s) => ({
+      id: s.id,
+      status: s.status,
+      attempt: s.attempt,
+      startedAt: s.startedAt,
+      submittedAt: s.submittedAt,
+      validatedAt: s.validatedAt,
+      finalScore: s.finalScore,
+      aiScore: (s.aiCheck as { score?: number } | null)?.score ?? null,
+      photoUploadIds: s.photoUploadIds,
+      gradeSynced: s.gradeSynced,
+      evaluatorFirstName: s.peerEvaluations[0]?.evaluator.name.split(' ')[0] ?? null,
+      mission: { id: s.mission.id, title: s.mission.title, audience: s.mission.audience, topicKey: s.mission.topic.key, topicName: s.mission.topic.name, subjectKey: s.mission.topic.subject.key },
+    }));
+  }
+
   async get(a: AuthContext, id: string) {
     const s = await this.load(id);
     const assignedToActor = s.peerEvaluations.some((p) => p.evaluatorId === a.userId);

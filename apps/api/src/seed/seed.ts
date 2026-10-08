@@ -19,6 +19,7 @@ export const SEED_USERS = [
   { handle: 'karim', googleId: 'seed-karim', email: 'karim@students.tripoli-future.school', name: 'Karim Hamadeh', locale: 'en', roles: [['STUDENT', 'APPROVED']] },
   { handle: 'omar', googleId: 'seed-omar', email: 'omar@students.tripoli-future.school', name: 'Omar Tannous', locale: 'en', roles: [['STUDENT', 'APPROVED']] },
   { handle: 'mona', googleId: 'seed-mona', email: 'mona.saliba@gmail.example', name: 'Mona Saliba', locale: 'ar', roles: [['PARENT', 'APPROVED']] },
+  { handle: 'hassan', googleId: 'seed-hassan', email: 'hassan@tripoli-future.school', name: 'Hassan Merhi', locale: 'en', roles: [['TEACHER', 'APPROVED']] },
   { handle: 'pending_teacher', googleId: 'seed-nadine', email: 'nadine@tripoli-future.school', name: 'Nadine Fakhoury', locale: 'en', roles: [['TEACHER', 'PENDING']] },
 ] as const;
 
@@ -286,6 +287,132 @@ export async function seed(prisma: PrismaClient, opts: { quiet?: boolean } = {})
     data: { userId: users.director, type: 'MEMBER_PENDING', payload: { membershipId: pendingMembership.id, name: 'Nadine Fakhoury', role: 'TEACHER' }, dedupeKey: `pending:${pendingMembership.id}:${users.director}` },
   });
 
+  await seedSchoolLife(prisma, { schoolId: school.id, teacherId: users.hassan, topics, missions: Object.fromEntries(Object.entries(missions).map(([k, v]) => [k, v.id])), now });
+
   log(`Seeded "${school.name}" (${school.schoolCode}): ${Object.keys(users).length} users, ${Object.keys(missions).length} missions, class ${cls.name}.`);
   return { school, users, class: cls, missions, topics, subjects };
+}
+
+/** Deterministic PRNG so the seeded school looks the same on every reset. */
+function rng(seedN: number) {
+  let a = seedN;
+  return () => {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const FIRST = ['Ali', 'Rita', 'Samir', 'Nadia', 'Fadi', 'Lina', 'Hussein', 'Christelle', 'Walid', 'Mira', 'Jad', 'Tala', 'Nour', 'Rayan', 'Celine', 'Yasmin', 'Mohamad', 'Perla', 'Wissam', 'Sarah', 'Karam', 'Joelle'];
+const LAST = ['Khoury', 'Haddad', 'Daher', 'Rizk', 'Salam', 'Karam', 'Nasr', 'Hamdan', 'Saad', 'Aoun', 'Bitar', 'Jaber'];
+
+/** A second teacher with two more classes and realistic progress, so the director dashboard has a school to show. */
+async function seedSchoolLife(
+  prisma: PrismaClient,
+  ctx: { schoolId: string; teacherId: string; topics: Ids; missions: Record<string, string>; now: number },
+) {
+  const rand = rng(2036);
+  const geoOrder = ['geo.area', 'geo.angles', 'geo.similar', 'geo.circles', 'geo.volume', 'geo.pythagoras'];
+  const topicMission: Record<string, string> = {
+    'geo.area': ctx.missions['m.area.tile'],
+    'geo.angles': ctx.missions['m.angles.ramp'],
+    'geo.similar': ctx.missions['m.similar.shadows'],
+    'geo.circles': ctx.missions['m.circles.pizza'],
+    'geo.volume': ctx.missions['m.volume.tank'],
+    'geo.pythagoras': ctx.missions['m.pythagoras.tv'],
+  };
+  const classes = [
+    { name: '7A Math', grade: 7, size: 12, skill: 0.35 },
+    { name: '9B Math', grade: 9, size: 10, skill: 0.7 },
+  ];
+  let n = 0;
+  for (const c of classes) {
+    const existing = await prisma.class.findFirst({ where: { schoolId: ctx.schoolId, name: c.name } });
+    const cls = existing ?? (await prisma.class.create({ data: { schoolId: ctx.schoolId, name: c.name, gradeLevel: c.grade, settings: { leaderboardEnabled: true } } }));
+    await prisma.classTeacher.upsert({
+      where: { classId_teacherId: { classId: cls.id, teacherId: ctx.teacherId } },
+      update: {},
+      create: { classId: cls.id, teacherId: ctx.teacherId, type: 'OWNER' },
+    });
+    for (let i = 0; i < c.size; i++, n++) {
+      const name = `${FIRST[n % FIRST.length]} ${LAST[(n * 7) % LAST.length]}`;
+      const googleId = `seed-life-${n}`;
+      const user = await prisma.user.upsert({
+        where: { googleId },
+        update: {},
+        create: { googleId, email: `student${n}@students.tripoli-future.school`, name, status: rand() > 0.15 ? 'ACTIVE' : 'INVITED' },
+      });
+      await prisma.membership.upsert({
+        where: { userId_schoolId_role: { userId: user.id, schoolId: ctx.schoolId, role: 'STUDENT' } },
+        update: {},
+        create: { userId: user.id, schoolId: ctx.schoolId, role: 'STUDENT', status: 'APPROVED' },
+      });
+      await prisma.enrollment.upsert({ where: { classId_studentId: { classId: cls.id, studentId: user.id } }, update: { status: 'ACTIVE' }, create: { classId: cls.id, studentId: user.id } });
+      // reset this student's activity
+      await prisma.submission.deleteMany({ where: { studentId: user.id } });
+      await prisma.xpEvent.deleteMany({ where: { studentId: user.id } });
+      await prisma.topicProgress.deleteMany({ where: { studentId: user.id } });
+      await prisma.wallet.upsert({ where: { studentId: user.id }, update: { points: 3 }, create: { studentId: user.id } });
+
+      const masteredCount = Math.min(geoOrder.length, Math.floor(rand() * 3 + c.skill * 4));
+      for (let t = 0; t < masteredCount; t++) {
+        const key = geoOrder[t];
+        if (key === 'geo.similar' && t < 2) continue;
+        const daysAgo = Math.floor(rand() * 13 * (1 - t / 8));
+        const at = ctx.now - daysAgo * DAY - Math.floor(rand() * DAY / 2);
+        const score = 70 + Math.floor(rand() * 28);
+        await prisma.submission.create({
+          data: {
+            missionId: topicMission[key],
+            studentId: user.id,
+            status: 'VALIDATED',
+            photoUploadIds: [],
+            explanation: 'Seeded history',
+            finalScore: score,
+            gradeSynced: true,
+            startedAt: new Date(at - DAY),
+            submittedAt: new Date(at - DAY / 2),
+            validatedAt: new Date(at),
+          },
+        });
+        await prisma.xpEvent.create({ data: { studentId: user.id, amount: 60, reason: 'MISSION_VALIDATED', createdAt: new Date(at) } });
+        await prisma.topicProgress.create({ data: { studentId: user.id, topicId: ctx.topics[key], state: 'MASTERED', bestScore: score, attempts: 1, masteredAt: new Date(at) } });
+      }
+      // a few students are stuck
+      if (rand() < 0.12 && masteredCount < geoOrder.length) {
+        await prisma.submission.create({
+          data: {
+            missionId: topicMission[geoOrder[masteredCount]],
+            studentId: user.id,
+            status: 'RETRY',
+            attempt: 2,
+            photoUploadIds: [],
+            explanation: 'Seeded retry',
+            aiCheck: { score: 40, correct: false, perCriterion: [], feedback: 'Almost!', followUpQuestion: '', flags: [] },
+            startedAt: new Date(ctx.now - 2 * DAY),
+          },
+        });
+      }
+      if (rand() < 0.45) {
+        const pid = `seed-life-parent-${n}`;
+        const parent = await prisma.user.upsert({
+          where: { googleId: pid },
+          update: {},
+          create: { googleId: pid, email: `parent${n}@family.example`, name: `Parent of ${name.split(' ')[0]}`, locale: 'ar' },
+        });
+        await prisma.membership.upsert({
+          where: { userId_schoolId_role: { userId: parent.id, schoolId: ctx.schoolId, role: 'PARENT' } },
+          update: {},
+          create: { userId: parent.id, schoolId: ctx.schoolId, role: 'PARENT', status: 'APPROVED' },
+        });
+        await prisma.parentLink.upsert({
+          where: { parentId_studentId: { parentId: parent.id, studentId: user.id } },
+          update: {},
+          create: { parentId: parent.id, studentId: user.id, status: 'VERIFIED', method: 'FAMILY_CODE' },
+        });
+      }
+    }
+  }
 }

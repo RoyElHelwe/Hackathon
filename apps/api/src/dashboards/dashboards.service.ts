@@ -140,7 +140,10 @@ export class DashboardsService {
       include: { teachers: { include: { teacher: { select: { name: true } } } }, enrollments: { where: { status: 'ACTIVE' } } },
       orderBy: { name: 'asc' },
     });
-    const topics = await this.prisma.topic.findMany({ include: { subject: true, prerequisites: true }, orderBy: [{ gradeLevel: 'asc' }, { subject: { key: 'asc' } }, { posY: 'asc' }] });
+    const subjectOrder = ['math', 'physics', 'chemistry', 'biology', 'history', 'languages'];
+    const topics = (await this.prisma.topic.findMany({ include: { subject: true, prerequisites: true }, orderBy: [{ posY: 'asc' }, { posX: 'asc' }] })).sort(
+      (x, y) => subjectOrder.indexOf(x.subject.key) - subjectOrder.indexOf(y.subject.key),
+    );
     const progressRows = await this.prisma.topicProgress.findMany({ where: { studentId: { in: studentIds }, state: 'MASTERED' }, select: { studentId: true, topicId: true } });
     const masteredSet = new Set(progressRows.map((r) => `${r.studentId}|${r.topicId}`));
 

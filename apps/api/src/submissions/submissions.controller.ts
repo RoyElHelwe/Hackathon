@@ -17,6 +17,12 @@ export class SubmissionsController {
     return this.submissions.start(a, body.missionId);
   }
 
+  @Can('read', 'progress')
+  @Get()
+  forStudent(@Auth() a: AuthContext, @Query('studentId') studentId: string) {
+    return this.submissions.forStudent(a, studentId);
+  }
+
   @Can('write', 'submission')
   @Get('mine')
   mine(@Auth() a: AuthContext) {

@@ -1,0 +1,10 @@
+{
+  "tabs": { "home": "Home", "map": "Map", "missions": "Missions", "reviews": "Reviews", "me": "Me" },
+  "level": "Level",
+  "levelUp": "Level up!",
+  "levelUpBody": "You reached level {level}. Keep exploring!",
+  "awesome": "Awesome!",
+  "nextLevelAt": "Next level at {xp} XP",
+  "streakDays": "{days}-day streak",
+  "walletPoints": "{points} evaluation points"
+}
