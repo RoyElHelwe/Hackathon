@@ -36,3 +36,26 @@ ALTER TABLE "TeacherSubject" ADD CONSTRAINT "TeacherSubject_schoolId_fkey" FOREI
 
 -- AddForeignKey
 ALTER TABLE "TeacherSubject" ADD CONSTRAINT "TeacherSubject_subjectId_fkey" FOREIGN KEY ("subjectId") REFERENCES "Subject"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- A subject's skills carry student work (missions → submissions, topic progress): never cascade a subject delete into them.
+-- DropForeignKey
+ALTER TABLE "Topic" DROP CONSTRAINT "Topic_subjectId_fkey";
+
+-- AddForeignKey
+ALTER TABLE "Topic" ADD CONSTRAINT "Topic_subjectId_fkey" FOREIGN KEY ("subjectId") REFERENCES "Subject"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- Backfill: databases seeded before this migration (the demo school TRP-2036) keep working without a manual re-seed.
+-- No-ops on an empty database.
+UPDATE "Subject" SET "schoolId" = (SELECT "id" FROM "School" WHERE "schoolCode" = 'TRP-2036')
+  WHERE "schoolId" IS NULL AND EXISTS (SELECT 1 FROM "School" WHERE "schoolCode" = 'TRP-2036');
+
+UPDATE "Class" SET "subjectId" = (SELECT "id" FROM "Subject" WHERE "key" = 'math')
+  WHERE "subjectId" IS NULL
+    AND "schoolId" = (SELECT "id" FROM "School" WHERE "schoolCode" = 'TRP-2036')
+    AND EXISTS (SELECT 1 FROM "Subject" WHERE "key" = 'math');
+
+INSERT INTO "TeacherSubject" ("teacherId", "schoolId", "subjectId")
+  SELECT u."id", s."schoolId", s."id"
+  FROM "User" u JOIN "Subject" s ON s."key" = 'math'
+  WHERE u."devHandle" IN ('rana', 'hassan') AND s."schoolId" IS NOT NULL
+  ON CONFLICT DO NOTHING;

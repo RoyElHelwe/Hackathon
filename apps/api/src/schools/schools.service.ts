@@ -56,7 +56,8 @@ export class SchoolsService {
       (await this.prisma.membership.create({
         data: { userId: a.userId, schoolId: school.id, role, status: 'PENDING' },
       }));
-    if (ids.length) await this.replaceTeacherSubjects(a.userId, school.id, ids);
+    // Subjects picked at join time are only a request: once approved, only the director changes them (PUT /memberships/:id/subjects).
+    if (ids.length && (!existing || existing.status === 'PENDING')) await this.replaceTeacherSubjects(a.userId, school.id, ids);
     if (existing) return { membership, school: { id: school.id, name: school.name } };
     const approvers = await this.prisma.membership.findMany({
       where: { schoolId: school.id, status: 'APPROVED', role: { in: role === 'STUDENT' ? ['DIRECTOR', 'ADMIN', 'TEACHER'] : ['DIRECTOR', 'ADMIN'] } },
@@ -131,11 +132,13 @@ export class SchoolsService {
     return unique;
   }
 
-  private async replaceTeacherSubjects(teacherId: string, schoolId: string, subjectIds: string[]) {
-    await this.prisma.$transaction([
-      this.prisma.teacherSubject.deleteMany({ where: { teacherId, schoolId } }),
-      this.prisma.teacherSubject.createMany({ data: subjectIds.map((subjectId) => ({ teacherId, schoolId, subjectId })), skipDuplicates: true }),
-    ]);
+  private async replaceTeacherSubjects(teacherId: string, schoolId: string, subjectIds: string[], tx?: Prisma.TransactionClient) {
+    const run = async (db: Prisma.TransactionClient) => {
+      await db.teacherSubject.deleteMany({ where: { teacherId, schoolId } });
+      await db.teacherSubject.createMany({ data: subjectIds.map((subjectId) => ({ teacherId, schoolId, subjectId })), skipDuplicates: true });
+    };
+    if (tx) await run(tx);
+    else await this.prisma.$transaction(run);
   }
 
   async createInvite(a: AuthContext, body: { email: string; role: Role; studentId?: string; subjectIds?: string[] }) {
@@ -190,22 +193,29 @@ export class SchoolsService {
     if (invite.email !== a.user.email.toLowerCase())
       throw new ForbiddenException({ message: `This invite was sent to ${invite.email}. Sign in with that Google account.` });
 
-    const membership = await this.prisma.membership.upsert({
-      where: { userId_schoolId_role: { userId: a.userId, schoolId: invite.schoolId, role: invite.role } },
-      update: { status: 'APPROVED' },
-      create: { userId: a.userId, schoolId: invite.schoolId, role: invite.role, status: 'APPROVED' },
-    });
-    if (invite.role === 'PARENT' && invite.studentId) {
-      await this.prisma.parentLink.upsert({
-        where: { parentId_studentId: { parentId: a.userId, studentId: invite.studentId } },
-        update: { status: 'VERIFIED' },
-        create: { parentId: a.userId, studentId: invite.studentId, status: 'VERIFIED', method: 'INVITE' },
+    // Subjects may have been deleted since the invite was sent: keep only those that still exist in the school.
+    const subjectIds =
+      invite.role === 'TEACHER' && invite.subjectIds.length
+        ? (await this.prisma.subject.findMany({ where: { id: { in: invite.subjectIds }, schoolId: invite.schoolId }, select: { id: true } })).map((s) => s.id)
+        : [];
+
+    const membership = await this.prisma.$transaction(async (tx) => {
+      const m = await tx.membership.upsert({
+        where: { userId_schoolId_role: { userId: a.userId, schoolId: invite.schoolId, role: invite.role } },
+        update: { status: 'APPROVED' },
+        create: { userId: a.userId, schoolId: invite.schoolId, role: invite.role, status: 'APPROVED' },
       });
-    }
-    if (invite.role === 'TEACHER' && invite.subjectIds.length) {
-      await this.replaceTeacherSubjects(a.userId, invite.schoolId, invite.subjectIds);
-    }
-    await this.prisma.invite.update({ where: { id: invite.id }, data: { usedAt: new Date() } });
+      if (invite.role === 'PARENT' && invite.studentId) {
+        await tx.parentLink.upsert({
+          where: { parentId_studentId: { parentId: a.userId, studentId: invite.studentId } },
+          update: { status: 'VERIFIED' },
+          create: { parentId: a.userId, studentId: invite.studentId, status: 'VERIFIED', method: 'INVITE' },
+        });
+      }
+      if (subjectIds.length) await this.replaceTeacherSubjects(a.userId, invite.schoolId, subjectIds, tx);
+      await tx.invite.update({ where: { id: invite.id }, data: { usedAt: new Date() } });
+      return m;
+    });
     return { membershipId: membership.id, role: membership.role };
   }
 

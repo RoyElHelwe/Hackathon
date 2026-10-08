@@ -34,7 +34,7 @@ export class SchoolsController {
     return this.schools.join(a, body.code, body.role, body.subjectIds);
   }
 
-  @Public()
+  @Can('read', 'self')
   @Get('by-code/:code/subjects')
   subjectsByCode(@Param('code') code: string) {
     return this.schools.subjectsByCode(code);

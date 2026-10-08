@@ -277,7 +277,7 @@ model Topic {
   posX          Int
   posY          Int
 
-  subject       Subject             @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  subject       Subject             @relation(fields: [subjectId], references: [id], onDelete: Restrict)
   prerequisites TopicPrerequisite[] @relation("TopicPrereqTopic")
   dependents    TopicPrerequisite[] @relation("TopicPrereqPrereq")
   missions      Mission[]

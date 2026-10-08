@@ -93,6 +93,8 @@ export async function seed(prisma: PrismaClient, opts: { quiet?: boolean } = {})
     });
     subjects[s.key] = row.id;
   }
+  // Reset the seeded teachers' subjects so a re-seed restores exactly Math.
+  await prisma.teacherSubject.deleteMany({ where: { schoolId: school.id, teacherId: { in: seededIds } } });
   for (const handle of ['rana', 'hassan'] as const) {
     await prisma.teacherSubject.upsert({
       where: { teacherId_subjectId: { teacherId: users[handle], subjectId: subjects.math } },

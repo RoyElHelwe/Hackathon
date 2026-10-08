@@ -44,10 +44,12 @@ describe('teacher subjects (integration)', () => {
   });
 
   it('code-join with subjects; reject removes them; director edits subjects', async () => {
-    const pub = (await ctx.http().get(`/schools/by-code/${code}/subjects`).expect(200)).body;
-    expect(pub.subjects).toHaveLength(2);
     const t = await ctx.app.get(AuthService).upsertFromGoogle({ googleId: 'g-t2', email: 't2@x.test', name: 'Tarek' });
     const tc = ctx.cookieFor(t.id);
+    // Subject lookup by code needs a signed-in user (the onboarding caller always is).
+    await ctx.http().get(`/schools/by-code/${code}/subjects`).expect(401);
+    const pub = (await ctx.http().get(`/schools/by-code/${encodeURIComponent(code)}/subjects`).set('Cookie', tc).expect(200)).body;
+    expect(pub.subjects).toHaveLength(2);
     const joined = (await ctx.http().post('/schools/join').set('Cookie', tc).send({ code, role: 'TEACHER', subjectIds: [chem.id] }).expect(201)).body;
     expect(await ctx.prisma.teacherSubject.count({ where: { teacherId: t.id } })).toBe(1);
     await ctx.http().put(`/memberships/${joined.membership.id}/subjects`).set('Cookie', dirCookie).send({ subjectIds: [phys.id, chem.id] }).expect(200);
@@ -61,5 +63,31 @@ describe('teacher subjects (integration)', () => {
     const t = await ctx.app.get(AuthService).upsertFromGoogle({ googleId: 'g-t3', email: 't3@x.test', name: 'Lina' });
     await ctx.http().post('/schools/join').set('Cookie', ctx.cookieFor(t.id)).send({ code, role: 'TEACHER', subjectIds: ['nope'] }).expect(400);
     expect(await ctx.prisma.membership.count({ where: { userId: t.id } })).toBe(0);
+  });
+
+  it('an APPROVED teacher cannot rewrite their own subjects by re-joining with the code', async () => {
+    const t = await ctx.app.get(AuthService).upsertFromGoogle({ googleId: 'g-t4', email: 't4@x.test', name: 'Rami' });
+    const tc = ctx.cookieFor(t.id);
+    const joined = (await ctx.http().post('/schools/join').set('Cookie', tc).send({ code, role: 'TEACHER', subjectIds: [phys.id] }).expect(201)).body;
+    // While still PENDING, re-joining may correct the picked subjects.
+    await ctx.http().post('/schools/join').set('Cookie', tc).send({ code, role: 'TEACHER', subjectIds: [chem.id] }).expect(201);
+    expect((await ctx.prisma.teacherSubject.findMany({ where: { teacherId: t.id } })).map((r) => r.subjectId)).toEqual([chem.id]);
+    await ctx.http().post(`/memberships/${joined.membership.id}/approve`).set('Cookie', dirCookie).expect(201);
+    await ctx.http().post('/schools/join').set('Cookie', tc).send({ code, role: 'TEACHER', subjectIds: [phys.id] }).expect(201);
+    const rows = await ctx.prisma.teacherSubject.findMany({ where: { teacherId: t.id } });
+    expect(rows.map((r) => r.subjectId)).toEqual([chem.id]);
+  });
+
+  it('accepting an invite whose subject was deleted keeps the remaining subjects and succeeds', async () => {
+    const tmp = (await ctx.http().post(`/schools/${sid}/subjects`).set('Cookie', dirCookie).send({ name: 'Drama' }).expect(201)).body;
+    const inv = (await ctx.http().post('/invites').set('Cookie', dirCookie).send({ email: 't5@x.test', role: 'TEACHER', subjectIds: [phys.id, tmp.id] }).expect(201)).body;
+    await ctx.http().delete(`/schools/${sid}/subjects/${tmp.id}`).set('Cookie', dirCookie).expect(200);
+    const t = await ctx.app.get(AuthService).upsertFromGoogle({ googleId: 'g-t5', email: 't5@x.test', name: 'Maya' });
+    await ctx.http().post(`/invites/${inv.token}/accept`).set('Cookie', ctx.cookieFor(t.id)).expect(201);
+    const m = await ctx.prisma.membership.findFirstOrThrow({ where: { userId: t.id, schoolId: sid, role: 'TEACHER' } });
+    expect(m.status).toBe('APPROVED');
+    expect((await ctx.prisma.invite.findUniqueOrThrow({ where: { token: inv.token } })).usedAt).not.toBeNull();
+    const rows = await ctx.prisma.teacherSubject.findMany({ where: { teacherId: t.id } });
+    expect(rows.map((r) => r.subjectId)).toEqual([phys.id]);
   });
 });
