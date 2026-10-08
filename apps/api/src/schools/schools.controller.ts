@@ -1,6 +1,6 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Res } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Put, Query, Res } from '@nestjs/common';
 import type { Response } from 'express';
-import { createInviteBody, createSchoolBody, joinSchoolBody, Role, schoolSettingsBody } from '@tajriba/shared';
+import { createInviteBody, createSchoolBody, joinSchoolBody, Role, schoolSettingsBody, setTeacherSubjectsBody } from '@tajriba/shared';
 import { z } from 'zod';
 import { AuthService } from '../auth/auth.service';
 import { AuthContext } from '../common/auth-context';
@@ -31,7 +31,13 @@ export class SchoolsController {
   @Can('write', 'self')
   @Post('join')
   join(@Auth() a: AuthContext, @Body(new ZodPipe(joinSchoolBody)) body: z.infer<typeof joinSchoolBody>) {
-    return this.schools.join(a, body.code, body.role);
+    return this.schools.join(a, body.code, body.role, body.subjectIds);
+  }
+
+  @Public()
+  @Get('by-code/:code/subjects')
+  subjectsByCode(@Param('code') code: string) {
+    return this.schools.subjectsByCode(code);
   }
 
   @Can('read', 'school')
@@ -68,6 +74,12 @@ export class MembershipsController {
   reject(@Auth() a: AuthContext, @Param('id') id: string) {
     return this.schools.decide(a, id, 'REJECTED');
   }
+
+  @Can('write', 'members')
+  @Put(':id/subjects')
+  setSubjects(@Auth() a: AuthContext, @Param('id') id: string, @Body(new ZodPipe(setTeacherSubjectsBody)) body: z.infer<typeof setTeacherSubjectsBody>) {
+    return this.schools.setTeacherSubjects(a, id, body.subjectIds);
+  }
 }
 
 @Controller('invites')
@@ -79,7 +91,7 @@ export class InvitesController {
 
   @Can('write', 'self')
   @Post()
-  create(@Auth() a: AuthContext, @Body(new ZodPipe(createInviteBody)) body: { email: string; role: Role; studentId?: string }) {
+  create(@Auth() a: AuthContext, @Body(new ZodPipe(createInviteBody)) body: { email: string; role: Role; studentId?: string; subjectIds?: string[] }) {
     return this.schools.createInvite(a, body);
   }
 

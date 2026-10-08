@@ -43,16 +43,22 @@ export class SchoolsService {
     return school;
   }
 
-  async join(a: AuthContext, code: string, role: 'TEACHER' | 'STUDENT') {
+  async join(a: AuthContext, code: string, role: 'TEACHER' | 'STUDENT', subjectIds?: string[]) {
     const school = await this.prisma.school.findUnique({ where: { schoolCode: code } });
     if (!school) throw new NotFoundException({ message: "We couldn't find a school with that code. Check it with your director." });
     const existing = await this.prisma.membership.findUnique({
       where: { userId_schoolId_role: { userId: a.userId, schoolId: school.id, role } },
     });
-    if (existing) return { membership: existing, school: { id: school.id, name: school.name } };
-    const membership = await this.prisma.membership.create({
-      data: { userId: a.userId, schoolId: school.id, role, status: 'PENDING' },
-    });
+    const membership =
+      existing ??
+      (await this.prisma.membership.create({
+        data: { userId: a.userId, schoolId: school.id, role, status: 'PENDING' },
+      }));
+    if (role === 'TEACHER') {
+      const ids = await this.validSubjectIds(school.id, subjectIds);
+      if (ids.length) await this.replaceTeacherSubjects(a.userId, school.id, ids);
+    }
+    if (existing) return { membership, school: { id: school.id, name: school.name } };
     const approvers = await this.prisma.membership.findMany({
       where: { schoolId: school.id, status: 'APPROVED', role: { in: role === 'STUDENT' ? ['DIRECTOR', 'ADMIN', 'TEACHER'] : ['DIRECTOR', 'ADMIN'] } },
     });
@@ -79,7 +85,19 @@ export class SchoolsService {
       include: { user: { select: { id: true, name: true, email: true, avatarUrl: true, status: true } } },
       orderBy: { createdAt: 'desc' },
     });
-    return rows.map((m) => ({ id: m.id, role: m.role, status: m.status, createdAt: m.createdAt, user: m.user }));
+    const teacherIds = rows.filter((m) => m.role === 'TEACHER').map((m) => m.userId);
+    const ts = await this.prisma.teacherSubject.findMany({
+      where: { schoolId, teacherId: { in: teacherIds } },
+      include: { subject: { select: { id: true, name: true } } },
+    });
+    return rows.map((m) => ({
+      id: m.id,
+      role: m.role,
+      status: m.status,
+      createdAt: m.createdAt,
+      user: m.user,
+      subjects: m.role === 'TEACHER' ? ts.filter((x) => x.teacherId === m.userId).map((x) => x.subject) : [],
+    }));
   }
 
   async decide(a: AuthContext, membershipId: string, status: 'APPROVED' | 'REJECTED') {
@@ -90,6 +108,9 @@ export class SchoolsService {
     const admin = actor.role === 'DIRECTOR' || actor.role === 'ADMIN';
     if (!admin && !(actor.role === 'TEACHER' && m.role === 'STUDENT')) throw new ForbiddenException();
     if (m.role === 'DIRECTOR' && actor.role !== 'DIRECTOR') throw new ForbiddenException();
+    if (status === 'REJECTED' && m.role === 'TEACHER') {
+      await this.prisma.teacherSubject.deleteMany({ where: { teacherId: m.userId, schoolId: m.schoolId } });
+    }
     return this.prisma.membership.update({ where: { id: m.id }, data: { status } });
   }
 
@@ -102,7 +123,23 @@ export class SchoolsService {
 
   // ---------- Invites ----------
 
-  async createInvite(a: AuthContext, body: { email: string; role: Role; studentId?: string }) {
+  /** Throws 400 unless every id is a subject of this school. */
+  private async validSubjectIds(schoolId: string, ids: string[] | undefined): Promise<string[]> {
+    const unique = [...new Set(ids ?? [])];
+    if (!unique.length) return [];
+    const found = await this.prisma.subject.count({ where: { id: { in: unique }, schoolId } });
+    if (found !== unique.length) throw new BadRequestException({ message: 'Pick subjects from your school list.' });
+    return unique;
+  }
+
+  private async replaceTeacherSubjects(teacherId: string, schoolId: string, subjectIds: string[]) {
+    await this.prisma.$transaction([
+      this.prisma.teacherSubject.deleteMany({ where: { teacherId, schoolId } }),
+      this.prisma.teacherSubject.createMany({ data: subjectIds.map((subjectId) => ({ teacherId, schoolId, subjectId })), skipDuplicates: true }),
+    ]);
+  }
+
+  async createInvite(a: AuthContext, body: { email: string; role: Role; studentId?: string; subjectIds?: string[] }) {
     const actor = await this.actors.actor(a);
     const admin = actor.role === 'DIRECTOR' || actor.role === 'ADMIN';
     if (body.role === 'PARENT') {
@@ -115,12 +152,15 @@ export class SchoolsService {
     } else if (body.role === 'DIRECTOR' && actor.role !== 'DIRECTOR') {
       throw new ForbiddenException();
     }
+    const subjectIds = body.role === 'TEACHER' ? await this.validSubjectIds(actor.schoolId, body.subjectIds) : [];
+    if (body.role === 'TEACHER' && !subjectIds.length) throw new BadRequestException({ message: 'Choose at least one subject for this teacher.' });
     const invite = await this.prisma.invite.create({
       data: {
         schoolId: actor.schoolId,
         email: body.email.toLowerCase(),
         role: body.role,
         studentId: body.studentId,
+        subjectIds,
         token: randomToken(),
         expiresAt: new Date(Date.now() + INVITE_TTL_MS),
       },
@@ -163,7 +203,25 @@ export class SchoolsService {
         create: { parentId: a.userId, studentId: invite.studentId, status: 'VERIFIED', method: 'INVITE' },
       });
     }
+    if (invite.role === 'TEACHER' && invite.subjectIds.length) {
+      await this.replaceTeacherSubjects(a.userId, invite.schoolId, invite.subjectIds);
+    }
     await this.prisma.invite.update({ where: { id: invite.id }, data: { usedAt: new Date() } });
     return { membershipId: membership.id, role: membership.role };
+  }
+
+  async setTeacherSubjects(a: AuthContext, membershipId: string, subjectIds: string[]) {
+    const m = await this.prisma.membership.findUnique({ where: { id: membershipId } });
+    if (!m || m.role !== 'TEACHER') throw new NotFoundException();
+    await this.actors.assert(a, 'write', 'members', { schoolId: m.schoolId });
+    const ids = await this.validSubjectIds(m.schoolId, subjectIds);
+    await this.replaceTeacherSubjects(m.userId, m.schoolId, ids);
+    return { ok: true, subjectIds: ids };
+  }
+
+  async subjectsByCode(code: string) {
+    const school = await this.prisma.school.findUnique({ where: { schoolCode: code.toUpperCase() }, include: { subjects: true } });
+    if (!school) throw new NotFoundException({ message: "We couldn't find a school with that code. Check it with your director." });
+    return { school: { name: school.name }, subjects: school.subjects.map((s) => ({ id: s.id, name: s.name })) };
   }
 }
