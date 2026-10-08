@@ -49,15 +49,14 @@ export class SchoolsService {
     const existing = await this.prisma.membership.findUnique({
       where: { userId_schoolId_role: { userId: a.userId, schoolId: school.id, role } },
     });
+    // Validate before creating the membership row, so a bad subject id never leaves an orphan PENDING membership.
+    const ids = role === 'TEACHER' ? await this.validSubjectIds(school.id, subjectIds) : [];
     const membership =
       existing ??
       (await this.prisma.membership.create({
         data: { userId: a.userId, schoolId: school.id, role, status: 'PENDING' },
       }));
-    if (role === 'TEACHER') {
-      const ids = await this.validSubjectIds(school.id, subjectIds);
-      if (ids.length) await this.replaceTeacherSubjects(a.userId, school.id, ids);
-    }
+    if (ids.length) await this.replaceTeacherSubjects(a.userId, school.id, ids);
     if (existing) return { membership, school: { id: school.id, name: school.name } };
     const approvers = await this.prisma.membership.findMany({
       where: { schoolId: school.id, status: 'APPROVED', role: { in: role === 'STUDENT' ? ['DIRECTOR', 'ADMIN', 'TEACHER'] : ['DIRECTOR', 'ADMIN'] } },
