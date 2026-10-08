@@ -1,0 +1,255 @@
+{
+  "courses": [
+    {
+      "id": "fake-8b-math",
+      "name": "8B Math",
+      "section": "Grade 8",
+      "gradeLevel": 8,
+      "teacherGoogleIds": [
+        "seed-rana"
+      ],
+      "teachers": [
+        {
+          "userId": "seed-rana",
+          "name": "Rana Khoury",
+          "email": "rana@tripoli-future.school"
+        }
+      ],
+      "students": [
+        {
+          "userId": "seed-lea",
+          "name": "Lea Saliba",
+          "email": "lea@students.tripoli-future.school"
+        },
+        {
+          "userId": "seed-karim",
+          "name": "Karim Hamadeh",
+          "email": "karim@students.tripoli-future.school"
+        },
+        {
+          "userId": "seed-omar",
+          "name": "Omar Tannous",
+          "email": "omar@students.tripoli-future.school"
+        }
+      ]
+    },
+    {
+      "id": "fake-8a-math",
+      "name": "8A Math",
+      "section": "Grade 8",
+      "gradeLevel": 8,
+      "teacherGoogleIds": [
+        "seed-rana",
+        "*"
+      ],
+      "teachers": [
+        {
+          "userId": "seed-rana",
+          "name": "Rana Khoury",
+          "email": "rana@tripoli-future.school"
+        }
+      ],
+      "students": [
+        {
+          "userId": "fake-8a-01",
+          "name": "Ahmad Saad",
+          "email": "ahmad.saad@students.tripoli-future.school"
+        },
+        {
+          "userId": "fake-8a-02",
+          "name": "Aya Mansour",
+          "email": "aya.mansour@students.tripoli-future.school"
+        },
+        {
+          "userId": "fake-8a-03",
+          "name": "Bilal Khalil",
+          "email": "bilal.khalil@students.tripoli-future.school"
+        },
+        {
+          "userId": "fake-8a-04",
+          "name": "Dana Fares",
+          "email": "dana.fares@students.tripoli-future.school"
+        },
+        {
+          "userId": "fake-8a-05",
+          "name": "Elie Nassar",
+          "email": "elie.nassar@students.tripoli-future.school"
+        },
+        {
+          "userId": "fake-8a-06",
+          "name": "Farah Itani",
+          "email": "farah.itani@students.tripoli-future.school"
+        },
+        {
+          "userId": "fake-8a-07",
+          "name": "Georges Abi Nader",
+          "email": "georges.nader@students.tripoli-future.school"
+        },
+        {
+          "userId": "fake-8a-08",
+          "name": "Hala Chami",
+          "email": "hala.chami@students.tripoli-future.school"
+        },
+        {
+          "userId": "fake-8a-09",
+          "name": "Hadi Zein",
+          "email": "hadi.zein@students.tripoli-future.school"
+        },
+        {
+          "userId": "fake-8a-10",
+          "name": "Jana Mikati",
+          "email": "jana.mikati@students.tripoli-future.school"
+        },
+        {
+          "userId": "fake-8a-11",
+          "name": "Joe Karam",
+          "email": "joe.karam@students.tripoli-future.school"
+        },
+        {
+          "userId": "fake-8a-12",
+          "name": "Lara Hamdan",
+          "email": "lara.hamdan@students.tripoli-future.school"
+        },
+        {
+          "userId": "fake-8a-13",
+          "name": "Majd Rifai",
+          "email": "majd.rifai@students.tripoli-future.school"
+        },
+        {
+          "userId": "fake-8a-14",
+          "name": "Maya Kassem",
+          "email": "maya.kassem@students.tripoli-future.school"
+        },
+        {
+          "userId": "fake-8a-15",
+          "name": "Nour Dib",
+          "email": "nour.dib@students.tripoli-future.school"
+        },
+        {
+          "userId": "fake-8a-16",
+          "name": "Rami Sleiman",
+          "email": "rami.sleiman@students.tripoli-future.school"
+        },
+        {
+          "userId": "fake-8a-17",
+          "name": "Reem Taha",
+          "email": "reem.taha@students.tripoli-future.school"
+        },
+        {
+          "userId": "fake-8a-18",
+          "name": "Sara Ghandour",
+          "email": "sara.ghandour@students.tripoli-future.school"
+        },
+        {
+          "userId": "fake-8a-19",
+          "name": "Tarek Ayoub",
+          "email": "tarek.ayoub@students.tripoli-future.school"
+        },
+        {
+          "userId": "fake-8a-20",
+          "name": "Yara Hijazi",
+          "email": "yara.hijazi@students.tripoli-future.school"
+        },
+        {
+          "userId": "fake-8a-21",
+          "name": "Zeina Moussa",
+          "email": "zeina.moussa@students.tripoli-future.school"
+        },
+        {
+          "userId": "fake-8a-22",
+          "name": "Ziad Barakat",
+          "email": "ziad.barakat@students.tripoli-future.school"
+        },
+        {
+          "userId": "fake-8a-23",
+          "name": "Karl Haddad",
+          "email": "karl.haddad@students.tripoli-future.school"
+        },
+        {
+          "userId": "fake-8a-24",
+          "name": "Lynn Sabbagh",
+          "email": "lynn.sabbagh@students.tripoli-future.school"
+        }
+      ]
+    },
+    {
+      "id": "fake-9a-science",
+      "name": "9A Science",
+      "section": "Grade 9",
+      "gradeLevel": 9,
+      "teacherGoogleIds": [
+        "seed-rana",
+        "*"
+      ],
+      "teachers": [
+        {
+          "userId": "seed-rana",
+          "name": "Rana Khoury",
+          "email": "rana@tripoli-future.school"
+        }
+      ],
+      "students": [
+        {
+          "userId": "fake-9a-01",
+          "name": "Ahmad Saad",
+          "email": "ahmad.9a@students.tripoli-future.school"
+        },
+        {
+          "userId": "fake-9a-02",
+          "name": "Aya Mansour",
+          "email": "aya.9a@students.tripoli-future.school"
+        },
+        {
+          "userId": "fake-9a-03",
+          "name": "Bilal Khalil",
+          "email": "bilal.9a@students.tripoli-future.school"
+        },
+        {
+          "userId": "fake-9a-04",
+          "name": "Dana Fares",
+          "email": "dana.9a@students.tripoli-future.school"
+        },
+        {
+          "userId": "fake-9a-05",
+          "name": "Elie Nassar",
+          "email": "elie.9a@students.tripoli-future.school"
+        },
+        {
+          "userId": "fake-9a-06",
+          "name": "Farah Itani",
+          "email": "farah.9a@students.tripoli-future.school"
+        },
+        {
+          "userId": "fake-9a-07",
+          "name": "Georges Abi Nader",
+          "email": "georges.9a@students.tripoli-future.school"
+        },
+        {
+          "userId": "fake-9a-08",
+          "name": "Hala Chami",
+          "email": "hala.9a@students.tripoli-future.school"
+        },
+        {
+          "userId": "fake-9a-09",
+          "name": "Hadi Zein",
+          "email": "hadi.9a@students.tripoli-future.school"
+        },
+        {
+          "userId": "fake-9a-10",
+          "name": "Jana Mikati",
+          "email": "jana.9a@students.tripoli-future.school"
+        },
+        {
+          "userId": "fake-9a-11",
+          "name": "Joe Karam",
+          "email": "joe.9a@students.tripoli-future.school"
+        },
+        {
+          "userId": "fake-9a-12",
+          "name": "Lara Hamdan",
+          "email": "lara.9a@students.tripoli-future.school"
+        }
+      ]
+    }
+  ]
+}

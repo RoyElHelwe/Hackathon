@@ -1,0 +1,17 @@
+{
+  "name": "tajriba",
+  "private": true,
+  "packageManager": "pnpm@10.28.0",
+  "scripts": {
+    "dev": "pnpm --filter @tajriba/shared build && pnpm -r --parallel --filter @tajriba/shared --filter @tajriba/api --filter @tajriba/web dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm --filter @tajriba/shared test && pnpm --filter @tajriba/api test",
+    "e2e": "pnpm --filter @tajriba/e2e e2e",
+    "verify": "pnpm lint && pnpm typecheck && pnpm test && pnpm e2e",
+    "db:migrate": "pnpm --filter @tajriba/api db:migrate",
+    "db:seed": "pnpm --filter @tajriba/api db:seed",
+    "db:reset": "pnpm --filter @tajriba/api db:reset"
+  }
+}

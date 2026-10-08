@@ -1,0 +1,536 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat        = "cjs"
+  importFileExtension = ""
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  DIRECTOR
+  ADMIN
+  TEACHER
+  STUDENT
+  PARENT
+}
+
+enum MembershipStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum UserStatus {
+  INVITED
+  ACTIVE
+}
+
+enum ClassTeacherType {
+  OWNER
+  CO_TEACHER
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum ParentLinkStatus {
+  PENDING
+  VERIFIED
+}
+
+enum ParentLinkMethod {
+  FAMILY_CODE
+  INVITE
+  CLASSROOM
+}
+
+enum MissionStatus {
+  DRAFT
+  APPROVED
+  ARCHIVED
+}
+
+enum MissionAudience {
+  STUDENT
+  FAMILY
+  SQUAD
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum SubmissionStatus {
+  IN_PROGRESS
+  SUBMITTED
+  AI_CHECKED
+  FOLLOW_UP_ANSWERED
+  PEER_REVIEW
+  FAMILY_CONFIRM
+  TEACHER_REVIEW
+  VALIDATED
+  RETRY
+}
+
+enum MasteryState {
+  LOCKED
+  AVAILABLE
+  IN_PROGRESS
+  MASTERED
+}
+
+model School {
+  id         String   @id @default(cuid())
+  name       String
+  city       String
+  schoolCode String   @unique
+  settings   Json     @default("{}")
+  createdAt  DateTime @default(now())
+
+  memberships Membership[]
+  invites     Invite[]
+  classes     Class[]
+  uploads     Upload[]
+}
+
+model User {
+  id                 String     @id @default(cuid())
+  googleId           String     @unique
+  email              String     @unique
+  name               String
+  avatarUrl          String?
+  locale             String     @default("en")
+  status             UserStatus @default(ACTIVE)
+  googleRefreshToken String?
+  devHandle          String?    @unique
+  createdAt          DateTime   @default(now())
+
+  memberships       Membership[]
+  teaching          ClassTeacher[]
+  enrollments       Enrollment[]
+  parentLinks       ParentLink[]   @relation("ParentLinkParent")
+  childLinks        ParentLink[]   @relation("ParentLinkStudent")
+  familyCodes       FamilyCode[]
+  missionsCreated   Mission[]
+  submissions       Submission[]
+  peerEvaluations   PeerEvaluation[]
+  teacherReviews    TeacherReview[]
+  topicProgress     TopicProgress[]
+  xpEvents          XpEvent[]
+  wallet            Wallet?
+  walletTxs         WalletTx[]
+  badges            StudentBadge[]
+  streak            Streak?
+  notifications     Notification[]
+  messagesSent      Message[]      @relation("MessageFrom")
+  messagesReceived  Message[]      @relation("MessageTo")
+  uploads           Upload[]
+}
+
+model Membership {
+  id        String           @id @default(cuid())
+  userId    String
+  schoolId  String
+  role      Role
+  status    MembershipStatus @default(PENDING)
+  createdAt DateTime         @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, schoolId, role])
+  @@index([schoolId, status])
+}
+
+model Invite {
+  id        String    @id @default(cuid())
+  schoolId  String
+  email     String
+  role      Role
+  studentId String?
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@index([email])
+}
+
+model Class {
+  id                String    @id @default(cuid())
+  schoolId          String
+  name              String
+  gradeLevel        Int?
+  classroomCourseId String?   @unique
+  settings          Json      @default("{}")
+  lastSyncedAt      DateTime?
+  syncError         String?
+
+  school      School         @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  teachers    ClassTeacher[]
+  enrollments Enrollment[]
+  missions    Mission[]
+
+  @@index([schoolId])
+}
+
+model ClassTeacher {
+  classId   String
+  teacherId String
+  type      ClassTeacherType
+
+  class   Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+  teacher User  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@id([classId, teacherId])
+  @@index([teacherId])
+}
+
+model Enrollment {
+  classId   String
+  studentId String
+  status    EnrollmentStatus @default(ACTIVE)
+
+  class   Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+  student User  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@id([classId, studentId])
+  @@index([studentId])
+}
+
+model ParentLink {
+  parentId  String
+  studentId String
+  status    ParentLinkStatus
+  method    ParentLinkMethod
+  createdAt DateTime         @default(now())
+
+  parent  User @relation("ParentLinkParent", fields: [parentId], references: [id], onDelete: Cascade)
+  student User @relation("ParentLinkStudent", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@id([parentId, studentId])
+  @@index([studentId])
+}
+
+model FamilyCode {
+  id        String    @id @default(cuid())
+  studentId String
+  code      String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+
+  student User @relation(fields: [studentId], references: [id], onDelete: Cascade)
+}
+
+model Subject {
+  id    String @id @default(cuid())
+  key   String @unique
+  name  Json
+  color String
+  icon  String
+
+  topics Topic[]
+}
+
+model Topic {
+  id            String  @id @default(cuid())
+  subjectId     String
+  key           String  @unique
+  name          Json
+  description   Json
+  icon          String  @default("star")
+  gradeLevel    Int
+  curriculumRef String?
+  posX          Int
+  posY          Int
+
+  subject       Subject             @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  prerequisites TopicPrerequisite[] @relation("TopicPrereqTopic")
+  dependents    TopicPrerequisite[] @relation("TopicPrereqPrereq")
+  missions      Mission[]
+  progress      TopicProgress[]
+}
+
+model TopicPrerequisite {
+  topicId        String
+  prerequisiteId String
+
+  topic        Topic @relation("TopicPrereqTopic", fields: [topicId], references: [id], onDelete: Cascade)
+  prerequisite Topic @relation("TopicPrereqPrereq", fields: [prerequisiteId], references: [id], onDelete: Cascade)
+
+  @@id([topicId, prerequisiteId])
+}
+
+model Mission {
+  id                    String          @id @default(cuid())
+  key                   String?         @unique
+  topicId               String
+  classId               String?
+  createdById           String
+  status                MissionStatus   @default(DRAFT)
+  audience              MissionAudience @default(STUDENT)
+  difficulty            Difficulty      @default(MEDIUM)
+  title                 Json
+  story                 Json
+  steps                 Json
+  miniLesson            Json
+  proofSpec             Json
+  rubric                Json
+  safetyNotes           Json
+  safetyCheck           Json?
+  xpReward              Int
+  estimatedMin          Int
+  dueAt                 DateTime?
+  classroomCourseWorkId String?
+  aiGenerated           Boolean         @default(false)
+  createdAt             DateTime        @default(now())
+
+  topic       Topic        @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  class       Class?       @relation(fields: [classId], references: [id], onDelete: Cascade)
+  createdBy   User         @relation(fields: [createdById], references: [id])
+  submissions Submission[]
+
+  @@index([classId, status])
+  @@index([topicId])
+}
+
+model Submission {
+  id              String           @id @default(cuid())
+  missionId       String
+  studentId       String
+  attempt         Int              @default(1)
+  status          SubmissionStatus @default(IN_PROGRESS)
+  photoUploadIds  String[]
+  audioUploadId   String?
+  explanation     String?
+  answers         Json?
+  aiCheck         Json?
+  followUpAnswer  String?
+  aiFollowUpCheck Json?
+  finalScore      Int?
+  hintsUsed       Int              @default(0)
+  hints           Json?
+  gradeSynced     Boolean          @default(false)
+  startedAt       DateTime         @default(now())
+  submittedAt     DateTime?
+  validatedAt     DateTime?
+
+  mission                  Mission                    @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  student                  User                       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  peerEvaluations          PeerEvaluation[]
+  teacherReviews           TeacherReview[]
+  familyConfirmation       FamilyMissionConfirmation?
+
+  @@index([studentId, status])
+  @@index([missionId])
+  @@index([status])
+}
+
+model PeerEvaluation {
+  id            String    @id @default(cuid())
+  submissionId  String
+  evaluatorId   String
+  sheet         Json
+  checklist     Json?
+  score         Int?
+  comment       String?
+  helpfulRating Int?
+  fairnessFlag  Boolean   @default(false)
+  status        String    @default("ASSIGNED")
+  assignedAt    DateTime  @default(now())
+  doneAt        DateTime?
+
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  evaluator  User       @relation(fields: [evaluatorId], references: [id], onDelete: Cascade)
+
+  @@index([evaluatorId, status])
+  @@index([submissionId])
+}
+
+model TeacherReview {
+  id           String   @id @default(cuid())
+  submissionId String
+  teacherId    String
+  score        Int
+  comment      String?
+  overrode     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  teacher    User       @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@index([submissionId])
+}
+
+model Upload {
+  id        String   @id @default(cuid())
+  ownerId   String
+  schoolId  String
+  kind      String
+  path      String
+  mime      String
+  bytes     Int
+  phash     String?
+  createdAt DateTime @default(now())
+
+  owner  User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId, phash])
+}
+
+model TopicProgress {
+  studentId  String
+  topicId    String
+  state      MasteryState @default(LOCKED)
+  bestScore  Int          @default(0)
+  attempts   Int          @default(0)
+  masteredAt DateTime?
+
+  student User  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  topic   Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@id([studentId, topicId])
+  @@index([topicId, state])
+}
+
+model XpEvent {
+  id        String   @id @default(cuid())
+  studentId String
+  subjectId String?
+  amount    Int
+  reason    String
+  refId     String?
+  createdAt DateTime @default(now())
+
+  student User @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+}
+
+model Wallet {
+  studentId String @id
+  points    Int    @default(3)
+
+  student User @relation(fields: [studentId], references: [id], onDelete: Cascade)
+}
+
+model WalletTx {
+  id        String   @id @default(cuid())
+  studentId String
+  delta     Int
+  reason    String
+  refId     String?
+  createdAt DateTime @default(now())
+
+  student User @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+}
+
+model Badge {
+  id       String @id @default(cuid())
+  key      String @unique
+  name     Json
+  icon     String
+  criteria Json
+
+  students StudentBadge[]
+}
+
+model StudentBadge {
+  studentId String
+  badgeId   String
+  earnedAt  DateTime @default(now())
+
+  student User  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  badge   Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@id([studentId, badgeId])
+}
+
+model Streak {
+  studentId  String    @id
+  current    Int       @default(0)
+  longest    Int       @default(0)
+  lastActive DateTime?
+
+  student User @relation(fields: [studentId], references: [id], onDelete: Cascade)
+}
+
+model FamilyMissionConfirmation {
+  id           String   @id @default(cuid())
+  submissionId String   @unique
+  parentId     String
+  note         String?
+  confirmedAt  DateTime @default(now())
+
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+}
+
+model ParentSummary {
+  id        String   @id @default(cuid())
+  parentId  String
+  studentId String
+  weekStart DateTime
+  locale    String
+  content   Json
+  createdAt DateTime @default(now())
+
+  @@unique([parentId, studentId, weekStart, locale])
+}
+
+model Message {
+  id        String    @id @default(cuid())
+  fromId    String
+  toId      String
+  studentId String?
+  body      String
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  from User @relation("MessageFrom", fields: [fromId], references: [id], onDelete: Cascade)
+  to   User @relation("MessageTo", fields: [toId], references: [id], onDelete: Cascade)
+
+  @@index([fromId, toId])
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  type      String
+  payload   Json
+  dedupeKey String?   @unique
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+}
+
+model AiCache {
+  key       String   @id
+  response  Json
+  createdAt DateTime @default(now())
+}
+
+model AiLog {
+  id        String   @id @default(cuid())
+  task      String
+  model     String
+  tokensIn  Int?
+  tokensOut Int?
+  ms        Int
+  ok        Boolean
+  error     String?
+  createdAt DateTime @default(now())
+}
