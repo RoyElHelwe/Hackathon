@@ -5,7 +5,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { PageHeader } from '@/components/app/adult-shell';
 import { ErrorState, PageSkeleton } from '@/components/app/states';
-import { SubjectChip } from '@/components/director/subject-chip';
+import { subjectLabel, SubjectChip } from '@/components/director/subject-chip';
 import { SubjectForm, type SubjectFormValue } from '@/components/director/subject-form';
 import { useToast } from '@/components/director/toast';
 import type { SchoolSubject } from '@/components/director/types';
@@ -97,7 +97,7 @@ export default function SubjectsPage() {
                 {subjects.map((s) => (
                   <li key={s.id} className="p-4" data-testid="subject-row">
                     {editingId === s.id ? (
-                      <SubjectForm initial={{ name: s.name.en, color: s.color, icon: s.icon }} busy={editBusy} onSubmit={(v) => editSubject(s.id, v)} onCancel={() => setEditingId(null)} />
+                      <SubjectForm initial={{ name: subjectLabel(s.name, locale), color: s.color, icon: s.icon }} busy={editBusy} onSubmit={(v) => editSubject(s.id, v)} onCancel={() => setEditingId(null)} />
                     ) : (
                       <div className="flex flex-wrap items-center gap-3">
                         <SubjectChip name={s.name} color={s.color} locale={locale} />
