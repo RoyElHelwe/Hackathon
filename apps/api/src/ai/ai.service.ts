@@ -86,14 +86,25 @@ export class AiUnavailableError extends ServiceUnavailableException {
   }
 }
 
-/** Extracts the first JSON object from a model reply (tolerates code fences). */
+/** Extracts the first complete JSON object from a model reply (tolerates code fences and text after the object). */
 export function extractJson(text: string): unknown {
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
   const raw = fenced ? fenced[1] : text;
   const start = raw.indexOf('{');
-  const end = raw.lastIndexOf('}');
-  if (start < 0 || end < start) throw new Error('No JSON object in reply');
-  return JSON.parse(raw.slice(start, end + 1));
+  if (start < 0) throw new Error('No JSON object in reply');
+  // scan to the brace that closes the first object, skipping braces inside strings
+  let depth = 0;
+  let inString = false;
+  for (let i = start; i < raw.length; i++) {
+    const c = raw[i];
+    if (inString) {
+      if (c === '\\') i++;
+      else if (c === '"') inString = false;
+    } else if (c === '"') inString = true;
+    else if (c === '{') depth++;
+    else if (c === '}' && --depth === 0) return JSON.parse(raw.slice(start, i + 1));
+  }
+  throw new Error('Unterminated JSON object in reply (output cut off?)');
 }
 
 function normalize(value: unknown): unknown {

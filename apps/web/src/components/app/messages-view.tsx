@@ -31,6 +31,7 @@ interface Msg {
 export function MessagesView({ initialWith }: { initialWith?: string }) {
   const t = useTranslations('common');
   const format = useFormatter();
+  // ticks once a minute; messages newer than the last tick are compared with the real clock (never "in 52 seconds")
   const now = useNow({ updateInterval: 60_000 });
   const { data: contacts, isLoading, error, refetch } = useApi<Contact[]>('/messages/contacts');
   const [withId, setWithId] = useState<string | undefined>(initialWith);
@@ -95,7 +96,7 @@ export function MessagesView({ initialWith }: { initialWith?: string }) {
             <div key={m.id} className={cn('flex', m.mine ? 'justify-end' : 'justify-start')}>
               <div className={cn('max-w-[80%] rounded-[18px] px-4 py-2', m.mine ? 'rounded-ee-sm bg-primary text-white' : 'rounded-es-sm bg-muted')}>
                 <p className="whitespace-pre-wrap">{m.body}</p>
-                <p className={cn('mt-1 text-[11px]', m.mine ? 'text-white/70' : 'text-muted-foreground')}>{format.relativeTime(new Date(m.createdAt), now)}</p>
+                <p className={cn('mt-1 text-[11px]', m.mine ? 'text-white/70' : 'text-muted-foreground')}>{format.relativeTime(new Date(m.createdAt), new Date(Math.max(now.getTime(), Date.now())))}</p>
               </div>
             </div>
           ))}

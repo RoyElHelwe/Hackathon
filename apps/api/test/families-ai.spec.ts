@@ -1,5 +1,5 @@
 import { safetyCheckMission, checkSubmission } from '../src/ai/tasks';
-import { AiService, AiTransport, AiUnavailableError } from '../src/ai/ai.service';
+import { AiService, AiTransport, AiUnavailableError, extractJson } from '../src/ai/ai.service';
 import { PeerReviewsService } from '../src/peer-reviews/peer-reviews.service';
 import { StuckService } from '../src/progress/stuck.service';
 import { createTestApp, TestCtx } from './app';
@@ -138,6 +138,12 @@ describe('AI JSON validation & safety', () => {
     const calls = useTransport(['```json\n' + JSON.stringify(good) + '\n```']);
     await expect(ai.run(checkSubmission, input)).resolves.toMatchObject({ score: 80 });
     expect(calls).toHaveLength(1);
+  });
+
+  it('extractJson takes the first complete object: text after it, braces in strings, cut-off output', () => {
+    expect(extractJson('{"a":1} and then {"b":2}')).toEqual({ a: 1 });
+    expect(extractJson('Sure! {"say":"use {curly} and \\"quotes\\"","n":{"x":1}}\nHope this helps {:}')).toEqual({ say: 'use {curly} and "quotes"', n: { x: 1 } });
+    expect(() => extractJson('{"say":"cut off mid')).toThrow(/cut off/);
   });
 
   it('invalid then fixed: retries once with the validation error', async () => {

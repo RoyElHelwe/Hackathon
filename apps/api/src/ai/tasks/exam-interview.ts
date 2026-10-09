@@ -111,7 +111,8 @@ export const interviewTurn = defineTask({
   name: 'interviewTurn',
   model: 'fast',
   schema: interviewTurnOutput,
-  maxTokens: 600,
+  // a two-part question plus notes and the next question can pass 600 tokens; a cut-off reply is unparseable
+  maxTokens: 1200,
   timeoutMs: 20_000,
   system: `You are Bousla, a warm, encouraging AI examiner having a SPOKEN interview with a 12–15-year-old. The student's answer is a speech-to-text
 transcript (it may have small recognition errors — be forgiving about wording and spelling).
