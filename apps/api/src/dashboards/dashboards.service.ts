@@ -4,6 +4,7 @@ import { AiService } from '../ai/ai.service';
 import { groupSession } from '../ai/tasks';
 import { AuthContext } from '../common/auth-context';
 import { ActorService } from '../common/actor.service';
+import { CurriculumService, VisibleTopic } from '../courses/curriculum.service';
 import { GamificationService } from '../gamification/gamification.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProgressService } from '../progress/progress.service';
@@ -20,22 +21,8 @@ export class DashboardsService {
     private readonly stuck: StuckService,
     private readonly ai: AiService,
     private readonly gamification: GamificationService,
+    private readonly curriculum: CurriculumService,
   ) {}
-
-  /** Topics shown for a class: every topic of each subject that has a mission in the class (fallback: math). */
-  private async classTopics(classId: string) {
-    const missions = await this.prisma.mission.findMany({ where: { classId }, select: { topic: { select: { subjectId: true } } } });
-    let subjectIds = [...new Set(missions.map((m) => m.topic.subjectId))];
-    if (!subjectIds.length) {
-      const math = await this.prisma.subject.findUnique({ where: { key: 'math' } });
-      subjectIds = math ? [math.id] : [];
-    }
-    return this.prisma.topic.findMany({
-      where: { subjectId: { in: subjectIds } },
-      include: { prerequisites: true, subject: true },
-      orderBy: [{ subject: { key: 'asc' } }, { posY: 'asc' }, { posX: 'asc' }],
-    });
-  }
 
   async teacher(a: AuthContext, classId: string) {
     await this.actors.assert(a, 'read', 'class', { classId });
@@ -45,7 +32,7 @@ export class DashboardsService {
       where: { id: classId },
       include: { course: { include: { subject: { select: { id: true, name: true, color: true } } } } },
     });
-    const topics = await this.classTopics(classId);
+    const topics = await this.curriculum.classTopics(classId);
     const enr = await this.prisma.enrollment.findMany({ where: { classId, status: 'ACTIVE' }, include: { student: true }, orderBy: { student: { name: 'asc' } } });
     const stuck = await this.stuck.forClass(classId);
     const cells: { studentId: string; topicId: string; state: string; bestScore: number }[] = [];
@@ -81,7 +68,17 @@ export class DashboardsService {
         sectionLabel: cls.sectionLabel,
         course: cls.course ? { id: cls.course.id, gradeLevel: cls.course.gradeLevel, subject: cls.course.subject } : null,
       },
-      topics: topics.map((t) => ({ id: t.id, key: t.key, name: t.name, subjectKey: t.subject.key, color: t.subject.color })),
+      topics: topics.map((t) => ({
+        id: t.id,
+        key: t.key,
+        name: t.name,
+        icon: t.icon,
+        courseId: t.courseId,
+        subjectKey: t.subject.key,
+        subjectName: t.subject.name,
+        color: t.subject.color,
+        subjectIcon: t.subject.icon,
+      })),
       students: enr.map((e) => ({ id: e.studentId, name: e.student.name, avatarUrl: e.student.avatarUrl, stuck: stuck.some((s) => s.studentId === e.studentId) })),
       cells,
       stuck: stuck.map((s) => ({ ...s, topicName: s.topicName })),
@@ -155,34 +152,48 @@ export class DashboardsService {
       include: { teachers: { include: { teacher: { select: { name: true } } } }, enrollments: { where: { status: 'ACTIVE' } } },
       orderBy: { name: 'asc' },
     });
-    const subjectOrder = ['math', 'physics', 'chemistry', 'biology', 'history', 'languages'];
-    const topics = (await this.prisma.topic.findMany({ include: { subject: true, prerequisites: true }, orderBy: [{ posY: 'asc' }, { posX: 'asc' }] })).sort(
-      (x, y) => subjectOrder.indexOf(x.subject.key) - subjectOrder.indexOf(y.subject.key),
-    );
+    const topicsByClass = await this.curriculum.topicsByClass(classes);
     const progressRows = await this.prisma.topicProgress.findMany({ where: { studentId: { in: studentIds }, state: 'MASTERED' }, select: { studentId: true, topicId: true } });
     const masteredSet = new Set(progressRows.map((r) => `${r.studentId}|${r.topicId}`));
+    const pctMastered = (classId: string, topicId: string) => {
+      const enrolled = classes.find((c) => c.id === classId)?.enrollments ?? [];
+      const m = enrolled.filter((e) => masteredSet.has(`${e.studentId}|${topicId}`)).length;
+      return enrolled.length ? Math.round((100 * m) / enrolled.length) : 0;
+    };
 
-    const coverage = topics.map((t) => ({
-      topicId: t.id,
-      topicKey: t.key,
-      topicName: t.name,
-      subjectKey: t.subject.key,
-      subjectName: t.subject.name,
-      color: t.subject.color,
-      gradeLevel: t.gradeLevel,
-      classes: classes.map((c) => {
-        const n = c.enrollments.length;
-        const m = c.enrollments.filter((e) => masteredSet.has(`${e.studentId}|${t.id}`)).length;
-        return { classId: c.id, pct: n ? Math.round((100 * m) / n) : 0 };
-      }),
-    }));
+    // Coverage: one grid per course of this school (columns = its sections, rows = the skills those sections see).
+    const coverage = (await this.curriculum.schoolCourses(schoolId)).map((course) => {
+      const seen = new Map<string, VisibleTopic>();
+      for (const sec of course.classes) for (const t of topicsByClass.get(sec.id) ?? []) if (!seen.has(t.id)) seen.set(t.id, t);
+      return {
+        courseId: course.id,
+        gradeLevel: course.gradeLevel,
+        subject: course.subject,
+        sections: course.classes.map((sec) => ({
+          id: sec.id,
+          name: sec.name,
+          sectionLabel: sec.sectionLabel,
+          students: classes.find((c) => c.id === sec.id)?.enrollments.length ?? 0,
+        })),
+        topics: [...seen.values()].map((t) => ({
+          topicId: t.id,
+          topicKey: t.key,
+          topicName: t.name,
+          icon: t.icon,
+          sections: course.classes.map((sec) => ({
+            classId: sec.id,
+            pct: (topicsByClass.get(sec.id) ?? []).some((x) => x.id === t.id) ? pctMastered(sec.id, t.id) : null,
+          })),
+        })),
+      };
+    });
 
     const classRows = [];
     for (const c of classes) {
       const ids = c.enrollments.map((e) => e.studentId);
       const active = ids.filter((id) => activeSet.has(id)).length;
       const stuck = await this.stuck.forClass(c.id);
-      const classTopicIds = (await this.classTopics(c.id)).map((t) => t.id);
+      const classTopicIds = (topicsByClass.get(c.id) ?? []).map((t) => t.id);
       const mastered = ids.reduce((s, id) => s + classTopicIds.filter((tid) => masteredSet.has(`${id}|${tid}`)).length, 0);
       classRows.push({
         id: c.id,
@@ -213,7 +224,6 @@ export class DashboardsService {
       trend,
       classes: classRows,
       coverage,
-      classList: classes.map((c) => ({ id: c.id, name: c.name })),
     };
   }
 

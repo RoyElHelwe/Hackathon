@@ -9,8 +9,8 @@ export class SubjectsController {
 
   @Can('read', 'self')
   @Get()
-  list(@Auth() a: AuthContext) {
-    return this.subjects.list(a);
+  list(@Auth() a: AuthContext, @Query('studentId') studentId?: string) {
+    return this.subjects.list(a, studentId);
   }
 
   @Can('read', 'progress')
