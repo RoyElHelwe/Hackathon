@@ -50,6 +50,8 @@ const LAST_SEEN_EVERY_MS = 30_000;
  */
 @WebSocketGateway({
   path: '/socket.io',
+  // No trailing slash: Next.js redirects "/api/socket.io/" → "/api/socket.io", so the proxied path must match without it.
+  addTrailingSlash: false,
   cors: { origin: config.WEB_URL, credentials: true },
   pingInterval: 20_000,
   pingTimeout: 20_000,
