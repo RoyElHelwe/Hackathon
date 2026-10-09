@@ -50,8 +50,11 @@ describe('Campus realtime', () => {
     const a = await emit<{ ok: boolean; snapshot: { map: string; players: unknown[] } }>(lea, 'room:join', { room: 'campus' });
     expect(a.ok).toBe(true);
     expect(a.snapshot.map).toBe('campus');
-    const b = await emit<{ ok: boolean; snapshot: { players: { name: string }[] } }>(karim, 'room:join', { room: 'campus' });
+    const b = await emit<{ ok: boolean; snapshot: { self: { x: number; y: number }; players: { name: string; x: number; y: number }[] } }>(karim, 'room:join', { room: 'campus' });
     expect(b.snapshot.players.map((p) => p.name)).toContain('Lea');
+    // nobody spawns on top of someone else
+    const leaPos = b.snapshot.players.find((p) => p.name === 'Lea')!;
+    expect(Math.hypot(leaPos.x - b.snapshot.self.x, leaPos.y - b.snapshot.self.y)).toBeGreaterThanOrEqual(48);
     karim.emit('move', { room: 'campus', x: 99999, y: 500, dir: 'right', moving: true });
     await wait(150);
     expect(joined).toHaveLength(1);

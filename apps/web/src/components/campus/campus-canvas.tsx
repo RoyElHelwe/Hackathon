@@ -1,13 +1,31 @@
 'use client';
 
 import { EMOTE_EMOJI, MAPS, type CampusMap, type Zone } from '@tajriba/shared';
-import { useTranslations } from 'next-intl';
-import { useEffect, useRef } from 'react';
+import { useLocale, useTranslations } from 'next-intl';
+import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/cn';
 import type { useRoom } from '@/lib/campus/use-room';
 import type { SceneApi } from './scene';
 
 type Room = ReturnType<typeof useRoom>;
+
+/** keys the scene uses for walking; the browser would scroll the page with them */
+const SCROLL_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
+
+/** Follows the `dark` class on <html> (the theme toggle), so the map can be redrawn in the new theme. */
+function useDarkClass() {
+  // read on first render too, so a dark-mode user doesn't boot the map twice
+  const [dark, setDark] = useState(() => typeof document !== 'undefined' && document.documentElement.classList.contains('dark'));
+  useEffect(() => {
+    const el = document.documentElement;
+    const read = () => setDark(el.classList.contains('dark'));
+    read();
+    const mo = new MutationObserver(read);
+    mo.observe(el, { attributes: true, attributeFilter: ['class'] });
+    return () => mo.disconnect();
+  }, []);
+  return dark;
+}
 
 interface Props {
   room: Room;
@@ -36,8 +54,12 @@ export function CampusCanvas({ room, map, interactive = true, selfSpeaking, onZo
   zoneRef.current = onZone;
   const apiCb = useRef(onApi);
   apiCb.current = onApi;
+  const dark = useDarkClass();
+  const locale = useLocale();
+  /** where I was standing when the scene was last torn down (theme/language switch → redraw in place) */
+  const lastSelf = useRef<{ map: string; x: number; y: number } | null>(null);
 
-  // Boot Phaser once per map.
+  // Boot Phaser once per map, theme and language (labels and colors are drawn at boot).
   useEffect(() => {
     let game: import('phaser').Game | null = null;
     let cancelled = false;
@@ -46,7 +68,6 @@ export function CampusCanvas({ room, map, interactive = true, selfSpeaking, onZo
       const Phaser = ((mod as unknown as { default?: typeof import('phaser') }).default ?? mod) as typeof import('phaser');
       if (cancelled || !host.current) return;
       const { createCampusScene } = await import('./scene');
-      const dark = document.documentElement.classList.contains('dark');
       const Scene = createCampusScene(Phaser, {
         map: MAPS[map],
         interactive,
@@ -58,8 +79,10 @@ export function CampusCanvas({ room, map, interactive = true, selfSpeaking, onZo
           api.current = a;
           const r = roomRef.current;
           if (r.snapshot) {
-            a.setSelf(r.snapshot.self);
-            for (const p of r.players) a.upsert(p);
+            const was = lastSelf.current?.map === map ? lastSelf.current : null;
+            a.setSelf(was ? { ...r.snapshot.self, x: was.x, y: was.y } : r.snapshot.self);
+            // live positions (kept up to date by the room hook), not the join-time list
+            for (const p of r.positions.current.values()) a.upsert(p);
           }
           apiCb.current?.(a);
         },
@@ -78,11 +101,33 @@ export function CampusCanvas({ room, map, interactive = true, selfSpeaking, onZo
     })();
     return () => {
       cancelled = true;
+      const pos = api.current?.selfPos();
+      if (pos) lastSelf.current = { map, ...pos };
       api.current = null;
       apiCb.current?.(null);
       game?.destroy(true);
     };
-  }, [map, interactive]);
+  }, [map, interactive, dark, locale]);
+
+  // Walking with the arrow keys must not scroll the page while the map is on screen.
+  useEffect(() => {
+    const el = host.current;
+    if (!interactive || !el) return;
+    let visible = false;
+    const io = new IntersectionObserver(([e]) => (visible = e.intersectionRatio >= 0.5), { threshold: [0, 0.5, 1] });
+    io.observe(el);
+    const onKey = (e: KeyboardEvent) => {
+      if (!visible || !SCROLL_KEYS.has(e.key)) return;
+      const target = e.target as HTMLElement | null;
+      if (target && (/^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName) || target.isContentEditable)) return;
+      e.preventDefault();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      io.disconnect();
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [interactive]);
 
   // Room events → scene.
   useEffect(
@@ -92,6 +137,7 @@ export function CampusCanvas({ room, map, interactive = true, selfSpeaking, onZo
         if (!a) return;
         switch (e.type) {
           case 'snapshot':
+            lastSelf.current = null; // the server's position wins after a (re)join
             a.clearOthers();
             a.setSelf(e.snapshot.self);
             for (const p of e.snapshot.players) a.upsert(p);

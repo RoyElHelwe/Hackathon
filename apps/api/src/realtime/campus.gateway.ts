@@ -14,12 +14,12 @@ import {
   joinRoomMsg,
   MAPS,
   moveMsg,
+  pickSpawn,
   PlayerState,
   PRESENCE_GRACE_MS,
   reactionMsg,
   RoomSnapshot,
   signalMsg,
-  spawnFor,
   speakingMsg,
   transcriptMsg,
 } from '@tajriba/shared';
@@ -112,7 +112,8 @@ export class CampusGateway implements OnGatewayInit, OnGatewayDisconnect {
     if (previous && previous.key !== grant.key) this.detach(client, previous, 'leave');
 
     const map = MAPS[grant.map];
-    const spawn = spawnFor(map, grant.spawnIndex);
+    const others = this.bus.presence.players(grant.key).filter((p) => p.userId !== data.ident.userId && !p.spectator);
+    const spawn = pickSpawn(map, grant.spawnIndex, others);
     const initial: PlayerState = {
       userId: data.ident.userId,
       name: firstName(data.ident.name),
@@ -129,6 +130,7 @@ export class CampusGateway implements OnGatewayInit, OnGatewayDisconnect {
     await client.join(grant.key);
 
     if (isNew) client.to(grant.key).emit('player:joined', { room: msg.room, player: state });
+    this.syncTogether(grant);
     if (grant.refId) {
       const type = grant.spectator ? 'SPECTATOR_JOINED' : isNew ? 'JOIN' : 'REJOIN';
       void this.sessionLog.log(grant.kind === 'study' ? 'STUDY' : 'EXAM', grant.refId, data.ident.userId, type);
@@ -241,6 +243,8 @@ export class CampusGateway implements OnGatewayInit, OnGatewayDisconnect {
     const userId = data.ident.userId;
     void client.leave(grant.key);
     const last = this.bus.presence.leaveSocket(grant.key, userId, client.id);
+    // together time stops as soon as a partner has no live socket (no grace period for XP)
+    this.syncTogether(grant);
     if (!last) return;
     const gone = () => {
       this.bus.toRoom(grant.key, 'player:left', { room: roomName(grant), userId });
@@ -256,6 +260,30 @@ export class CampusGateway implements OnGatewayInit, OnGatewayDisconnect {
     } else {
       this.bus.presence.scheduleRemoval(grant.key, userId, this.graceMs, gone);
     }
+  }
+
+  /**
+   * Study rooms: starts or stops the "together" clock when both partners are (or stop being) connected, stores the
+   * ended segment and tells the room, so both see the same together time.
+   */
+  private syncTogether(grant: RoomGrant) {
+    if (grant.kind !== 'study' || !grant.refId) return;
+    const together = this.bus.presence.connected(grant.key).filter((p) => !p.spectator).length >= 2;
+    const wasTogether = this.bus.together.sinceOf(grant.key) !== null;
+    if (wasTogether === together) return;
+    const endedMs = this.bus.together.update(grant.key, together);
+    const sessionId = grant.refId;
+    void (async () => {
+      try {
+        const s = endedMs
+          ? await this.prisma.studySession.update({ where: { id: sessionId }, data: { togetherMs: { increment: endedMs } }, select: { togetherMs: true } })
+          : await this.prisma.studySession.findUnique({ where: { id: sessionId }, select: { togetherMs: true } });
+        const since = this.bus.together.sinceOf(grant.key);
+        this.bus.toRoom(grant.key, 'study:together', { sessionId, togetherMs: s?.togetherMs ?? 0, since: since ? new Date(since).toISOString() : null });
+      } catch (e) {
+        this.logger.warn(`together time update failed: ${e instanceof Error ? e.message : e}`);
+      }
+    })();
   }
 
   private kind(grant: RoomGrant): 'STUDY' | 'EXAM' {

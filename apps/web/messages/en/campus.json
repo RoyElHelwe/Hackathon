@@ -92,7 +92,7 @@
     "mic": "Microphone",
     "end": "End session",
     "endTitle": "End this study session?",
-    "endBody": "It ends for both of you. You get XP if you studied at least 5 minutes.",
+    "endBody": "It ends for both of you. You get XP if you studied together for at least 5 minutes.",
     "cancel": "Keep studying",
     "here": "{name} is here",
     "away": "{name} hasn't joined yet",
@@ -119,7 +119,10 @@
     "noRecordings": "No recordings yet.",
     "timeline": "What happened",
     "duration": "Duration: {time}",
-    "activityNotice": "Your teacher sees what happens in this session (who joined, reactions, how long). Voices are not recorded."
+    "activityNotice": "Your teacher sees what happens in this session (who joined, reactions, how long). Voices are not recorded.",
+    "together": "Together {time}",
+    "togetherGoal": "Study together 5 min to earn XP",
+    "togetherDone": "XP unlocked ✓"
   },
   "events": {
     "INVITED": "sent an invite",

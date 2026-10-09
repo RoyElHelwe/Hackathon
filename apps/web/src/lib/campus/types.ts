@@ -44,6 +44,10 @@ export interface StudySessionDetail {
   startedAt: string | null;
   endedAt: string | null;
   endedReason: string | null;
+  /** time both partners were in the room at once (stored total, without the running segment) */
+  togetherMs: number;
+  /** start of the running together-segment, null when apart */
+  togetherSince: string | null;
   room: string;
   participants: { userId: string; name: string; avatarUrl: string | null; joinedAt: string | null; leftAt: string | null; online: boolean }[];
   events: SessionEventItem[];

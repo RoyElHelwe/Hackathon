@@ -47,6 +47,16 @@ export function InviteListener() {
     }
   };
 
+  // "Not now" really declines, so the classmate who invited isn't left waiting for the invite to expire.
+  const decline = () => {
+    if (!invite) return;
+    const id = invite.sessionId;
+    setInvite(null);
+    void api(`/study-sessions/${id}/decline`, { method: 'POST' })
+      .catch(() => undefined)
+      .then(() => invalidate('/study-sessions/mine'));
+  };
+
   return (
     <AnimatePresence>
       {invite && (
@@ -65,7 +75,7 @@ export function InviteListener() {
             <Button size="sm" variant="kid" onClick={join} loading={busy} data-testid="invite-join">
               {t('invites.accept')}
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => setInvite(null)}>
+            <Button size="sm" variant="ghost" onClick={decline} data-testid="invite-decline">
               {t('invites.decline')}
             </Button>
           </div>

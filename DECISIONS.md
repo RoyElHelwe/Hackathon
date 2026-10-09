@@ -67,3 +67,7 @@ Non-obvious choices made while building Tajriba. CLAUDE.md is the spec; this fil
 - **Spectating is transparent**: the student sees "Your teacher is watching".
 - Exams are built from **course lessons** (Classroom posts) of the class's course; the seed creates the 8B lessons exactly as lesson sync would (same fingerprint + source ids) so a later sync keeps them.
 - Map art is drawn with Phaser primitives (the dev_pulse "Modern Office" tileset forbids redistribution).
+- **Study XP is earned on together time**: the server measures how long both partners have a live socket in the room at once (`TogetherClock`, stored in `StudySession.togetherMs`), and XP needs ≥ 5 min of it. Joining for a moment, leaving, and letting the sweeper end the session earns nothing. The running segment is in memory like presence, so a server restart only loses that segment.
+- **Only the host may wait in a study room before the invite is accepted**; the invited classmate enters after accepting. "Not now" on the invite pop-up declines on the server, so the host isn't left waiting.
+- **Campus spawns**: each user prefers a spawn point from a hash of their id and gets the first one nobody is standing on (`pickSpawn`), so avatars and name tags never stack.
+- **The map redraws in place** when the theme or language changes (Phaser draws colors and labels at boot): the scene is rebuilt with the player's last position and the live positions of everyone else.

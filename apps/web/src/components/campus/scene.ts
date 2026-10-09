@@ -55,12 +55,20 @@ const FONT = 'Nunito, Tajawal, system-ui, sans-serif';
 
 interface Avatar {
   c: Container;
+  /** body + eyes: bobs while walking */
+  figure: Container;
   body: import('phaser').GameObjects.Arc;
   pupils: import('phaser').GameObjects.Arc[];
   ring: import('phaser').GameObjects.Arc;
   tween?: import('phaser').Tweens.Tween;
+  bob?: import('phaser').Tweens.Tween;
+  /** scene time of the last movement update (remote players) */
+  lastMove: number;
   dir: Dir;
 }
+
+/** a remote player with no movement update for this long has stopped (the "stopped" packet may be dropped) */
+const IDLE_AFTER_MS = 350;
 
 /** Builds the Phaser scene class for one campus map (courtyard, study room or exam room). */
 export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
@@ -178,21 +186,47 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
           g.fillStyle(C.greenDark, 1).fillCircle(cx, cy, f.w / 2);
           g.fillStyle(C.green, 1).fillCircle(cx - 6, cy - 6, f.w / 2.6);
           break;
-        case 'fountain':
-          g.fillStyle(0xb9c4d6, 1).fillCircle(cx, cy, f.w / 2);
-          g.fillStyle(C.sky, 1).fillCircle(cx, cy, f.w / 2 - 10);
-          g.fillStyle(0xffffff, 0.8).fillCircle(cx, cy, 10);
-          this.tweens.add({ targets: g, alpha: { from: 0.9, to: 1 }, duration: 1200, yoyo: true, repeat: -1 });
+        case 'fountain': {
+          // stone basin, water, a centre spout and ripples spreading out (reads as water, not as a button)
+          const r = f.w / 2;
+          g.fillStyle(0x000000, 0.12).fillEllipse(cx + 5, cy + 8, f.w, f.h * 0.92);
+          g.fillStyle(cfg.dark ? 0x58617a : 0xd5dbe6, 1).fillCircle(cx, cy, r);
+          for (let i = 0; i < 12; i++) {
+            const a = (i / 12) * Math.PI * 2;
+            g.fillStyle(cfg.dark ? 0x4a5269 : 0xbfc7d6, 1).fillCircle(cx + Math.cos(a) * (r - 5), cy + Math.sin(a) * (r - 5), 4);
+          }
+          g.fillStyle(cfg.dark ? 0x2b6f9c : 0x8fd6ff, 1).fillCircle(cx, cy, r - 11);
+          g.fillStyle(0xffffff, 0.35).fillEllipse(cx - r / 3, cy - r / 3, r / 2, r / 4);
+          g.fillStyle(cfg.dark ? 0x58617a : 0xd5dbe6, 1).fillCircle(cx, cy, 11);
+          g.fillStyle(0xffffff, 0.95).fillCircle(cx, cy - 2, 5);
+          for (const delay of [0, 900]) {
+            const ripple = this.add.circle(cx, cy, 12).setStrokeStyle(2, 0xffffff, 0.8).setDepth(3.1);
+            this.tweens.add({ targets: ripple, scale: { from: 1, to: (r - 12) / 12 }, alpha: { from: 0.9, to: 0 }, duration: 1800, delay, repeat: -1 });
+          }
           break;
+        }
         case 'board':
           g.fillStyle(0x1f5f4a, 1).fillRoundedRect(f.x, f.y, f.w, f.h, 8);
           g.lineStyle(4, C.woodDark, 1).strokeRoundedRect(f.x, f.y, f.w, f.h, 8);
           if (f.label) this.label(cx, cy, tr(f.label), 15, '#ffffff').setDepth(4);
           break;
-        case 'lamp':
-          g.fillStyle(C.sunny, 0.25).fillCircle(cx, cy, f.w);
-          g.fillStyle(C.sunny, 1).fillCircle(cx, cy, f.w / 2.5);
+        case 'lamp': {
+          // floor lamp seen from the front: base, pole, shade and a warm glow
+          g.fillStyle(C.sunny, cfg.dark ? 0.2 : 0.14).fillCircle(cx, f.y + 10, f.w * 0.95);
+          g.fillStyle(0x000000, 0.12).fillEllipse(cx + 2, f.y + f.h, f.w * 0.75, 8);
+          g.fillStyle(C.woodDark, 1).fillEllipse(cx, f.y + f.h - 2, f.w * 0.6, 8);
+          g.fillStyle(0x6b5a4a, 1).fillRect(cx - 2, f.y + 14, 4, f.h - 16);
+          const shade = [
+            { x: cx - 8, y: f.y },
+            { x: cx + 8, y: f.y },
+            { x: cx + 15, y: f.y + 16 },
+            { x: cx - 15, y: f.y + 16 },
+          ];
+          g.fillStyle(0xfff1c1, 1).fillPoints(shade, true);
+          g.lineStyle(2, C.sunny, 1).strokePoints(shade, true);
+          g.fillStyle(0xffffff, 0.9).fillCircle(cx, f.y + 18, 3);
           break;
+        }
         case 'bousla': {
           // Bousla, the compass mascot, standing in the room.
           g.fillStyle(0x000000, 0.12).fillEllipse(cx, f.y + f.h + 2, f.w * 0.8, 10);
@@ -217,9 +251,23 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
       const pupilL = this.add.circle(-5, -2, 2, C.ink);
       const pupilR = this.add.circle(5, -2, 2, C.ink);
       const name = this.label(0, 29, isSelf ? `${p.name} ★` : p.name, 12, '#ffffff', isSelf ? '#6c4cf1' : '#14112bcc');
-      const c = this.add.container(p.x, p.y, [shadow, ring, body, eyeL, eyeR, pupilL, pupilR, name]).setDepth(10 + p.y / 1000);
+      const figure = this.add.container(0, 0, [body, eyeL, eyeR, pupilL, pupilR]);
+      const c = this.add.container(p.x, p.y, [shadow, ring, figure, name]).setDepth(10 + p.y / 1000);
       this.tweens.add({ targets: ring, scale: { from: 0.95, to: 1.15 }, duration: 450, yoyo: true, repeat: -1 });
-      return { c, body, pupils: [pupilL, pupilR], ring, dir: p.dir };
+      const a: Avatar = { c, figure, body, pupils: [pupilL, pupilR], ring, dir: p.dir, lastMove: 0 };
+      if (p.moving) this.walk(a, true);
+      return a;
+    }
+
+    /** A little hop while walking, so moving players don't just slide. */
+    private walk(a: Avatar, on: boolean) {
+      if (on && !a.bob) {
+        a.bob = this.tweens.add({ targets: a.figure, y: { from: 0, to: -4 }, duration: 130, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+      } else if (!on && a.bob) {
+        a.bob.stop();
+        a.bob = undefined;
+        a.figure.y = 0;
+      }
     }
 
     private look(a: Avatar, dir: Dir) {
@@ -249,6 +297,8 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
     // ---------- loop ----------
 
     update() {
+      const now = this.time.now;
+      for (const a of this.others.values()) if (a.bob && now - a.lastMove > IDLE_AFTER_MS) this.walk(a, false);
       const self = this.self;
       if (!self || !cfg.interactive) return;
       const body = self.c.body as import('phaser').Physics.Arcade.Body;
@@ -277,6 +327,7 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
       const len = Math.hypot(vx, vy) || 1;
       body.setVelocity((vx / len) * speed, (vy / len) * speed);
       const moving = !!(vx || vy);
+      this.walk(self, moving);
       if (moving) {
         const dir: Dir = Math.abs(vx) > Math.abs(vy) ? (vx < 0 ? 'left' : 'right') : vy < 0 ? 'up' : 'down';
         if (dir !== self.dir) this.look(self, dir);
@@ -284,7 +335,6 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
       }
       self.c.setDepth(10 + self.c.y / 1000);
 
-      const now = this.time.now;
       const changed = Math.abs(self.c.x - this.lastPos.x) > 1 || Math.abs(self.c.y - this.lastPos.y) > 1 || moving !== this.lastPos.moving;
       if (changed && now - this.lastSent > 60) {
         this.lastSent = now;
@@ -342,9 +392,11 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
           const a = this.others.get(id);
           if (!a) return;
           a.tween?.stop();
-          a.tween = this.tweens.add({ targets: a.c, x, y, duration: 110, ease: 'Linear', onUpdate: () => a.c.setDepth(10 + a.c.y / 1000) });
+          // a bit longer than the 60 ms send interval, so the next update arrives before the tween ends
+          a.tween = this.tweens.add({ targets: a.c, x, y, duration: 80, ease: 'Linear', onUpdate: () => a.c.setDepth(10 + a.c.y / 1000) });
           if (dir !== a.dir) this.look(a, dir);
-          void moving;
+          a.lastMove = this.time.now;
+          this.walk(a, moving);
         },
         remove: (id) => {
           const a = this.others.get(id);

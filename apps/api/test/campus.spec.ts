@@ -74,6 +74,14 @@ describe('Peer study sessions', () => {
     expect(await emit(omar, 'room:join', { room: `study:${sessionId}` })).toEqual({ ok: false, error: 'forbidden' });
   });
 
+  it('the host may wait in the room, the invited classmate must accept first', async () => {
+    const karim = await connect(await ctx.as('karim'));
+    expect(await emit(karim, 'room:join', { room: `study:${sessionId}` })).toEqual({ ok: false, error: 'forbidden' });
+    const lea = await connect(await ctx.as('lea'));
+    expect(await emit(lea, 'room:join', { room: `study:${sessionId}` })).toMatchObject({ ok: true });
+    await emit(lea, 'room:leave', { room: `study:${sessionId}` });
+  });
+
   it('accept → both in the room; a disconnect does NOT end the session; End does', async () => {
     const karimCookie = await ctx.as('karim');
     const accepted = await ctx.http().post(`/study-sessions/${sessionId}/accept`).set('Cookie', karimCookie).expect(201);
@@ -101,8 +109,8 @@ describe('Peer study sessions', () => {
     await ctx.app.get(StudySessionsService).sweep(new Date(Date.now() + 10 * 60_000));
     expect((await ctx.prisma.studySession.findUniqueOrThrow({ where: { id: sessionId } })).status).toBe('ACTIVE');
 
-    // Long enough for XP, then Lea ends it.
-    await ctx.prisma.studySession.update({ where: { id: sessionId }, data: { startedAt: new Date(Date.now() - STUDY_MIN_XP_MS - 1000) } });
+    // Long enough together for XP, then Lea ends it.
+    await ctx.prisma.studySession.update({ where: { id: sessionId }, data: { startedAt: new Date(Date.now() - STUDY_MIN_XP_MS - 1000), togetherMs: STUDY_MIN_XP_MS + 1000 } });
     const xpBefore = await ctx.prisma.xpEvent.count({ where: { reason: 'STUDY_SESSION' } });
     const r = await ctx.http().post(`/study-sessions/${sessionId}/end`).set('Cookie', await ctx.as('lea')).expect(201);
     expect(r.body.status).toBe('ENDED');
@@ -115,6 +123,35 @@ describe('Peer study sessions', () => {
     // idempotent
     await ctx.http().post(`/study-sessions/${sessionId}/end`).set('Cookie', await ctx.as('lea')).expect(201);
     expect(await ctx.prisma.xpEvent.count({ where: { reason: 'STUDY_SESSION' } })).toBe(xpBefore + 2);
+  });
+
+  it('XP needs time TOGETHER, not just time since the invite was accepted', async () => {
+    const r = await ctx.http().post('/study-sessions').set('Cookie', await ctx.as('lea')).send({ partnerId: await userId('omar') }).expect(201);
+    const sid = r.body.id;
+    await ctx.http().post(`/study-sessions/${sid}/accept`).set('Cookie', await ctx.as('omar')).expect(201);
+    const room = `study:${sid}`;
+    const lea = await connect(await ctx.as('lea'));
+    const omar = await connect(await ctx.as('omar'));
+    const together: { togetherMs: number; since: string | null }[] = [];
+    lea.on('study:together', (d) => together.push(d));
+    await emit(lea, 'room:join', { room });
+    await emit(omar, 'room:join', { room });
+    await wait(250);
+    expect(together.at(-1)?.since).toBeTruthy();
+    expect((await ctx.http().get(`/study-sessions/${sid}`).set('Cookie', await ctx.as('lea')).expect(200)).body.togetherSince).toBeTruthy();
+    await emit(omar, 'room:leave', { room });
+    await wait(150);
+    expect(together.at(-1)?.since).toBeNull();
+    const stored = (await ctx.prisma.studySession.findUniqueOrThrow({ where: { id: sid } })).togetherMs;
+    expect(stored).toBeGreaterThanOrEqual(200);
+    expect(together.at(-1)?.togetherMs).toBe(stored);
+
+    // an hour since accept, but only a few hundred ms together → no XP
+    await ctx.prisma.studySession.update({ where: { id: sid }, data: { startedAt: new Date(Date.now() - 60 * 60_000) } });
+    const xpBefore = await ctx.prisma.xpEvent.count({ where: { reason: 'STUDY_SESSION', refId: sid } });
+    const ended = await ctx.http().post(`/study-sessions/${sid}/end`).set('Cookie', await ctx.as('lea')).expect(201);
+    expect(ended.body.status).toBe('ENDED');
+    expect(await ctx.prisma.xpEvent.count({ where: { reason: 'STUDY_SESSION', refId: sid } })).toBe(xpBefore);
   });
 
   it('a session nobody is in gets swept after a while', async () => {

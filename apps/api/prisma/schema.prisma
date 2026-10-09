@@ -687,6 +687,8 @@ model StudySession {
   startedAt   DateTime?
   endedAt     DateTime?
   endedReason String?
+  /// time both partners were in the room at once (study XP is earned on this)
+  togetherMs  Int                @default(0)
   createdAt   DateTime           @default(now())
 
   class        Class                     @relation(fields: [classId], references: [id], onDelete: Cascade)

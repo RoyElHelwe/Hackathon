@@ -111,6 +111,7 @@ export class StudySessionsService {
       topic = t ? pickText(t.name as I18nText, a.user.locale) : null;
     }
     const events = await this.sessionLog.list('STUDY', id);
+    const since = this.bus.together.sinceOf(`study:${s.id}`);
     return {
       id: s.id,
       status: s.status,
@@ -123,6 +124,9 @@ export class StudySessionsService {
       startedAt: s.startedAt,
       endedAt: s.endedAt,
       endedReason: s.endedReason,
+      // stored total; the running segment (if any) started at togetherSince
+      togetherMs: s.togetherMs,
+      togetherSince: since ? new Date(since).toISOString() : null,
       room: `study:${s.id}`,
       participants: s.participants.map((p) => ({
         userId: p.userId,
@@ -243,15 +247,20 @@ export class StudySessionsService {
     }));
   }
 
-  /** Ends a session (once) and gives XP to participants who actually joined, if it lasted long enough. */
+  /**
+   * Ends a session (once) and gives XP to participants who joined — only if they spent at least STUDY_MIN_XP_MS in
+   * the room at the same time (together time), so joining for a moment and leaving earns nothing.
+   */
   async finish(id: string, reason: string, byUserId: string | null) {
     const now = new Date();
     const flipped = await this.prisma.studySession.updateMany({ where: { id, status: 'ACTIVE' }, data: { status: 'ENDED', endedAt: now, endedReason: reason } });
     if (!flipped.count) return;
+    const running = this.bus.together.flush(`study:${id}`, now.getTime());
+    if (running) await this.prisma.studySession.update({ where: { id }, data: { togetherMs: { increment: running } } });
     const s = await this.prisma.studySession.findUniqueOrThrow({ where: { id }, include: { participants: true, class: { select: { subjectId: true } } } });
     const lasted = s.startedAt ? now.getTime() - s.startedAt.getTime() : 0;
     const xpBy: Record<string, number> = {};
-    if (lasted >= STUDY_MIN_XP_MS) {
+    if (s.togetherMs >= STUDY_MIN_XP_MS) {
       for (const p of s.participants.filter((x) => x.joinedAt)) {
         if (await this.dailyCapReached(p.userId, now)) continue;
         const before = await this.gamification.totalXp(p.userId);
@@ -261,7 +270,7 @@ export class StudySessionsService {
         xpBy[p.userId] = STUDY_XP;
       }
     }
-    await this.sessionLog.log('STUDY', id, byUserId, 'ENDED', { reason, lastedSec: Math.round(lasted / 1000), xpBy });
+    await this.sessionLog.log('STUDY', id, byUserId, 'ENDED', { reason, lastedSec: Math.round(lasted / 1000), togetherSec: Math.round(s.togetherMs / 1000), xpBy });
     this.bus.toRoom(`study:${id}`, 'study:ended', { sessionId: id, reason, byId: byUserId, xpBy });
   }
 

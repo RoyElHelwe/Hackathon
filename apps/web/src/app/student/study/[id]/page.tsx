@@ -1,6 +1,6 @@
 'use client';
 
-import { distance, voiceGain } from '@tajriba/shared';
+import { distance, STUDY_MIN_XP_MS, voiceGain } from '@tajriba/shared';
 import { ArrowLeft, Mic, MicOff, PhoneOff, Shuffle } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useTranslations } from 'next-intl';
@@ -41,8 +41,13 @@ export default function StudyRoomPage() {
   const recordsVoice = cfg?.recordStudySessions === true;
   const notice = t(recordsVoice ? 'study.recordingNotice' : 'study.activityNotice');
 
-  useSocketEvent<{ sessionId: string; xpBy?: Record<string, number> }>('study:ended', (d) => {
+  useSocketEvent<{ sessionId: string; reason?: string; xpBy?: Record<string, number> }>('study:ended', (d) => {
     if (d.sessionId !== id) return;
+    if (d.reason === 'DECLINED') {
+      // the invite was declined or cancelled: the page shows that status, not "session over"
+      void invalidate(path, '/study-sessions/mine');
+      return;
+    }
     const xp = (me && d.xpBy?.[me.user.id]) || 0; // 0 when the session was too short or the daily cap was reached
     setEnded({ xp });
     if (xp) fireConfetti(true);
@@ -137,7 +142,13 @@ function StudyRoom({ session, myId, withMic, names }: { session: StudySessionDet
   const scene = useRef<SceneApi | null>(null);
   const [confirm, setConfirm] = useState(false);
   const [ending, setEnding] = useState(false);
-  const [elapsed, setElapsed] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
+  // together time: stored total + the running segment (both partners in the room)
+  const [together, setTogether] = useState({ ms: session.togetherMs, since: session.togetherSince });
+  useSocketEvent<{ sessionId: string; togetherMs: number; since: string | null }>('study:together', (d) => {
+    if (d.sessionId === session.id) setTogether({ ms: d.togetherMs, since: d.since });
+  });
+  const togetherMs = together.ms + (together.since ? Math.max(0, now - new Date(together.since).getTime()) : 0);
   const [tip, setTip] = useState<number | null>(null);
   const lastVoice = useRef(Date.now());
   const partner = session.participants.find((p) => p.userId !== myId);
@@ -176,18 +187,17 @@ function StudyRoom({ session, myId, withMic, names }: { session: StudySessionDet
     return () => window.clearInterval(iv);
   }, [setVolume]);
 
-  // Elapsed time + Bousla's tips when it gets quiet.
+  // Clock for the together timer + Bousla's tips when it gets quiet.
   useEffect(() => {
-    const start = session.startedAt ? new Date(session.startedAt).getTime() : Date.now();
     const iv = window.setInterval(() => {
-      setElapsed(Math.round((Date.now() - start) / 1000));
+      setNow(Date.now());
       if (Date.now() - lastVoice.current > 30_000) {
         setTip((n) => ((n ?? -1) + 1) % 4);
         lastVoice.current = Date.now();
       }
     }, 1000);
     return () => window.clearInterval(iv);
-  }, [session.startedAt]);
+  }, []);
   useEffect(() => {
     if (tip === null) return;
     const to = window.setTimeout(() => setTip(null), 9000);
@@ -232,7 +242,7 @@ function StudyRoom({ session, myId, withMic, names }: { session: StudySessionDet
             {partnerHere ? t('study.here', { name: partner?.name.split(' ')[0] ?? '' }) : t('study.away', { name: partner?.name.split(' ')[0] ?? '' })}
           </p>
         </div>
-        <span className="font-mono text-sm font-bold text-muted-foreground">{mmss(elapsed)}</span>
+        <TogetherChip ms={togetherMs} running={!!together.since} />
         {rec.recording && (
           <span className="flex items-center gap-1.5 rounded-full bg-coral-soft px-2.5 py-1 text-xs font-extrabold text-coral" data-testid="recording-chip">
             <span className="size-2 animate-pulse rounded-full bg-coral" /> {t('study.recording')}
@@ -292,6 +302,29 @@ function StudyRoom({ session, myId, withMic, names }: { session: StudySessionDet
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+/** "Together 3:12" with a ring filling up to the 5 minutes that earn study XP. */
+function TogetherChip({ ms, running }: { ms: number; running: boolean }) {
+  const t = useTranslations('campus');
+  const done = ms >= STUDY_MIN_XP_MS;
+  const p = Math.min(1, ms / STUDY_MIN_XP_MS);
+  const r = 9;
+  const c = 2 * Math.PI * r;
+  return (
+    <span
+      className={cn('flex items-center gap-2 rounded-full px-3 py-1 text-xs font-extrabold', done ? 'bg-mint-soft text-success' : 'bg-violet-soft text-violet')}
+      title={done ? t('study.togetherDone') : t('study.togetherGoal')}
+      data-testid="together-chip"
+    >
+      <svg viewBox="0 0 24 24" className={cn('size-5 -rotate-90', running && !done && 'animate-pulse')} aria-hidden>
+        <circle cx="12" cy="12" r={r} fill="none" stroke="currentColor" strokeOpacity={0.2} strokeWidth={3} />
+        <circle cx="12" cy="12" r={r} fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - p)} />
+      </svg>
+      <span className="font-mono">{t('study.together', { time: mmss(Math.floor(ms / 1000)) })}</span>
+      {done && <span>{t('study.togetherDone')}</span>}
+    </span>
   );
 }
 
