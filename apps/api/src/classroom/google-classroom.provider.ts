@@ -1,4 +1,4 @@
-import { classroom_v1, google } from 'googleapis';
+import { auth as googleAuth, classroom, classroom_v1 } from '@googleapis/classroom';
 import { config } from '../config';
 import {
   ClassroomAuthError,
@@ -86,9 +86,9 @@ export class GoogleClassroomProvider implements ClassroomProvider {
 
   private api(t: TeacherCredentials): classroom_v1.Classroom {
     if (!t.refreshToken) throw new ClassroomAuthError('Google Classroom is not connected');
-    const auth = new google.auth.OAuth2(config.GOOGLE_CLIENT_ID, config.GOOGLE_CLIENT_SECRET, config.GOOGLE_REDIRECT_URI);
+    const auth = new googleAuth.OAuth2(config.GOOGLE_CLIENT_ID, config.GOOGLE_CLIENT_SECRET, config.GOOGLE_REDIRECT_URI);
     auth.setCredentials({ refresh_token: t.refreshToken });
-    return google.classroom({ version: 'v1', auth });
+    return classroom({ version: 'v1', auth });
   }
 
   private async call<T>(fn: () => Promise<T>): Promise<T> {

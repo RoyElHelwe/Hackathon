@@ -3,7 +3,7 @@ import { writeFile } from 'node:fs/promises';
 import { Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import type { Readable } from 'node:stream';
-import { google } from 'googleapis';
+import { auth as googleAuth, drive } from '@googleapis/drive';
 import { config } from '../config';
 import { ClassroomAuthError, TeacherCredentials } from '../classroom/classroom.provider';
 import { isInsufficientScope, isInvalidGrant } from '../classroom/google-classroom.provider';
@@ -84,9 +84,9 @@ export class GoogleDriveReader implements DriveReader {
 
   private api(t: TeacherCredentials) {
     if (!t.refreshToken) throw new ClassroomAuthError('Google Classroom is not connected');
-    const auth = new google.auth.OAuth2(config.GOOGLE_CLIENT_ID, config.GOOGLE_CLIENT_SECRET, config.GOOGLE_REDIRECT_URI);
+    const auth = new googleAuth.OAuth2(config.GOOGLE_CLIENT_ID, config.GOOGLE_CLIENT_SECRET, config.GOOGLE_REDIRECT_URI);
     auth.setCredentials({ refresh_token: t.refreshToken });
-    return google.drive({ version: 'v3', auth });
+    return drive({ version: 'v3', auth });
   }
 
   async meta(t: TeacherCredentials, fileId: string): Promise<DriveFileMeta> {
