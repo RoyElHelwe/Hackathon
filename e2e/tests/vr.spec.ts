@@ -11,6 +11,9 @@ declare global {
   }
 }
 
+// fake microphone: voice in the study room and the exam room runs headless
+test.use({ launchOptions: { args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'] }, permissions: ['microphone'] });
+
 async function vr(page: Page) {
   await expect.poll(() => page.evaluate(() => !!window.__tajribaVR)).toBe(true);
 }
@@ -90,5 +93,67 @@ test.describe('Shadow Lab (emulated Quest 2)', () => {
     await lab('answer', height);
     await expect.poll(step).toBe(5);
     expect(await page.evaluate(() => window.__tajribaVR?.session)).toBe('immersive-vr');
+  });
+});
+
+test.describe('VR campus with laptop classmates (emulated Quest 2)', () => {
+  test.beforeAll(() => reseed());
+
+  test('Karim walks in VR, Lea sees him on her 2D campus; he invites her from the Study Hall door and they study together', async ({ browser }) => {
+    const leaCtx = await browser.newContext({ permissions: ['microphone'] });
+    const lea = await leaCtx.newPage();
+    await loginAs(lea, 'lea', '/student/campus');
+    await expect(lea.getByTestId('campus-canvas-campus').locator('canvas')).toBeVisible();
+    await expect(lea.getByTestId('campus-vr')).toHaveAttribute('href', '/vr?scene=campus');
+
+    const karimCtx = await browser.newContext({ permissions: ['microphone'] });
+    const karim = await karimCtx.newPage();
+    await loginAs(karim, 'karim', '/vr?scene=campus&emulate=1');
+    await expect.poll(() => karim.evaluate(() => !!(window.__tajribaVR?.campus as { pos(): unknown } | undefined)?.pos())).toBe(true);
+    await enterVR(karim);
+
+    // the same room: Lea's 2D scene shows Karim where he walked in VR
+    type Campus = { pos(): { x: number; y: number }; moveBy(dx: number, dy: number): void; zone(): string | null };
+    const start = await karim.evaluate(() => (window.__tajribaVR!.campus as Campus).pos());
+    await karim.evaluate(() => (window.__tajribaVR!.campus as Campus).moveBy(-100, 0));
+    await lea.bringToFront();
+    await expect
+      .poll(async () => (await lea.evaluate(() => [...(window as unknown as { __tajribaScene: { positions(): Map<string, { x: number }> } }).__tajribaScene.positions().values()].map((p) => p.x))).some((x) => Math.abs(x - (start.x - 100)) <= 2))
+      .toBe(true);
+
+    // Study Hall door → invite Lea (the VR panel's Invite button)
+    await karim.bringToFront();
+    await karim.evaluate(([dx, dy]) => (window.__tajribaVR!.campus as Campus).moveBy(dx, dy), [555 - (start.x - 100), 262 - start.y] as const);
+    await expect.poll(() => karim.evaluate(() => (window.__tajribaVR!.campus as Campus).zone())).toBe('study_door');
+    const invited = await karim.evaluate(async () => {
+      const me = (await (await fetch('/api/study-sessions/classmates')).json()) as { userId: string; name: string }[];
+      const lea = me.find((m) => m.name.startsWith('Lea'))!;
+      const r = await fetch('/api/study-sessions', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ partnerId: lea.userId }) });
+      return ((await r.json()) as { id: string }).id;
+    });
+    await karim.evaluate((id) => window.__tajribaVR!.setScene(`study:${id}`), invited);
+    await expect(karim.getByTestId('vr-app')).toHaveAttribute('data-scene', `study:${invited}`);
+    expect(await karim.evaluate(() => window.__tajribaVR?.session)).toBe('immersive-vr');
+
+    // Lea joins from her laptop
+    await lea.bringToFront();
+    await expect(lea.getByTestId('study-invite-popup')).toBeVisible();
+    await lea.getByTestId('invite-join').click();
+    await lea.getByTestId('join-no-mic').click();
+    await expect(lea.getByTestId('partner-status')).toContainText('Karim');
+
+    // together time runs for both, and the VR player flips the shared card
+    await karim.bringToFront();
+    await expect.poll(() => karim.evaluate(() => (window.__tajribaVR!.study as { togetherMs: number } | undefined)?.togetherMs ?? 0)).toBeGreaterThan(0);
+    await lea.bringToFront();
+    const before = await lea.getByTestId('discussion-card').innerText();
+    await karim.evaluate(() => (window.__tajribaVR!.study as { nextCard(): void }).nextCard());
+    await expect.poll(() => lea.getByTestId('discussion-card').innerText()).not.toBe(before);
+
+    await lea.getByTestId('end-session').click();
+    await lea.getByTestId('confirm-end').click();
+    await expect(lea.getByTestId('study-ended')).toBeVisible();
+    await leaCtx.close();
+    await karimCtx.close();
   });
 });

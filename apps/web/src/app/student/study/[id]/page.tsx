@@ -124,6 +124,9 @@ export default function StudyRoomPage() {
           <Button variant="kidGhost" size="lg" onClick={() => setJoined({ mic: false })} data-testid="join-no-mic">
             {t('study.joinNoMic')}
           </Button>
+          <Button asChild variant="kidSunny" size="lg" data-testid="join-vr">
+            <Link href={`/vr?scene=study:${s.id}`}>🥽 {t('study.joinVr')}</Link>
+          </Button>
         </div>
       </Card>
     );

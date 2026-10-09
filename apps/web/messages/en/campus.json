@@ -137,7 +137,8 @@
       "label": "Ideas board:",
       "mission": "Mission",
       "cards": "Cards"
-    }
+    },
+    "joinVr": "Join in VR"
   },
   "events": {
     "INVITED": "sent an invite",
@@ -334,5 +335,6 @@
     "close": "Close",
     "near": "Say hi to {name}"
   },
-  "liveTable": "{a} & {b} 📚"
+  "liveTable": "{a} & {b} 📚",
+  "enterVr": "Walk it in VR"
 }

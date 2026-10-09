@@ -8,7 +8,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { VRNavCtx, parseScene, sceneParam, type VRScene } from './nav';
 import { HubScene } from './scenes/hub';
+import { CampusScene } from './scenes/campus';
 import { ShadowLab } from './scenes/shadow-lab';
+import { StudyScene } from './scenes/study';
 import { XRStage, useVRStore, useVRSupported } from './stage';
 import { vrTest } from './test-hook';
 import { Panel, VButton, VText } from './kit';
@@ -65,6 +67,10 @@ export default function VRApp() {
             <HubScene />
           ) : scene.kind === 'shadow-lab' ? (
             <ShadowLab key="lab" missionId={scene.missionId} />
+          ) : scene.kind === 'campus' ? (
+            <CampusScene key="campus" />
+          ) : scene.kind === 'study' ? (
+            <StudyScene key={`study-${scene.id}`} id={scene.id} />
           ) : (
             <Soon onBack={() => go({ kind: 'hub' })} />
           )}

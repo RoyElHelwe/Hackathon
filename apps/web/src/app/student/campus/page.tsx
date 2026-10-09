@@ -113,7 +113,12 @@ export default function CampusPage() {
           <AnimatePresence>{panel}</AnimatePresence>
         </div>
         {room.status === 'error' && <p className="text-sm font-semibold text-danger">{t('roomError')}</p>}
-        <p className="text-xs text-muted-foreground">{t('hint')}</p>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-xs text-muted-foreground">{t('hint')}</p>
+          <Button asChild size="sm" variant="kidGhost" data-testid="campus-vr">
+            <Link href="/vr?scene=campus">🥽 {t('enterVr')}</Link>
+          </Button>
+        </div>
         <EmoteBar onEmote={onEmote} onReaction={onReaction} compact />
       </section>
 

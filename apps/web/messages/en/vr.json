@@ -89,5 +89,15 @@
       "title": "You found it!",
       "body": "The building is {H} m tall. You just used similar triangles: H = h × S ÷ s."
     }
+  },
+  "campus": {
+    "home": "VR home",
+    "practiceLab": "Practice in the Shadow Lab",
+    "startOnScreen": "Take off the headset to start this mission on your screen.",
+    "backToCampus": "Back to the campus",
+    "micOn": "Mic on",
+    "micOff": "Mic off",
+    "nextCard": "Next card",
+    "endSure": "Sure? End"
   }
 }

@@ -70,8 +70,10 @@ export function useVRSupported(store: XRStore): { vr: boolean | null; ar: boolea
 interface DesktopView {
   /** places the laptop (non-VR) camera; scenes call it when they mount */
   look(position: V3, target: V3): void;
+  /** moves the orbit target to a point and the camera along with it (third-person follow of the player) */
+  follow(target: V3): void;
 }
-const DesktopCtx = createContext<DesktopView>({ look: () => undefined });
+const DesktopCtx = createContext<DesktopView>({ look: () => undefined, follow: () => undefined });
 export const useDesktopView = () => useContext(DesktopCtx);
 
 /** Tells the test hook (and the page) whether a VR session is running. */
@@ -94,6 +96,19 @@ function DesktopCamera({ children }: { children: ReactNode }) {
         camera.position.set(...position);
         controls.current?.target.set(...target);
         controls.current?.update();
+      },
+      follow: (target) => {
+        const c = controls.current;
+        if (!c) return;
+        const dx = target[0] - c.target.x;
+        const dy = target[1] - c.target.y;
+        const dz = target[2] - c.target.z;
+        if (!dx && !dy && !dz) return;
+        c.target.set(...target);
+        camera.position.x += dx;
+        camera.position.y += dy;
+        camera.position.z += dz;
+        c.update();
       },
     }),
     [camera],
