@@ -7,6 +7,8 @@ dist
 /uploads
 /apps/api/uploads
 coverage
+# the director Coverage page is source, not a test-coverage report
+!/apps/web/src/app/director/coverage/
 *.tsbuildinfo
 apps/api/src/generated
 e2e/test-results

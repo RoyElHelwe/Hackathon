@@ -27,15 +27,14 @@ export interface DirectorClass {
   classroomLinked: boolean;
 }
 
-export interface CoverageRow {
-  topicId: string;
-  topicKey: string;
-  topicName: I18nText;
-  subjectKey: string;
-  subjectName: I18nText;
-  color: string;
+/** One course of the school: its sections (columns) and the skills those sections see (rows). */
+export interface CoverageCourse {
+  courseId: string;
   gradeLevel: number;
-  classes: { classId: string; pct: number }[];
+  subject: { id: string; key: string; name: I18nText; color: string; icon: string };
+  sections: { id: string; name: string; sectionLabel: string | null; students: number }[];
+  /** pct = % of the section's students who mastered the skill; null when the section does not have that skill */
+  topics: { topicId: string; topicKey: string; topicName: I18nText; icon: string; sections: { classId: string; pct: number | null }[] }[];
 }
 
 export interface DirectorDashboard {
@@ -51,8 +50,7 @@ export interface DirectorDashboard {
   };
   trend: { day: string; validated: number }[];
   classes: DirectorClass[];
-  coverage: CoverageRow[];
-  classList: { id: string; name: string }[];
+  coverage: CoverageCourse[];
 }
 
 export interface SchoolSubject {
