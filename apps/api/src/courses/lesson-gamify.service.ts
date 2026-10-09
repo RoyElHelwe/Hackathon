@@ -12,8 +12,11 @@ import { LessonContentService } from './lesson-content.service';
 /** Error codes stored in Lesson.gamifyError; the web shows a localized message per code. */
 export type GamifyErrorCode = 'AI_UNAVAILABLE' | 'INTERRUPTED' | 'FAILED';
 
-/** A GAMIFYING lesson older than this is considered abandoned (e.g. the dyno restarted) and may be restarted. */
-const STALE_MS = 10 * 60 * 1000;
+/**
+ * A GAMIFYING lesson older than this is considered abandoned and may be restarted (a dyno restart already resets it).
+ * Long: transcoding and watching up to 3 videos of 2 hours can take a while.
+ */
+const STALE_MS = 60 * 60 * 1000;
 
 /** Skill map layout (pixels, like the seeded topics): a zig-zag column in Classroom post order. */
 export const lessonTopicPos = (position: number) => ({ posX: 180 + (position % 2 ? 90 : -90), posY: position * 170 });
@@ -83,7 +86,9 @@ export class LessonGamifyService implements OnModuleInit {
     const { course } = lesson;
     const locale = opts.locale || 'en';
     const count = Math.min(3, Math.max(1, opts.count ?? 2));
-    const content = await this.content.collect(lessonId);
+    const content = await this.content.collect(lessonId, { locale });
+    // Saved before the AI call so the teacher sees what could be read even when gamifying fails.
+    await this.prisma.lesson.update({ where: { id: lessonId }, data: { contentReport: content.report as unknown as Prisma.InputJsonValue } });
     const out = await this.ai.run(
       gamifyLesson,
       {

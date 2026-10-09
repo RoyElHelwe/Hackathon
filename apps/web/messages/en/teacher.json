@@ -452,6 +452,27 @@
     "changedRegenerate": "Updated in Classroom — regenerate?",
     "regenerateTitle": "Regenerate missions for “{title}”?",
     "regenerateBody": "{n, plural, one {Bousla will write new drafts. Your # unapproved draft will be replaced.} other {Bousla will write new drafts. Your # unapproved drafts will be replaced.}} Published missions stay as they are.",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "contentReport": {
+      "full": "Watched full video",
+      "audio": "Listened to audio",
+      "text": "Read document",
+      "title": "Title only",
+      "failed": "Couldn’t read: {note}",
+      "first2h": "first 2 hours",
+      "label": "What Bousla read",
+      "code": {
+        "private": "video is private or unavailable — make it Unlisted or Public",
+        "too_large": "video is larger than 1.5 GB",
+        "audio_only": "audio only",
+        "first_2h": "first 2 hours read",
+        "media_limit": "only 3 videos per lesson are watched",
+        "unreadable": "could not open the file (is it shared with you?)",
+        "unsupported": "this file type can’t be read",
+        "media_failed": "couldn’t process this recording",
+        "ai_failed": "the AI couldn’t watch it right now — try again later",
+        "reconnect": "Google access needs to be reconnected"
+      }
+    }
   }
 }

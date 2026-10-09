@@ -238,6 +238,8 @@ model Lesson {
   archivedAt       DateTime?
   status           LessonStatus @default(NOT_GAMIFIED)
   gamifyError      String?
+  /// per attachment {title,type,status,note?,codes?} of the last gamify run
+  contentReport    Json?
   contentChangedAt DateTime?
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt

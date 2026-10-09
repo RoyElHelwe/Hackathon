@@ -5,9 +5,13 @@ import {
   CirclePlay,
   ClipboardList,
   ExternalLink,
+  Eye,
   File,
   FileSpreadsheet,
   FileText,
+  Headphones,
+  TriangleAlert,
+  Type,
   Image as ImageIcon,
   Link2,
   Presentation,
@@ -26,7 +30,7 @@ import { SubjectChip, subjectLabel } from '@/components/director/subject-chip';
 import { errMessage } from '@/components/teacher/helpers';
 import { ReconnectBanner } from '@/components/teacher/reconnect-banner';
 import { toast } from '@/components/teacher/toast';
-import type { CourseLesson, CourseSummary, LessonMaterial, LessonStatus, LessonSyncResult } from '@/components/teacher/types';
+import type { ContentReportItem, CourseLesson, CourseSummary, LessonMaterial, LessonStatus, LessonSyncResult } from '@/components/teacher/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -295,6 +299,7 @@ function LessonRow({
               )}
             </div>
           )}
+          {lesson.contentReport && lesson.contentReport.length > 0 && !gamifying && <ContentReport items={lesson.contentReport} />}
           <div className="mt-3 flex flex-wrap items-center gap-2">
             {lesson.materials.map((m, i) => {
               const kind = attachmentKind(m);
@@ -329,5 +334,41 @@ function LessonRow({
         </div>
       </Card>
     </li>
+  );
+}
+
+/** Per attachment: what Bousla actually read on the last gamify run (watched the full video, read the document, title only…). */
+function ContentReport({ items }: { items: ContentReportItem[] }) {
+  const t = useTranslations('teacher.courses.contentReport');
+  const reason = (item: ContentReportItem) => (item.codes?.length ? item.codes.map((c) => t(`code.${c}`)).join('; ') : (item.note ?? ''));
+  return (
+    <ul className="mt-2 flex flex-wrap gap-1.5" aria-label={t('label')} data-testid="content-report">
+      {items.map((item, i) => {
+        const listened = item.type === 'audio' || item.codes?.includes('audio_only');
+        const [variant, Icon, label]: ['mint' | 'sky' | 'muted' | 'coral', LucideIcon, string] =
+          item.status === 'full'
+            ? [listened ? 'sky' : 'mint', listened ? Headphones : Eye, listened ? t('audio') : t('full')]
+            : item.status === 'text'
+              ? ['mint', FileText, t('text')]
+              : item.status === 'title'
+                ? ['muted', Type, t('title')]
+                : ['coral', TriangleAlert, t('failed', { note: reason(item) })];
+        const extra = item.status === 'full' && item.codes?.includes('first_2h') ? ` · ${t('first2h')}` : '';
+        const why = item.status === 'title' ? reason(item) : '';
+        return (
+          <li key={`${item.title}-${i}`}>
+            <Badge variant={variant} className={`max-w-full ${item.status === 'failed' ? 'whitespace-normal' : ''}`} title={why ? `${item.title} — ${why}` : item.title} data-status={item.status}>
+              <Icon className="size-3.5 shrink-0" aria-hidden />
+              <span className="max-w-[12rem] truncate font-bold">{item.title}</span>
+              <span aria-hidden>·</span>
+              <span>
+                {label}
+                {extra}
+              </span>
+            </Badge>
+          </li>
+        );
+      })}
+    </ul>
   );
 }

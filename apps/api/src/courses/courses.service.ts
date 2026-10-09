@@ -163,6 +163,8 @@ export class CoursesService {
       postedAt: l.postedAt,
       status: l.status,
       gamifyError: l.gamifyError,
+      /** per attachment: what the AI could read on the last gamify run (null before the first run) */
+      contentReport: l.contentReport ?? null,
       contentChangedAt: l.contentChangedAt,
       archived: false,
       topic: l.topic ? { id: l.topic.id, name: l.topic.name } : null,

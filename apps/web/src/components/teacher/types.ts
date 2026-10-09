@@ -208,6 +208,18 @@ export interface LessonMaterial {
 
 export type LessonStatus = 'NOT_GAMIFIED' | 'GAMIFYING' | 'READY' | 'FAILED';
 
+export type ContentCode = 'private' | 'too_large' | 'audio_only' | 'first_2h' | 'media_limit' | 'unreadable' | 'unsupported' | 'media_failed' | 'ai_failed' | 'reconnect';
+
+/** What the AI could read of one attachment on the last gamify run ('full' = watched/listened to the whole media). */
+export interface ContentReportItem {
+  title: string;
+  type: 'youtube' | 'video' | 'audio' | 'document' | 'file' | 'link' | 'form';
+  status: 'full' | 'text' | 'title' | 'failed';
+  /** English fallback; `codes` are localized */
+  note?: string;
+  codes?: ContentCode[];
+}
+
 export interface CourseLesson {
   id: string;
   title: string;
@@ -219,6 +231,8 @@ export interface CourseLesson {
   status: LessonStatus;
   /** error code when status is FAILED (AI_UNAVAILABLE | INTERRUPTED | FAILED) */
   gamifyError: string | null;
+  /** null before the first gamify run */
+  contentReport: ContentReportItem[] | null;
   contentChangedAt: string | null;
   sources: { classId: string; classroomUrl: string | null }[];
   /** the skill created by "Gamify with AI" */

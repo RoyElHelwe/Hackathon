@@ -14,6 +14,10 @@ export interface TaskDef<I, O> {
   maxTokens?: number;
   /** request timeout (default 30 s) */
   timeoutMs?: number;
+  /** OpenRouter provider routing passed through in the request body */
+  provider?: Record<string, unknown>;
+  /** cache results even when AI_CACHE is off (expensive media tasks; the input must identify the media) */
+  alwaysCache?: boolean;
 }
 
 export function defineTask<I, O>(def: TaskDef<I, O>): TaskDef<I, O> {

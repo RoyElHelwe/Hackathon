@@ -6,7 +6,18 @@ import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '../generated/prisma/client';
 import { TaskDef } from './task';
 
-export type ChatContent = string | ({ type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } })[];
+/** Video part: a YouTube URL (Gemini via AI Studio only) or a base64 data URL (`data:video/mp4;base64,…`). */
+export interface VideoPart {
+  type: 'video_url';
+  video_url: { url: string };
+}
+/** Audio part (OpenRouter): base64 data only, no URLs. */
+export interface AudioPart {
+  type: 'input_audio';
+  input_audio: { data: string; format: 'mp3' | 'wav' | 'aac' | 'ogg' | 'flac' | 'm4a' | 'aiff' };
+}
+export type MediaPart = VideoPart | AudioPart;
+export type ChatContent = string | ({ type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } } | MediaPart)[];
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
   content: ChatContent;
@@ -23,6 +34,8 @@ export interface CompletionOptions {
   jsonMode: boolean;
   maxTokens?: number;
   timeoutMs?: number;
+  /** OpenRouter provider routing, e.g. { order: ['google-ai-studio'], allow_fallbacks: false } */
+  provider?: Record<string, unknown>;
 }
 
 export interface AiTransport {
@@ -45,6 +58,7 @@ export class OpenRouterTransport implements AiTransport {
         max_tokens: opts.maxTokens ?? config.AI_MAX_TOKENS,
         temperature: 0.4,
         ...(opts.jsonMode ? { response_format: { type: 'json_object' } } : {}),
+        ...(opts.provider ? { provider: opts.provider } : {}),
       }),
       signal: AbortSignal.timeout(opts.timeoutMs ?? 30_000),
     });
@@ -99,6 +113,10 @@ function normalize(value: unknown): unknown {
 export interface RunOptions {
   /** already-loaded image buffers (vision tasks) */
   images?: Buffer[];
+  /** video/audio parts sent after the prompt. Not hashed: put a stable media identity in the task input instead. */
+  media?: MediaPart[];
+  /** OpenRouter provider routing (overrides the task's) */
+  provider?: Record<string, unknown>;
   /** bypass cache (e.g. "regenerate") */
   fresh?: boolean;
 }
@@ -131,7 +149,9 @@ export class AiService {
     const imageHashes = (opts.images ?? []).map((b) => sha256(b.toString('base64')));
     const key = sha256(JSON.stringify([task.name, model, normalize(input), imageHashes]));
 
-    if (this.cacheEnabled && !opts.fresh) {
+    // Expensive tasks (video) cache even when AI_CACHE is off, so regenerating a lesson doesn't re-pay.
+    const useCache = this.cacheEnabled || (!!task.alwaysCache && this.provider !== 'mock');
+    if (useCache && !opts.fresh) {
       const hit = await this.prisma.aiCache.findUnique({ where: { key } });
       if (hit) {
         const parsed = task.schema.safeParse(hit.response);
@@ -145,10 +165,10 @@ export class AiService {
       result = task.schema.parse(task.mock(input));
       await this.log(task.name, model, started, true);
     } else {
-      result = await this.callModel(task, input, model, opts.images ?? [], started);
+      result = await this.callModel(task, input, model, opts, started);
     }
 
-    if (this.cacheEnabled) {
+    if (useCache) {
       await this.prisma.aiCache
         .upsert({
           where: { key },
@@ -160,15 +180,23 @@ export class AiService {
     return result;
   }
 
-  private async callModel<I, O>(task: TaskDef<I, O>, input: I, model: string, images: Buffer[], started: number): Promise<O> {
+  private async callModel<I, O>(task: TaskDef<I, O>, input: I, model: string, opts: RunOptions, started: number): Promise<O> {
+    const images = opts.images ?? [];
+    const media = opts.media ?? [];
+    const provider = opts.provider ?? task.provider;
     if (!this.apiKey || !model) {
       await this.log(task.name, model || 'unset', started, false, 'OpenRouter not configured');
       throw new AiUnavailableError();
     }
     const userText = task.user(input);
-    const content: ChatContent = images.length
-      ? [{ type: 'text', text: userText }, ...(await Promise.all(images.map(async (b) => ({ type: 'image_url' as const, image_url: { url: await AiService.prepareImage(b) } }))))]
-      : userText;
+    const content: ChatContent =
+      images.length || media.length
+        ? [
+            { type: 'text', text: userText },
+            ...(await Promise.all(images.map(async (b) => ({ type: 'image_url' as const, image_url: { url: await AiService.prepareImage(b) } })))),
+            ...media,
+          ]
+        : userText;
     const messages: ChatMessage[] = [
       { role: 'system', content: task.system },
       { role: 'user', content },
@@ -181,7 +209,7 @@ export class AiService {
     for (let attempt = 0; attempt < 2; attempt++) {
       let reply: CompletionResult;
       try {
-        reply = await this.transport.complete(model, messages, { jsonMode, maxTokens: task.maxTokens, timeoutMs: task.timeoutMs });
+        reply = await this.transport.complete(model, messages, { jsonMode, maxTokens: task.maxTokens, timeoutMs: task.timeoutMs, provider });
       } catch (e) {
         const status = (e as { status?: number }).status;
         if (status === 400 && jsonMode) {

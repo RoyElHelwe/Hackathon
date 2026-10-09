@@ -1,4 +1,7 @@
+import { AiService } from '../src/ai/ai.service';
+import { DRIVE_READER, FakeDriveReader } from '../src/courses/drive-reader';
 import { LessonContentService } from '../src/courses/lesson-content.service';
+import { MEDIA_TOOLS, MediaTools } from '../src/courses/media-tools';
 import { LessonGamifyService } from '../src/courses/lesson-gamify.service';
 import { createTestApp, TestCtx } from './app';
 
@@ -112,5 +115,106 @@ describe('gamify a course lesson (integration)', () => {
 
     await ctx.prisma.lesson.update({ where: { id: lessonIds[2] }, data: { status: 'GAMIFYING' } });
     await ctx.http().post(`/lessons/${lessonIds[2]}/gamify`).set('Cookie', await ctx.as('rana')).expect(409);
+  });
+
+  describe('AI watches lesson videos', () => {
+    const MB = 1024 * 1024;
+    let drive: FakeDriveReader;
+    let tools: MediaTools;
+    let ai: AiService;
+    const video = (size: number, extra = {}) => ({ meta: { name: 'v.mp4', mimeType: 'video/mp4', size, md5Checksum: 'abc', ...extra }, data: Buffer.from('fake video bytes') });
+    const setMaterials = (materials: object[]) => ctx.prisma.lesson.update({ where: { id: lessonIds[1] }, data: { materials } });
+    /** runs gamify on lessonIds[1] and returns the lesson + the AI calls it made */
+    const gamifyWithSpy = async () => {
+      const spy = jest.spyOn(ai, 'run');
+      try {
+        await gamify.run(lessonIds[1], { teacherId: ranaId });
+        const calls = spy.mock.calls.map(([task, input, opts]) => ({ task: task.name, input: input as Record<string, unknown>, opts }));
+        const lesson = await ctx.prisma.lesson.findUniqueOrThrow({ where: { id: lessonIds[1] } });
+        return { lesson, calls, content: calls.find((c) => c.task === 'gamifyLesson')!.input.content as string };
+      } finally {
+        spy.mockRestore();
+      }
+    };
+
+    beforeAll(() => {
+      drive = ctx.app.get(DRIVE_READER) as FakeDriveReader;
+      tools = ctx.app.get(MEDIA_TOOLS) as MediaTools;
+      ai = ctx.app.get(AiService);
+    });
+    afterEach(() => {
+      jest.restoreAllMocks();
+      drive.media = {};
+    });
+
+    it('watches a YouTube link and a small Drive video; the report marks both "full"', async () => {
+      drive.media['drive-vid-small'] = video(2 * MB);
+      await setMaterials([
+        { type: 'youtube', id: 'yt-sim-1', title: 'Similar triangles explained', url: 'https://www.youtube.com/watch?v=yt-sim-1' },
+        { type: 'drive', id: 'drive-vid-small', title: 'My recorded lesson', url: 'https://drive.google.com/file/d/drive-vid-small/view', mimeType: 'video/mp4' },
+        { type: 'drive', id: 'drive-similar-slides', title: 'Slides', url: 'https://docs.google.com/presentation/d/drive-similar-slides/edit' },
+      ]);
+      const { lesson, calls, content } = await gamifyWithSpy();
+      expect(lesson.status).toBe('READY');
+      expect(content).toContain('## Video: Similar triangles explained (AI watched the full video)');
+      expect(content).toContain('Study notes for "Similar triangles explained"');
+      expect(content).toContain('## Video: My recorded lesson (AI watched the full video)');
+      expect(content).toContain('Study notes for "My recorded lesson"');
+
+      const yt = calls.find((c) => c.task === 'summarizeVideo' && c.input.kind === 'youtube')!;
+      expect(yt.input.identity).toBe('yt:yt-sim-1');
+      expect(yt.opts).toMatchObject({ provider: { order: ['google-ai-studio'], allow_fallbacks: false }, media: [{ type: 'video_url', video_url: { url: 'https://www.youtube.com/watch?v=yt-sim-1' } }] });
+      const file = calls.find((c) => c.task === 'summarizeVideo' && c.input.kind === 'file')!;
+      expect(file.input.identity).toBe('drive:drive-vid-small:abc:whole');
+      expect((file.opts as { media: { video_url: { url: string } }[] }).media[0].video_url.url).toMatch(/^data:video\/mp4;base64,/);
+
+      expect(lesson.contentReport).toEqual([
+        { title: 'Similar triangles explained', type: 'youtube', status: 'full' },
+        { title: 'My recorded lesson', type: 'video', status: 'full' },
+        { title: 'Slides', type: 'document', status: 'text' },
+      ]);
+      const lessons = (await ctx.http().get(`/courses/${courseId}/lessons`).set('Cookie', await ctx.as('rana')).expect(200)).body;
+      expect(lessons.find((l: { id: string }) => l.id === lessonIds[1]).contentReport).toHaveLength(3);
+    });
+
+    it('splits a large Drive video into time chunks and joins the notes in order', async () => {
+      drive.media['drive-vid-big'] = video(400 * MB, { durationMs: 25 * 60 * 1000 });
+      // study copy: 25 min, 30 MB → ~14 min chunks → 2 parts
+      jest.spyOn(tools, 'probe').mockResolvedValue({ durationSec: 1500, bytes: 30 * MB });
+      const transcode = jest.spyOn(tools, 'transcodeStudy');
+      const cut = jest.spyOn(tools, 'cut');
+      await setMaterials([{ type: 'drive', id: 'drive-vid-big', title: 'Long lesson', url: 'https://drive.google.com/file/d/drive-vid-big/view', mimeType: 'video/mp4' }]);
+      const { lesson, calls, content } = await gamifyWithSpy();
+      expect(transcode).toHaveBeenCalledTimes(1);
+      expect(cut).toHaveBeenCalledTimes(2);
+      const parts = calls.filter((c) => c.task === 'summarizeVideo').map((c) => c.input.part);
+      expect(parts).toEqual([
+        { index: 0, total: 2, startSec: 0, endSec: 850 },
+        { index: 1, total: 2, startSec: 850, endSec: 1500 },
+      ]);
+      const first = content.indexOf('[0:00–14:10]');
+      const second = content.indexOf('[14:10–25:00]');
+      expect(first).toBeGreaterThan(content.indexOf('## Video: Long lesson (AI watched the full video)'));
+      expect(second).toBeGreaterThan(first);
+      expect(content.indexOf('(part 2 of 2)')).toBeGreaterThan(content.indexOf('(part 1 of 2)'));
+      expect(lesson.contentReport).toEqual([{ title: 'Long lesson', type: 'video', status: 'full' }]);
+    });
+
+    it('a media failure never fails the lesson (title only + note)', async () => {
+      drive.media['drive-vid-broken'] = video(400 * MB);
+      jest.spyOn(tools, 'transcodeStudy').mockRejectedValue(new Error('ffmpeg: invalid data'));
+      jest.spyOn(tools, 'extractAudio').mockRejectedValue(new Error('ffmpeg: invalid data'));
+      await setMaterials([
+        { type: 'drive', id: 'drive-vid-broken', title: 'Broken video', url: 'https://drive.google.com/file/d/drive-vid-broken/view', mimeType: 'video/mp4' },
+        { type: 'youtube', id: 'yt-private-1', title: 'Private video', url: 'https://www.youtube.com/watch?v=yt-private-1' },
+      ]);
+      const { lesson, content } = await gamifyWithSpy();
+      expect(lesson.status).toBe('READY');
+      expect(content).toContain('## Video: Broken video\nhttps://drive.google.com/file/d/drive-vid-broken/view');
+      expect(lesson.contentReport).toEqual([
+        { title: 'Broken video', type: 'video', status: 'failed', codes: ['media_failed'], note: "couldn't process this recording" },
+        { title: 'Private video', type: 'youtube', status: 'failed', codes: ['private'], note: 'video is private or unavailable — make it Unlisted or Public' },
+      ]);
+    });
   });
 });
