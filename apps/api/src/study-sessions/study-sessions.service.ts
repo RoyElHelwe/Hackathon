@@ -247,6 +247,7 @@ export class StudySessionsService {
     if (!flipped.count) return;
     const s = await this.prisma.studySession.findUniqueOrThrow({ where: { id }, include: { participants: true, class: { select: { subjectId: true } } } });
     const lasted = s.startedAt ? now.getTime() - s.startedAt.getTime() : 0;
+    const xpBy: Record<string, number> = {};
     if (lasted >= STUDY_MIN_XP_MS) {
       for (const p of s.participants.filter((x) => x.joinedAt)) {
         if (await this.dailyCapReached(p.userId, now)) continue;
@@ -254,10 +255,11 @@ export class StudySessionsService {
         await this.gamification.addXp(p.userId, STUDY_XP, 'STUDY_SESSION', id, s.class.subjectId);
         await this.gamification.recordActivity(p.userId, now);
         await this.gamification.levelUpCheck(p.userId, before);
+        xpBy[p.userId] = STUDY_XP;
       }
     }
-    await this.sessionLog.log('STUDY', id, byUserId, 'ENDED', { reason, lastedSec: Math.round(lasted / 1000), xp: lasted >= STUDY_MIN_XP_MS ? STUDY_XP : 0 });
-    this.bus.toRoom(`study:${id}`, 'study:ended', { sessionId: id, reason, byId: byUserId, xp: lasted >= STUDY_MIN_XP_MS ? STUDY_XP : 0 });
+    await this.sessionLog.log('STUDY', id, byUserId, 'ENDED', { reason, lastedSec: Math.round(lasted / 1000), xpBy });
+    this.bus.toRoom(`study:${id}`, 'study:ended', { sessionId: id, reason, byId: byUserId, xpBy });
   }
 
   /** Cron: expire old invites and end sessions nobody has been in for STUDY_ABANDON_MS. Idempotent. */

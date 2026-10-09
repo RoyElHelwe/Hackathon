@@ -37,10 +37,11 @@ export default function StudyRoomPage() {
   const [ended, setEnded] = useState<{ xp: number } | null>(null);
   const [accepting, setAccepting] = useState(false);
 
-  useSocketEvent<{ sessionId: string; xp?: number }>('study:ended', (d) => {
+  useSocketEvent<{ sessionId: string; xpBy?: Record<string, number> }>('study:ended', (d) => {
     if (d.sessionId !== id) return;
-    setEnded({ xp: d.xp ?? 0 });
-    if (d.xp) fireConfetti(true);
+    const xp = (me && d.xpBy?.[me.user.id]) || 0; // 0 when the session was too short or the daily cap was reached
+    setEnded({ xp });
+    if (xp) fireConfetti(true);
     void invalidate(path, '/study-sessions/mine', '/gamification/me');
   });
   useSocketEvent<{ sessionId: string }>('study:status', (d) => d.sessionId === id && void invalidate(path));
