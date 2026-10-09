@@ -18,6 +18,7 @@ import { MissionsModule } from './missions/missions.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { ParentsModule } from './parents/parents.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { RealtimeModule } from './realtime/realtime.module';
 import { ProgressModule } from './progress/progress.module';
 import { SchoolsModule } from './schools/schools.module';
 import { SubjectsModule } from './subjects/subjects.module';
@@ -30,6 +31,7 @@ import { UploadsModule } from './uploads/uploads.module';
     PrismaModule,
     AuthModule,
     NotificationsModule,
+    RealtimeModule,
     AiModule,
     ClassroomModule,
     CoursesModule,

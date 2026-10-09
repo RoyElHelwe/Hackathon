@@ -15,6 +15,8 @@ export class SessionGuard implements CanActivate {
   ) {}
 
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
+    // WebSocket handlers are authenticated by the gateway's handshake middleware (realtime/socket-auth.service.ts).
+    if (ctx.getType() !== 'http') return true;
     const req = ctx.switchToHttp().getRequest<RequestWithAuth>();
     const token: string | undefined = req.cookies?.[SESSION_COOKIE];
     if (!token) return true;
@@ -41,6 +43,7 @@ export class PolicyGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
 
   canActivate(ctx: ExecutionContext): boolean {
+    if (ctx.getType() !== 'http') return true;
     const targets = [ctx.getHandler(), ctx.getClass()];
     if (this.reflector.getAllAndOverride<boolean>(IS_PUBLIC, targets)) return true;
     const policy = this.reflector.getAllAndOverride<PolicyMeta>(POLICY, targets);
