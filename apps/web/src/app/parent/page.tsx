@@ -8,6 +8,7 @@ import { Suspense } from 'react';
 import { PageHeader } from '@/components/app/adult-shell';
 import { EmptyState, ErrorState, PageSkeleton } from '@/components/app/states';
 import { ChildDashboard } from '@/components/parent/child-dashboard';
+import { ChildExams } from '@/components/parent/child-exams';
 import { ChildSwitcher } from '@/components/parent/child-switcher';
 import { firstName } from '@/components/parent/types';
 import { Button } from '@/components/ui/button';
@@ -58,6 +59,7 @@ function ParentHome() {
       <ChildSwitcher items={kids} value={selected.id} onChange={select} />
       <PageHeader title={t('title', { name: firstName(selected.name) })} subtitle={t('subtitle', { name: firstName(selected.name) })} />
       <ChildDashboard key={selected.id} studentId={selected.id} />
+      <ChildExams key={`exams-${selected.id}`} studentId={selected.id} />
     </div>
   );
 }
