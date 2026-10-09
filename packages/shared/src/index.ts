@@ -7,3 +7,4 @@ export * from './safety';
 export * from './stuck';
 export * from './campus';
 export * from './exam';
+export * from './vr';

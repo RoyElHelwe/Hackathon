@@ -5,7 +5,7 @@ export const LOCALES = ['en', 'ar'] as const;
 export type AppLocale = (typeof LOCALES)[number];
 export const LOCALE_COOKIE = 'NEXT_LOCALE';
 
-const NAMESPACES = ['common', 'landing', 'auth', 'student', 'mission', 'teacher', 'parent', 'director', 'campus'] as const;
+const NAMESPACES = ['common', 'landing', 'auth', 'student', 'mission', 'teacher', 'parent', 'director', 'campus', 'vr'] as const;
 
 async function loadMessages(locale: AppLocale) {
   const entries = await Promise.all(

@@ -1,0 +1,56 @@
+{
+  "title": "Tajriba VR",
+  "back": "Back to Tajriba",
+  "enter": "Enter VR",
+  "desktopHint": "Drag to look around. On a Meta Quest, open this page and press “Enter VR”.",
+  "notSupported": "This browser can't do VR — you can still explore it here in 3D.",
+  "soon": "Coming soon!",
+  "hub": {
+    "hello": "Where do we go today?",
+    "go": "Go",
+    "home": "VR home",
+    "shadowLab": {
+      "title": "Shadow Lab",
+      "body": "Move the sun, measure shadows, find the height."
+    },
+    "campus": {
+      "title": "Campus",
+      "body": "Walk with your classmates and study together."
+    },
+    "exam": {
+      "title": "Exam room",
+      "body": "Bousla interviews you."
+    },
+    "examNone": "No exam is open right now."
+  },
+  "check": {
+    "title": "VR device check",
+    "onQuest": "Meta Quest browser detected 👋",
+    "notQuest": "Open this page in the Meta Quest browser to check your headset.",
+    "ready": "Ready for VR ✓",
+    "notReady": "Not ready for VR yet — see the red rows.",
+    "voiceDevice": "Voice answers in the VR exam: recognized right on this device.",
+    "voiceServer": "Voice answers in the VR exam: recorded and turned into text by Tajriba.",
+    "secure": "Secure page (HTTPS)",
+    "secureHint": "VR only works on https:// links (or localhost). Open the https link.",
+    "webxr": "WebXR available",
+    "webxrHint": "Use the Meta Quest Browser (or Chrome on a laptop).",
+    "vr": "Immersive VR supported",
+    "vrHint": "This browser can't start a VR session.",
+    "ar": "Passthrough (AR) supported",
+    "arHint": "Optional — not needed for Tajriba VR.",
+    "webgl2": "3D graphics (WebGL 2)",
+    "webgl2Hint": "Try updating the browser.",
+    "mic": "Microphone",
+    "micHint": "Allow the microphone for this site in the browser settings.",
+    "testMic": "Test",
+    "stt": "Speech recognition in the browser",
+    "sttHint": "Optional — Tajriba will turn your voice into text on its server instead.",
+    "tts": "Bousla's voice ({n} voices)",
+    "ttsHint": "Optional — Bousla's questions are also shown as text.",
+    "hello": "Hi! Press “Enter VR test” to step inside.",
+    "itWorks": "It works! 🎉 Press the Meta button to leave.",
+    "enterTest": "Enter VR test",
+    "next": "Open Tajriba VR"
+  }
+}
