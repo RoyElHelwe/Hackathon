@@ -1,36 +1,48 @@
 'use client';
 
-import { ChevronRight, ClipboardList, Link2, RefreshCw, Trophy, Users } from 'lucide-react';
+import { ChevronRight, Link2, RefreshCw, Trophy } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { Badge } from '@/components/ui/badge';
 import { Avatar } from '@/components/ui/misc';
+import { cn } from '@/lib/cn';
 import type { ClassSummary } from '@/lib/types';
+import { SUBJECT_SOLID } from './helpers';
 import { useRelativeTime } from './use-relative-time';
 
-export function ClassCard({ cls }: { cls: ClassSummary }) {
+/** Class tile: subject-colored header block, two big numbers, Classroom status. */
+export function ClassCard({ cls, color }: { cls: ClassSummary; color?: string }) {
   const t = useTranslations('teacher.classes');
   const ago = useRelativeTime();
   return (
     <Link
       href={`/teacher/classes/${cls.id}`}
-      className="group relative flex flex-col overflow-hidden rounded-[20px] border border-border bg-card shadow-[0_1px_2px_rgba(20,17,43,0.04),0_8px_24px_-12px_rgba(108,76,241,0.18)] transition-all hover:-translate-y-0.5 hover:border-primary/40"
+      className="chunky chunky-hover group flex flex-col overflow-hidden rounded-[20px]"
       data-testid="class-card"
     >
-      <div className="relative h-20 bg-gradient-to-br from-violet to-sky">
-        <div className="bg-dots absolute inset-0 opacity-40" />
-        <span className="absolute bottom-3 start-5 rounded-full bg-card/90 px-2.5 py-0.5 text-xs font-extrabold text-foreground">
-          {cls.gradeLevel ? t('grade', { n: cls.gradeLevel }) : t('noGrade')}
-        </span>
+      <div className={cn('relative px-5 pb-4 pt-4 text-white', (color && SUBJECT_SOLID[color]) || 'bg-med')}>
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <h2 className="truncate font-display text-[22px] font-black leading-tight">{cls.name}</h2>
+            <p className="text-sm font-extrabold opacity-90">{cls.gradeLevel ? t('grade', { n: cls.gradeLevel }) : t('noGrade')}</p>
+          </div>
+          <ChevronRight className="rtl-flip mt-1 size-6 shrink-0 opacity-80 transition-transform group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5" />
+        </div>
       </div>
       <div className="flex flex-1 flex-col gap-4 p-5">
-        <div className="flex items-start justify-between gap-2">
-          <h2 className="text-xl font-extrabold leading-tight">{cls.name}</h2>
-          <ChevronRight className="rtl-flip mt-1 size-5 text-muted-foreground transition-transform group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5" />
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <p className="eyebrow">{t('students')}</p>
+            <p className="font-display text-[28px] font-black leading-tight tabular-nums">{cls.studentCount}</p>
+          </div>
+          <div>
+            <p className="eyebrow">{t('missions')}</p>
+            <p className="font-display text-[28px] font-black leading-tight tabular-nums">{cls.missionCount}</p>
+          </div>
         </div>
         <div className="flex flex-wrap gap-1.5">
           {cls.classroomCourseId ? (
-            <Badge variant="mint">
+            <Badge variant="sky">
               <Link2 /> {t('classroomLinked')}
             </Badge>
           ) : (
@@ -43,24 +55,10 @@ export function ClassCard({ cls }: { cls: ClassSummary }) {
             </Badge>
           )}
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-[14px] bg-muted px-3 py-2">
-            <p className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-              <Users className="size-3.5" /> {t('students')}
-            </p>
-            <p className="text-xl font-extrabold tabular-nums">{cls.studentCount}</p>
-          </div>
-          <div className="rounded-[14px] bg-muted px-3 py-2">
-            <p className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-              <ClipboardList className="size-3.5" /> {t('missions')}
-            </p>
-            <p className="text-xl font-extrabold tabular-nums">{cls.missionCount}</p>
-          </div>
-        </div>
-        <div className="mt-auto flex items-center justify-between gap-2 border-t border-border pt-3 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1.5">
-            <RefreshCw className="size-3.5" />
-            {cls.lastSyncedAt ? t('synced', { when: ago(cls.lastSyncedAt) }) : t('neverSynced')}
+        <div className="mt-auto flex items-center justify-between gap-2 border-t-2 border-border pt-3 text-xs font-bold text-muted-foreground">
+          <span className="flex min-w-0 items-center gap-1.5">
+            <RefreshCw className="size-3.5 shrink-0" />
+            <span className="truncate">{cls.lastSyncedAt ? t('synced', { when: ago(cls.lastSyncedAt) }) : t('neverSynced')}</span>
           </span>
           <span className="flex -space-x-2 rtl:space-x-reverse">
             {cls.teachers.slice(0, 3).map((tc) => (

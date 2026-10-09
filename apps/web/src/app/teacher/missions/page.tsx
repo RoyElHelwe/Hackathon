@@ -4,8 +4,8 @@ import { Sparkles, Users, Wand2, User } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { use, useCallback, useRef, useState } from 'react';
 import { PageHeader } from '@/components/app/adult-shell';
-import { EmptyState, ErrorState, PageSkeleton, Thinking } from '@/components/app/states';
-import { BouslaSays } from '@/components/bousla';
+import { EmptyState, ErrorState, PageSkeleton } from '@/components/app/states';
+import { Arzino, ArzinoSays } from '@/components/arzino';
 import { CourseStudio } from '@/components/teacher/course-studio';
 import { errMessage } from '@/components/teacher/helpers';
 import { MissionDraftCard } from '@/components/teacher/mission-draft-card';
@@ -25,7 +25,7 @@ type Audience = 'STUDENT' | 'FAMILY';
 
 export default function MissionStudioPage({ searchParams }: { searchParams: Promise<{ classId?: string; courseId?: string }> }) {
   const sp = use(searchParams);
-  // Course mode: review the mission templates Bousla wrote from the course's lessons (generation happens on lessons).
+  // Course mode: review the mission templates Arzino wrote from the course's lessons (generation happens on lessons).
   if (sp.courseId) return <CourseStudio courseId={sp.courseId} />;
   return <ClassStudio initialClassId={sp.classId ?? null} />;
 }
@@ -83,14 +83,14 @@ function ClassStudio({ initialClassId }: { initialClassId: string | null }) {
 
   if (classes.isLoading) return <PageSkeleton />;
   if (classes.error) return <ErrorState message={classes.error.message} onRetry={() => classes.refetch()} />;
-  if (!classes.data?.length) return <EmptyState title={t('noClasses')} body={t('noClassesBody')} mood="curious" />;
+  if (!classes.data?.length) return <EmptyState title={t('noClasses')} body={t('noClassesBody')} mood="teaching" />;
 
   return (
     <div>
-      <PageHeader title={t('title')} subtitle={t('subtitle')} />
+      <PageHeader mood="teaching" eyebrow={t('eyebrow')} title={t('title')} subtitle={t('subtitle')} />
 
       <Card>
-        <CardContent className="grid gap-6 p-5 md:p-6 lg:grid-cols-[1fr_280px]">
+        <CardContent className="grid gap-6 p-5 md:p-6 lg:grid-cols-[1fr_300px]">
           <div className="space-y-5">
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
@@ -114,7 +114,7 @@ function ClassStudio({ initialClassId }: { initialClassId: string | null }) {
               </div>
               <div>
                 <Label>{t('audience')}</Label>
-                <div className="grid h-12 grid-cols-2 gap-1 rounded-[14px] bg-muted p-1" role="radiogroup" aria-label={t('audience')}>
+                <div className="grid h-12 grid-cols-2 gap-1 rounded-[16px] border-2 border-border bg-muted p-1" role="radiogroup" aria-label={t('audience')}>
                   {(['STUDENT', 'FAMILY'] as const).map((a) => (
                     <button
                       key={a}
@@ -123,8 +123,8 @@ function ClassStudio({ initialClassId }: { initialClassId: string | null }) {
                       aria-checked={audience === a}
                       onClick={() => setAudience(a)}
                       className={cn(
-                        'flex items-center justify-center gap-2 rounded-[11px] text-sm font-bold transition-colors',
-                        audience === a ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+                        'flex items-center justify-center gap-2 rounded-[12px] font-display text-sm font-black uppercase tracking-[0.06em] transition-colors',
+                        audience === a ? 'bg-card text-med-ink shadow-[0_2px_0_var(--border)] dark:text-white' : 'text-muted-foreground hover:text-foreground',
                       )}
                       data-testid={`audience-${a.toLowerCase()}`}
                     >
@@ -155,20 +155,20 @@ function ClassStudio({ initialClassId }: { initialClassId: string | null }) {
             )}
             <div>
               <Label htmlFor="interests">
-                {t('interests')} <span className="font-normal text-muted-foreground">· {t('optional')}</span>
+                {t('interests')} <span className="font-semibold text-muted-foreground">· {t('optional')}</span>
               </Label>
               <Input id="interests" value={interests} onChange={(e) => setInterests(e.target.value)} maxLength={200} placeholder={t('interestsPlaceholder')} data-testid="interests-input" />
             </div>
           </div>
-          <div className="flex flex-col justify-between gap-5 rounded-[18px] bg-gradient-to-b from-violet-soft to-transparent p-5">
-            <BouslaSays mood={topic ? 'happy' : 'curious'} size={64}>
-              <span className="text-sm">{topic ? t('bouslaReady', { topic: l(topic.name), className: cls?.name ?? '' }) : t('bouslaPick')}</span>
-            </BouslaSays>
+          <div className="flex flex-col justify-between gap-5 rounded-[18px] border-2 border-med/30 bg-med-soft p-5">
+            <ArzinoSays mood={topic ? 'teaching' : 'thinking'} size={88} className="flex-col items-center gap-1">
+              <span className="text-sm">{topic ? t('arzinoReady', { topic: l(topic.name), className: cls?.name ?? '' }) : t('arzinoPick')}</span>
+            </ArzinoSays>
             <div className="space-y-2">
-              <Button size="lg" className="w-full" onClick={generate} disabled={!topicId || generating} loading={generating} data-testid="generate-missions">
+              <Button size="lg" variant="kidMint" className="w-full" onClick={generate} disabled={!topicId || generating} loading={generating} data-testid="generate-missions">
                 <Wand2 /> {t('generate')}
               </Button>
-              <p className="text-center text-xs text-muted-foreground">{t('privateNote')}</p>
+              <p className="text-center text-xs font-semibold text-muted-foreground">{t('privateNote')}</p>
             </div>
           </div>
         </CardContent>
@@ -176,8 +176,11 @@ function ClassStudio({ initialClassId }: { initialClassId: string | null }) {
 
       <div ref={draftsRef} className="scroll-mt-24">
         {generating && (
-          <Card className="mt-6">
-            <Thinking label={t('thinking')} />
+          <Card className="mt-6" role="status" aria-live="polite">
+            <div className="flex flex-col items-center gap-2 px-6 pb-4 pt-8 text-center">
+              <Arzino mood="writing" size={170} pop />
+              <p className="font-display text-xl font-black">{t('thinking')}</p>
+            </div>
             <div className="grid gap-3 px-6 pb-6 md:grid-cols-3">
               {[0, 1, 2].map((i) => (
                 <Skeleton key={i} className="h-24" />
@@ -194,10 +197,10 @@ function ClassStudio({ initialClassId }: { initialClassId: string | null }) {
           <section className="mt-8 space-y-5" data-testid="drafts">
             <div className="flex flex-wrap items-end justify-between gap-2">
               <div>
-                <h2 className="flex items-center gap-2 text-xl font-extrabold">
-                  <Sparkles className="size-5 text-primary" /> {t('draftsTitle', { n: drafts.length })}
+                <h2 className="flex items-center gap-2 font-display text-[24px] font-black">
+                  <Sparkles className="size-6 text-med" /> {t('draftsTitle', { n: drafts.length })}
                 </h2>
-                <p className="text-sm text-muted-foreground">{t('draftsBody')}</p>
+                <p className="text-sm font-semibold text-muted-foreground">{t('draftsBody')}</p>
               </div>
             </div>
             {drafts.map((m, i) => (
@@ -218,7 +221,7 @@ function ClassStudio({ initialClassId }: { initialClassId: string | null }) {
       {classId && (
         <Card className="mt-8">
           <CardHeader>
-            <CardTitle>{t('libraryTitle', { className: cls?.name ?? '' })}</CardTitle>
+            <CardTitle className="text-xl">{t('libraryTitle', { className: cls?.name ?? '' })}</CardTitle>
             <CardDescription>{t('libraryBody')}</CardDescription>
           </CardHeader>
           <CardContent>

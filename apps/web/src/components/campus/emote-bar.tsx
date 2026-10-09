@@ -26,7 +26,7 @@ export function EmoteBar({ onEmote, onReaction, className, compact }: { onEmote:
           key={e}
           type="button"
           onClick={() => onEmote(e)}
-          className="flex h-11 min-w-11 items-center justify-center gap-1 rounded-full border-2 border-border bg-card px-2.5 text-xl transition-transform hover:scale-110 active:scale-95"
+          className="flex h-11 min-w-11 items-center justify-center gap-1 rounded-[14px] border-2 border-border bg-card px-2.5 text-xl shadow-[0_3px_0_0_var(--border)] transition-transform hover:-translate-y-0.5 active:translate-y-[3px] active:shadow-none"
           title={`${t(`emotes.${e}`)} (${i + 1})`}
           aria-label={t(`emotes.${e}`)}
           data-testid={`emote-${e}`}
@@ -37,7 +37,7 @@ export function EmoteBar({ onEmote, onReaction, className, compact }: { onEmote:
       ))}
       {onReaction &&
         REACTIONS.slice(0, compact ? 4 : REACTIONS.length).map((r) => (
-          <button key={r} type="button" onClick={() => onReaction(r)} className="flex size-11 items-center justify-center rounded-full bg-muted text-xl transition-transform hover:scale-110 active:scale-95" aria-label={`${t('react')} ${r}`}>
+          <button key={r} type="button" onClick={() => onReaction(r)} className="flex size-11 items-center justify-center rounded-full bg-muted text-xl transition-transform hover:scale-110 active:scale-90" aria-label={`${t('react')} ${r}`}>
             {r}
           </button>
         ))}

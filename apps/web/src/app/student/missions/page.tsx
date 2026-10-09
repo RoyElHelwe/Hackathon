@@ -1,6 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import { Arzino } from '@/components/arzino';
 import { EmptyState, ErrorState, PageSkeleton } from '@/components/app/states';
 import { MissionCard } from '@/components/student/mission-card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/misc';
@@ -26,20 +27,26 @@ export default function MissionsPage() {
         ))}
       </div>
     ) : (
-      <EmptyState title={empty} />
+      <EmptyState title={empty} className="chunky rounded-[24px]" />
     );
   return (
-    <div className="space-y-4">
-      <h1 className="font-display text-3xl font-extrabold">{t('missionsTitle')}</h1>
+    <div className="space-y-5">
+      <div className="flex items-center gap-3">
+        <Arzino mood="laser-focus" size={110} />
+        <div className="min-w-0">
+          <h1 className="font-display text-[30px] font-black leading-tight">{t('missionsTitle')}</h1>
+          <p className="font-bold text-muted-foreground">{t('missionsSub')}</p>
+        </div>
+      </div>
       <Tabs defaultValue={active.length ? 'active' : 'available'}>
         <TabsList className="w-full">
-          <TabsTrigger value="active" className="flex-1">
+          <TabsTrigger value="active" className="flex-1 px-2">
             {t('tabActive')} ({active.length})
           </TabsTrigger>
-          <TabsTrigger value="available" className="flex-1">
+          <TabsTrigger value="available" className="flex-1 px-2">
             {t('tabAvailable')} ({available.length})
           </TabsTrigger>
-          <TabsTrigger value="done" className="flex-1">
+          <TabsTrigger value="done" className="flex-1 px-2">
             {t('tabDone')} ({done.length})
           </TabsTrigger>
         </TabsList>

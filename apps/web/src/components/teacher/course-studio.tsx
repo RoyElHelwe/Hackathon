@@ -15,7 +15,7 @@ import { MissionDraftCard } from './mission-draft-card';
 import { MissionList } from './mission-list';
 import type { CourseSummary } from './types';
 
-/** Mission studio for a course: review/edit/approve the templates Bousla wrote from gamified lessons. */
+/** Mission studio for a course: review/edit/approve the templates Arzino wrote from gamified lessons. */
 export function CourseStudio({ courseId }: { courseId: string }) {
   const t = useTranslations('teacher.studio');
   const tc = useTranslations('teacher.courses');
@@ -69,23 +69,23 @@ export function CourseStudio({ courseId }: { courseId: string }) {
 
   return (
     <div>
-      <Link href={`/teacher/courses/${courseId}`} className="mb-3 inline-flex items-center gap-1.5 text-sm font-bold text-muted-foreground hover:text-foreground">
+      <Link href={`/teacher/courses/${courseId}`} className="mb-4 inline-flex items-center gap-1.5 font-display text-xs font-black uppercase tracking-[0.09em] text-muted-foreground hover:text-foreground">
         <ArrowLeft className="rtl-flip size-4" /> {t('backToCourse')}
       </Link>
-      <PageHeader title={t('courseTitle', { course: courseName })} subtitle={t('courseSubtitle')} />
+      <PageHeader mood="teaching" eyebrow={t('eyebrow')} title={t('courseTitle', { course: courseName })} subtitle={t('courseSubtitle')} />
 
       <section className="space-y-5" data-testid="course-drafts">
-        <h2 className="flex items-center gap-2 text-xl font-extrabold">
-          <Sparkles className="size-5 text-primary" /> {t('courseDraftsTitle', { n: pending })}
+        <h2 className="flex items-center gap-2 font-display text-[24px] font-black">
+          <Sparkles className="size-6 text-med" /> {t('courseDraftsTitle', { n: pending })}
         </h2>
         {!drafts.length ? (
           <Card>
-            <EmptyState title={t('noDrafts')} body={t('courseNoDraftsBody')} mood="sleepy" className="py-10" />
+            <EmptyState title={t('noDrafts')} body={t('courseNoDraftsBody')} mood="bored-waiting" className="py-10" />
           </Card>
         ) : (
           groups.map((g) => (
             <div key={g.topicId} className="space-y-4">
-              {g.name && <h3 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">{t('skillGroup', { name: l(g.name) })}</h3>}
+              {g.name && <h3 className="eyebrow">{t('skillGroup', { name: l(g.name) })}</h3>}
               {g.items.map((m) => (
                 <MissionDraftCard
                   key={m.id}
@@ -105,7 +105,7 @@ export function CourseStudio({ courseId }: { courseId: string }) {
 
       <Card className="mt-8">
         <CardHeader>
-          <CardTitle>{t('courseLibraryTitle', { course: courseName })}</CardTitle>
+          <CardTitle className="text-xl">{t('courseLibraryTitle', { course: courseName })}</CardTitle>
           <CardDescription>{t('libraryBody')}</CardDescription>
         </CardHeader>
         <CardContent>

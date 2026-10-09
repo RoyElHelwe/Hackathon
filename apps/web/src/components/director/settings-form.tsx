@@ -68,8 +68,8 @@ export function SettingsForm({ school, onToast }: { school: School; onToast: (te
     <div className="space-y-5 pb-4">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Trophy className="size-5 text-warning" /> {t('leaderboard')}
+          <CardTitle className="flex items-center gap-3 text-xl">
+            <IconChip className="bg-flag-soft text-flag-d dark:text-danger"><Trophy /></IconChip> {t('leaderboard')}
           </CardTitle>
           <CardDescription>{t('leaderboardBody')}</CardDescription>
         </CardHeader>
@@ -84,15 +84,18 @@ export function SettingsForm({ school, onToast }: { school: School; onToast: (te
                   role="radio"
                   aria-checked={on}
                   onClick={() => setForm((f) => ({ ...f, leaderboardPolicy: p }))}
-                  className={cn('flex items-start gap-3 rounded-[16px] border-2 p-4 text-start transition-colors', on ? 'border-primary bg-violet-soft' : 'border-border hover:bg-muted')}
+                  className={cn(
+                    'flex items-start gap-3 rounded-[18px] border-2 p-4 text-start transition-colors',
+                    on ? 'border-med bg-med-soft shadow-[0_4px_0_var(--med)]' : 'border-border shadow-[0_4px_0_var(--border)] hover:bg-muted',
+                  )}
                   data-testid={`policy-${p}`}
                 >
-                  <span className={cn('mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border-2', on ? 'border-primary' : 'border-border')}>
-                    {on && <span className="size-2.5 rounded-full bg-primary" />}
+                  <span className={cn('mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full border-2', on ? 'border-med bg-card' : 'border-lock-d')}>
+                    {on && <span className="size-3 rounded-full bg-med" />}
                   </span>
                   <span>
-                    <span className="block font-extrabold">{t(p)}</span>
-                    <span className="block text-sm text-muted-foreground">{t(`${p}_body`)}</span>
+                    <span className="block font-black">{t(p)}</span>
+                    <span className="block text-sm font-semibold text-muted-foreground">{t(`${p}_body`)}</span>
                   </span>
                 </button>
               );
@@ -103,13 +106,13 @@ export function SettingsForm({ school, onToast }: { school: School; onToast: (te
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ShieldCheck className="size-5 text-success" /> {t('safety')}
+          <CardTitle className="flex items-center gap-3 text-xl">
+            <IconChip className="bg-cedar-soft text-cedar-d dark:text-success"><ShieldCheck /></IconChip> {t('safety')}
           </CardTitle>
           <CardDescription>{t('safetyBody')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
-          {form.safetyRules.length === 0 && <p className="text-sm text-muted-foreground">{t('noRules')}</p>}
+          {form.safetyRules.length === 0 && <p className="rounded-[14px] bg-muted px-3 py-3 text-sm font-bold text-muted-foreground">{t('noRules')}</p>}
           {form.safetyRules.map((r, i) => (
             <div key={i} className="flex items-center gap-2" data-testid="safety-rule">
               <Input
@@ -130,7 +133,7 @@ export function SettingsForm({ school, onToast }: { school: School; onToast: (te
             }}
           >
             <Input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={t('rulePlaceholder')} data-testid="new-safety-rule" />
-            <Button type="submit" variant="outline" disabled={!draft.trim()} data-testid="add-safety-rule">
+            <Button type="submit" variant="kidGhost" disabled={!draft.trim()} data-testid="add-safety-rule">
               <Plus /> <span className="hidden sm:inline">{t('addRule')}</span>
             </Button>
           </form>
@@ -139,13 +142,13 @@ export function SettingsForm({ school, onToast }: { school: School; onToast: (te
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Languages className="size-5 text-sky" /> {t('language')}
+          <CardTitle className="flex items-center gap-3 text-xl">
+            <IconChip className="bg-med-soft text-med-d dark:text-ring"><Languages /></IconChip> {t('language')}
           </CardTitle>
           <CardDescription>{t('languageBody')}</CardDescription>
         </CardHeader>
         <CardContent>
-          <div role="radiogroup" aria-label={t('language')} className="inline-flex rounded-[16px] bg-muted p-1">
+          <div role="radiogroup" aria-label={t('language')} className="inline-flex flex-wrap rounded-[16px] border-2 border-border bg-muted p-1">
             {LOCALES.map((loc) => (
               <button
                 key={loc}
@@ -153,7 +156,10 @@ export function SettingsForm({ school, onToast }: { school: School; onToast: (te
                 role="radio"
                 aria-checked={form.defaultLocale === loc}
                 onClick={() => setForm((f) => ({ ...f, defaultLocale: loc }))}
-                className={cn('h-10 rounded-[12px] px-5 font-bold transition-colors', form.defaultLocale === loc ? 'bg-card shadow-sm' : 'text-muted-foreground')}
+                className={cn(
+                  'h-11 rounded-[12px] px-5 font-black transition-colors',
+                  form.defaultLocale === loc ? 'bg-card text-med-ink shadow-[0_3px_0_var(--border)] dark:text-white' : 'text-muted-foreground hover:text-foreground',
+                )}
                 data-testid={`locale-${loc}`}
               >
                 {t(loc)}
@@ -163,8 +169,8 @@ export function SettingsForm({ school, onToast }: { school: School; onToast: (te
         </CardContent>
       </Card>
 
-      <div className="sticky bottom-4 z-10 flex items-center justify-end gap-3 rounded-[20px] border border-border bg-card/95 p-3 shadow-lg backdrop-blur">
-        {dirty && <p className="me-auto ps-2 text-sm font-semibold text-warning">{t('unsaved')}</p>}
+      <div className="sticky bottom-4 z-10 flex flex-wrap items-center justify-end gap-3 rounded-[20px] border-2 border-border bg-card/95 p-3 shadow-[0_4px_0_var(--border)] backdrop-blur">
+        {dirty && <p className="me-auto ps-2 text-sm font-black text-flame-d dark:text-warning">{t('unsaved')}</p>}
         <Button
           variant="ghost"
           disabled={!dirty || busy}
@@ -175,10 +181,14 @@ export function SettingsForm({ school, onToast }: { school: School; onToast: (te
         >
           {tc('cancel')}
         </Button>
-        <Button onClick={save} loading={busy} disabled={!dirty} data-testid="save-settings">
+        <Button variant="kid" onClick={save} loading={busy} disabled={!dirty} data-testid="save-settings">
           {t('save')}
         </Button>
       </div>
     </div>
   );
+}
+
+function IconChip({ className, children }: { className?: string; children: React.ReactNode }) {
+  return <span className={cn('flex size-9 shrink-0 items-center justify-center rounded-[12px] [&_svg]:size-5', className)}>{children}</span>;
 }

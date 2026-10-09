@@ -4,19 +4,24 @@ import confetti from 'canvas-confetti';
 import { AnimatePresence, motion } from 'motion/react';
 import { useTranslations } from 'next-intl';
 import { useEffect } from 'react';
-import { Bousla } from '@/components/bousla';
+import { Arzino, type ArzinoMood } from '@/components/arzino';
 import { Button } from '@/components/ui/button';
 import { useSound } from '@/components/app/theme';
+import { cn } from '@/lib/cn';
 import { useL } from '@/lib/hooks';
 import type { I18nText } from '@tajriba/shared';
 
+/** Lebanon confetti: cedar, flag red, white, Mediterranean blue, a pinch of flame and gold. */
+const CONFETTI = ['#00A651', '#E4252D', '#FFFFFF', '#1C8BE0', '#FF9600', '#FFC21A', '#58CC02'];
+
 export function fireConfetti(strong = false) {
   if (typeof window === 'undefined' || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  const colors = ['#6C4CF1', '#2DD4A7', '#FFC83D', '#FF7A59', '#4CB8FF'];
-  confetti({ particleCount: strong ? 160 : 90, spread: strong ? 100 : 70, origin: { y: 0.6 }, colors, scalar: 1.1 });
+  const colors = CONFETTI;
+  confetti({ particleCount: strong ? 170 : 100, spread: strong ? 110 : 75, origin: { y: 0.6 }, colors, scalar: 1.15 });
   if (strong) {
-    setTimeout(() => confetti({ particleCount: 80, angle: 60, spread: 60, origin: { x: 0 }, colors }), 250);
-    setTimeout(() => confetti({ particleCount: 80, angle: 120, spread: 60, origin: { x: 1 }, colors }), 400);
+    setTimeout(() => confetti({ particleCount: 90, angle: 60, spread: 65, origin: { x: 0, y: 0.7 }, colors }), 250);
+    setTimeout(() => confetti({ particleCount: 90, angle: 120, spread: 65, origin: { x: 1, y: 0.7 }, colors }), 420);
+    setTimeout(() => confetti({ particleCount: 60, spread: 360, startVelocity: 28, origin: { y: 0.35 }, colors, shapes: ['star'], scalar: 1.4 }), 700);
   }
 }
 
@@ -26,12 +31,15 @@ export function FloatingXp({ amount, show }: { amount: number; show: boolean }) 
     <AnimatePresence>
       {show && (
         <motion.div
-          initial={{ opacity: 0, y: 10, scale: 0.8 }}
-          animate={{ opacity: [0, 1, 1, 0], y: -70, scale: 1.2 }}
-          transition={{ duration: 1.8, ease: 'easeOut' }}
-          className="pointer-events-none absolute inset-x-0 top-0 z-20 text-center font-display text-4xl font-extrabold text-mint drop-shadow"
+          initial={{ opacity: 0, y: 10, scale: 0.6 }}
+          animate={{ opacity: [0, 1, 1, 0], y: -80, scale: [0.6, 1.35, 1.2] }}
+          transition={{ duration: 1.9, ease: 'easeOut' }}
+          className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-center justify-center gap-1 font-display text-5xl font-black text-med drop-shadow-[0_3px_0_var(--med-d)]"
           data-testid="floating-xp"
         >
+          <svg viewBox="0 0 24 24" className="size-11" aria-hidden>
+            <path d="M13.5 2 4 13.5h6.5L9.5 22 20 9.5h-6.6L13.5 2Z" fill="var(--med)" stroke="#fff" strokeWidth="1.6" strokeLinejoin="round" />
+          </svg>
           +{amount} XP
         </motion.div>
       )}
@@ -51,25 +59,34 @@ export function LevelUpModal({ level, open, onClose }: { level: number; open: bo
   return (
     <AnimatePresence>
       {open && (
-        <motion.div className="fixed inset-0 z-[60] flex items-center justify-center bg-ink/70 p-6 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} role="dialog" aria-modal data-testid="level-up">
+        <motion.div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-ink/70 p-6 backdrop-blur-sm"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          role="dialog"
+          aria-modal
+          data-testid="level-up"
+        >
           <motion.div
-            initial={{ scale: 0.6, rotate: -6 }}
-            animate={{ scale: 1, rotate: 0 }}
-            transition={{ type: 'spring', stiffness: 160, damping: 12 }}
-            className="w-full max-w-sm rounded-[32px] bg-card p-8 text-center shadow-2xl"
+            initial={{ scale: 0.5, rotate: -8, y: 40 }}
+            animate={{ scale: 1, rotate: 0, y: 0 }}
+            transition={{ type: 'spring', stiffness: 170, damping: 12 }}
+            className="relative w-full max-w-sm overflow-hidden rounded-[28px] border-2 border-border bg-card px-7 pb-7 pt-4 text-center shadow-[0_8px_0_0_var(--border)]"
           >
-            <Bousla mood="cheering" size={140} className="mx-auto" />
-            <p className="mt-2 font-display text-xl font-bold text-muted-foreground">{t('levelUp')}</p>
+            <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-med-soft to-transparent" aria-hidden />
+            <Arzino mood="fireworks" size={210} className="relative mx-auto -mb-2" pop priority />
+            <p className="eyebrow relative !text-med-ink dark:!text-med">{t('levelUp')}</p>
             <motion.p
               initial={{ scale: 0 }}
-              animate={{ scale: [0, 1.4, 1] }}
-              transition={{ delay: 0.3, duration: 0.6 }}
-              className="font-display text-7xl font-extrabold text-primary"
+              animate={{ scale: [0, 1.5, 1] }}
+              transition={{ delay: 0.35, duration: 0.6 }}
+              className="relative font-display text-[96px] font-black leading-none text-cedar drop-shadow-[0_5px_0_var(--cedar-d)]"
             >
               {level}
             </motion.p>
-            <p className="mt-1 font-semibold">{t('levelUpBody', { level })}</p>
-            <Button variant="kid" size="pill" className="mt-6 w-full" onClick={onClose}>
+            <p className="relative mt-3 text-lg font-bold">{t('levelUpBody', { level })}</p>
+            <Button variant="kid" size="lg" className="relative mt-6 w-full" onClick={onClose}>
               {t('awesome')}
             </Button>
           </motion.div>
@@ -79,21 +96,65 @@ export function LevelUpModal({ level, open, onClose }: { level: number; open: bo
   );
 }
 
-export function BadgeCard({ icon, name, earned = true, flip = false, size = 'md' }: { icon: string; name: I18nText; earned?: boolean; flip?: boolean; size?: 'sm' | 'md' }) {
+/** Each badge has an Arzino pose; the badge emoji sits on it as a little pin. */
+const BADGE_POSE: Record<string, ArzinoMood> = {
+  first_mission: 'cheer',
+  shadow_hunter: 'cool',
+  architect: 'proud',
+  pizza_master: 'starry-eyed',
+  peer_hero: 'clipboard',
+  kind_reviewer: 'warm',
+  streak_7: 'on-fire',
+  family_team: 'lebanese-pride',
+  kitchen_chemist: 'surprise',
+  time_traveler: 'reading',
+};
+export const badgePose = (key?: string): ArzinoMood => (key && BADGE_POSE[key]) || 'trophy';
+
+export function BadgeCard({
+  icon,
+  name,
+  earned = true,
+  flip = false,
+  size = 'md',
+  badgeKey,
+}: {
+  icon: string;
+  name: I18nText;
+  earned?: boolean;
+  flip?: boolean;
+  size?: 'sm' | 'md';
+  /** picks the Arzino pose for this badge */
+  badgeKey?: string;
+}) {
   const l = useL();
+  const art = size === 'sm' ? 64 : 120;
   return (
     <motion.div
       initial={flip ? { rotateY: 180, scale: 0.6 } : false}
       animate={{ rotateY: 0, scale: 1 }}
       transition={{ type: 'spring', stiffness: 90, damping: 12 }}
       style={{ transformStyle: 'preserve-3d' }}
-      className={`flex flex-col items-center gap-1 rounded-[20px] border-2 p-3 text-center ${earned ? 'border-sunny bg-sunny-soft' : 'border-dashed border-border bg-muted opacity-60 grayscale'} ${flip ? 'shine' : ''}`}
+      className={cn(
+        'relative flex flex-col items-center gap-1 rounded-[20px] border-2 p-2.5 text-center',
+        earned ? 'border-border bg-card shadow-[0_4px_0_0_var(--border)]' : 'border-dashed border-border bg-muted',
+        flip && 'shine border-[#FFC21A] shadow-[0_4px_0_0_#E0A800]',
+      )}
       data-testid="badge-card"
     >
-      <span className={size === 'sm' ? 'text-3xl' : 'text-4xl'} aria-hidden>
-        {earned ? icon : '🔒'}
+      <span className={cn('relative', !earned && 'opacity-45 grayscale')}>
+        <Arzino mood={badgePose(badgeKey)} size={art} animate={flip} title="" />
+        <span
+          className={cn(
+            'absolute -bottom-1 end-0 flex items-center justify-center rounded-full border-2 border-card bg-[#FFF5D6] shadow-sm dark:bg-[#3b3212]',
+            size === 'sm' ? 'size-7 text-sm' : 'size-10 text-xl',
+          )}
+          aria-hidden
+        >
+          {earned ? icon : '🔒'}
+        </span>
       </span>
-      <span className="text-xs font-extrabold leading-tight">{l(name)}</span>
+      <span className={cn('font-black leading-tight', size === 'sm' ? 'text-xs' : 'text-base', !earned && 'text-muted-foreground')}>{l(name)}</span>
     </motion.div>
   );
 }
@@ -102,9 +163,9 @@ export function ValidatedStamp({ label }: { label: string }) {
   return (
     <motion.div
       initial={{ scale: 3, opacity: 0, rotate: -25 }}
-      animate={{ scale: 1, opacity: 1, rotate: -12 }}
+      animate={{ scale: 1, opacity: 1, rotate: -8 }}
       transition={{ type: 'spring', stiffness: 260, damping: 14, delay: 0.2 }}
-      className="inline-flex items-center gap-2 rounded-[14px] border-4 border-mint px-5 py-2 font-display text-3xl font-extrabold uppercase tracking-wider text-success"
+      className="inline-flex items-center gap-2 rounded-[16px] border-4 border-cedar bg-card px-5 py-2 font-display text-3xl font-black uppercase tracking-[0.08em] text-cedar-ink shadow-[0_5px_0_0_var(--cedar-d)] dark:text-cedar"
       data-testid="validated-stamp"
     >
       {label} ✓

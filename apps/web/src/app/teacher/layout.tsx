@@ -17,13 +17,13 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
       <AdultShell
         home="/teacher"
         nav={[
-          { href: '/teacher', label: t('classes'), icon: School, exact: true },
-          { href: '/teacher/missions', label: t('missions'), icon: Wand2 },
-          { href: '/teacher/review', label: t('review'), icon: ClipboardCheck, badge: pending },
-          { href: '/teacher/exams', label: tc('navExams'), icon: MicVocal },
-          { href: '/teacher/sessions', label: tc('navSessions'), icon: Headphones },
-          { href: '/teacher/insights', label: t('insights'), icon: BarChart3 },
-          { href: '/teacher/messages', label: t('messages'), icon: MessageCircle },
+          { href: '/teacher', label: t('classes'), icon: School, exact: true, tone: 'flag' },
+          { href: '/teacher/missions', label: t('missions'), icon: Wand2, tone: 'med' },
+          { href: '/teacher/review', label: t('review'), icon: ClipboardCheck, badge: pending, tone: 'cedar' },
+          { href: '/teacher/exams', label: tc('navExams'), icon: MicVocal, tone: 'flame' },
+          { href: '/teacher/sessions', label: tc('navSessions'), icon: Headphones, tone: 'med' },
+          { href: '/teacher/insights', label: t('insights'), icon: BarChart3, tone: 'ink' },
+          { href: '/teacher/messages', label: t('messages'), icon: MessageCircle, tone: 'cedar' },
         ]}
       >
         {children}

@@ -1,5 +1,12 @@
 {
-  "nav": { "overview": "Overview", "subjects": "Subjects", "coverage": "Coverage", "classes": "Classes", "members": "Members", "settings": "Settings" },
+  "nav": {
+    "overview": "Overview",
+    "subjects": "Subjects",
+    "coverage": "Coverage",
+    "classes": "Classes",
+    "members": "Members",
+    "settings": "Settings"
+  },
   "overview": {
     "title": "School overview",
     "subtitle": "{school} · {city}",
@@ -23,7 +30,10 @@
     "topClassesSubtitle": "By engagement this week",
     "allClasses": "All classes",
     "coverageCta": "Curriculum coverage",
-    "noClasses": "No classes yet. Teachers import them from Google Classroom."
+    "noClasses": "No classes yet. Teachers import them from Google Classroom.",
+    "needsAttention": "Needs attention",
+    "pendingShort": "{n, plural, one {person waiting} other {people waiting}}",
+    "heroSubtitle": "{city} · {classes, plural, one {# class} other {# classes}} · {students, plural, one {# student} other {# students}}"
   },
   "code": {
     "title": "School code",
@@ -46,7 +56,10 @@
     "students": "{n, plural, one {# student} other {# students}}",
     "notInSection": "{topic} · {cls}: not part of this section",
     "cell": "{topic} · {cls}: {pct}% mastered",
-    "avg": "School"
+    "avg": "School",
+    "legendLow": "Below 50%",
+    "legendMid": "50–69%",
+    "legendHigh": "70% and up"
   },
   "classes": {
     "title": "Classes",

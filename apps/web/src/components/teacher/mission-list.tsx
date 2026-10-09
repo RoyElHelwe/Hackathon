@@ -29,7 +29,7 @@ export function MissionList({ classId, courseId, editingIds, onOpen }: { classId
       </TabsList>
       <TabsContent value="drafts" className="mt-4">
         {drafts.length ? (
-          <ul className="divide-y divide-border">
+          <ul className="divide-y-2 divide-border">
             {drafts.map((m) => (
               <Row key={m.id} m={m}>
                 {editingIds.includes(m.id) ? (
@@ -43,18 +43,18 @@ export function MissionList({ classId, courseId, editingIds, onOpen }: { classId
             ))}
           </ul>
         ) : (
-          <EmptyState title={t('noDrafts')} body={t('noDraftsBody')} mood="sleepy" className="py-6" />
+          <EmptyState title={t('noDrafts')} body={t('noDraftsBody')} mood="bored-waiting" className="py-6" />
         )}
       </TabsContent>
       <TabsContent value="published" className="mt-4">
         {published.length ? (
-          <ul className="divide-y divide-border">
+          <ul className="divide-y-2 divide-border">
             {published.map((m) => (
               <Row key={m.id} m={m} />
             ))}
           </ul>
         ) : (
-          <EmptyState title={t('noPublished')} mood="curious" className="py-6" />
+          <EmptyState title={t('noPublished')} mood="writing" className="py-6" />
         )}
       </TabsContent>
     </Tabs>
@@ -69,7 +69,7 @@ function Row({ m, children }: { m: Mission; children?: React.ReactNode }) {
   return (
     <li className="flex flex-wrap items-center gap-3 py-3" data-testid="mission-row">
       <div className="min-w-0 flex-1">
-        <p className="truncate font-bold">{l(m.title)}</p>
+        <p className="truncate font-extrabold">{l(m.title)}</p>
         <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
           {m.topic && <Badge variant="muted">{l(m.topic.name)}</Badge>}
           <Badge variant="outline">{td(m.difficulty)}</Badge>
@@ -79,7 +79,7 @@ function Row({ m, children }: { m: Mission; children?: React.ReactNode }) {
             </Badge>
           )}
           {m.classroomCourseWorkId && (
-            <Badge variant="mint">
+            <Badge variant="sky">
               <ExternalLink /> {t('inClassroom')}
             </Badge>
           )}
@@ -91,7 +91,7 @@ function Row({ m, children }: { m: Mission; children?: React.ReactNode }) {
         </div>
       </div>
       {m.status === 'APPROVED' && (
-        <span className="text-sm font-semibold tabular-nums text-muted-foreground">{t('submissionsN', { n: m.submissionCount ?? 0 })}</span>
+        <span className="text-sm font-black tabular-nums text-med-d dark:text-med">{t('submissionsN', { n: m.submissionCount ?? 0 })}</span>
       )}
       {children}
     </li>

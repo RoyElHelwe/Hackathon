@@ -19,7 +19,7 @@ export function SafetyBadge({ check, checking, onUseSafer, onRecheck, busy }: Pr
   if (checking || !check)
     return (
       <div className="flex flex-wrap items-center gap-2" data-testid="safety-badge" data-safe="pending">
-        <span className="inline-flex items-center gap-2 rounded-full bg-muted px-3 py-1.5 text-sm font-bold text-muted-foreground">
+        <span className="inline-flex items-center gap-2 rounded-full border-2 border-border bg-muted px-3 py-1.5 text-sm font-extrabold text-muted-foreground">
           {checking ? <span className="size-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden /> : <ShieldAlert className="size-4" />}
           {checking ? t('checking') : t('notChecked')}
         </span>
@@ -32,13 +32,13 @@ export function SafetyBadge({ check, checking, onUseSafer, onRecheck, busy }: Pr
     );
   if (check.safe)
     return (
-      <span className="inline-flex items-center gap-2 rounded-full bg-mint-soft px-3 py-1.5 text-sm font-extrabold text-success" data-testid="safety-badge" data-safe="true">
+      <span className="inline-flex items-center gap-2 self-start rounded-full border-2 border-cedar/40 bg-cedar-soft px-3 py-1.5 text-sm font-extrabold text-cedar-d dark:text-success" data-testid="safety-badge" data-safe="true">
         <ShieldCheck className="size-4" /> {t('passed')}
       </span>
     );
   return (
-    <div className="rounded-[16px] border border-coral/40 bg-coral-soft p-4" data-testid="safety-badge" data-safe="false" role="alert">
-      <p className="flex items-center gap-2 font-extrabold text-danger">
+    <div className="rounded-[16px] border-2 border-flag/40 bg-flag-soft p-4" data-testid="safety-badge" data-safe="false" role="alert">
+      <p className="flex items-center gap-2 font-extrabold text-flag-d dark:text-danger">
         <ShieldAlert className="size-5" /> {t('issuesTitle')}
       </p>
       <ul className="ms-7 mt-2 list-disc space-y-1 text-sm">
@@ -47,8 +47,8 @@ export function SafetyBadge({ check, checking, onUseSafer, onRecheck, busy }: Pr
         ))}
       </ul>
       {check.saferVersion && (
-        <div className="mt-3 rounded-[12px] bg-card p-3 text-sm">
-          <p className="mb-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">{t('saferLabel')}</p>
+        <div className="mt-3 rounded-[12px] border-2 border-border bg-card p-3 text-sm">
+          <p className="eyebrow mb-1">{t('saferLabel')}</p>
           <p>{check.saferVersion}</p>
         </div>
       )}

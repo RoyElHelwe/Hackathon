@@ -10,7 +10,7 @@ export default function TeacherMessagesPage({ searchParams }: { searchParams: Pr
   const t = useTranslations('teacher.messages');
   return (
     <div>
-      <PageHeader title={t('title')} subtitle={t('subtitle')} />
+      <PageHeader mood="welcome" title={t('title')} subtitle={t('subtitle')} />
       <MessagesView initialWith={sp.with} />
     </div>
   );

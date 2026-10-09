@@ -18,6 +18,7 @@ import { StudentsTable } from '@/components/teacher/students-table';
 import { StuckAlertList } from '@/components/teacher/stuck-alerts';
 import { SyncButton } from '@/components/teacher/sync-button';
 import type { ClassStudent, TeacherDashboard } from '@/components/teacher/types';
+import { Arzino } from '@/components/arzino';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -40,10 +41,12 @@ export default function ClassOverviewPage({ params }: { params: Promise<{ id: st
 
   return (
     <div>
-      <Link href="/teacher" className="mb-3 inline-flex items-center gap-1.5 text-sm font-bold text-muted-foreground hover:text-foreground">
+      <Link href="/teacher" className="mb-4 inline-flex items-center gap-1.5 font-display text-xs font-black uppercase tracking-[0.09em] text-muted-foreground hover:text-foreground">
         <ArrowLeft className="rtl-flip size-4" /> {t('back')}
       </Link>
       <PageHeader
+        mood="teaching"
+        eyebrow={t('eyebrow')}
         title={data.class.name}
         subtitle={
           <span className="flex flex-wrap items-center gap-2">
@@ -51,7 +54,7 @@ export default function ClassOverviewPage({ params }: { params: Promise<{ id: st
               <>
               <Link
                 href={`/teacher/courses/${data.class.course.id}`}
-                className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card py-0.5 pe-2.5 ps-0.5 text-xs font-bold hover:border-primary/50"
+                className="inline-flex items-center gap-1.5 rounded-full border-2 border-border bg-card py-0.5 pe-2.5 ps-0.5 text-xs font-extrabold text-foreground hover:border-med/60"
                 data-testid="class-course-link"
               >
                 <SubjectChip name={data.class.course.subject.name} color={data.class.course.subject.color} locale={locale} />
@@ -71,7 +74,7 @@ export default function ClassOverviewPage({ params }: { params: Promise<{ id: st
               />
             )}
             {data.class.classroomCourseId && (
-              <Badge variant="mint">
+              <Badge variant="sky">
                 <Link2 /> {t('classroomLinked')}
               </Badge>
             )}
@@ -83,7 +86,7 @@ export default function ClassOverviewPage({ params }: { params: Promise<{ id: st
         actions={
           <>
             {data.class.classroomCourseId && <SyncButton classId={id} />}
-            <Button asChild>
+            <Button asChild variant="kidMint">
               <Link href={`/teacher/missions?classId=${id}`} data-testid="generate-mission-link">
                 <Wand2 /> {t('generate')}
               </Link>
@@ -94,16 +97,31 @@ export default function ClassOverviewPage({ params }: { params: Promise<{ id: st
       {data.class.syncError === 'RECONNECT' && <ReconnectBanner />}
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5" data-testid="class-stats">
-        <StatTile icon={Users} label={t('statStudents')} value={stats.students} tone="violet" />
-        <StatTile icon={Gauge} label={t('statMastery')} value={`${stats.avgMastery}%`} tone="mint" />
-        <StatTile icon={CheckCircle2} label={t('statValidated')} value={stats.validatedThisWeek} hint={t('statValidatedHint')} tone="sky" />
-        <StatTile icon={ClipboardCheck} label={t('statPending')} value={stats.pendingReviews} tone="sunny" href="/teacher/review" />
-        <StatTile icon={AlertTriangle} label={t('statStuck')} value={stats.stuckCount} tone="coral" />
+        <StatTile icon={Users} label={t('statStudents')} value={stats.students} tone="med" />
+        <StatTile icon={Gauge} label={t('statMastery')} value={`${stats.avgMastery}%`} tone="cedar" />
+        <StatTile icon={CheckCircle2} label={t('statValidated')} value={stats.validatedThisWeek} hint={t('statValidatedHint')} tone="cedar" />
+        <StatTile icon={ClipboardCheck} label={t('statPending')} value={stats.pendingReviews} tone="flame" href="/teacher/review" />
+        <StatTile icon={AlertTriangle} label={t('statStuck')} value={stats.stuckCount} tone="flag" alert={stats.stuckCount > 0} />
       </div>
+
+      {data.stuck.length > 0 && (
+        <section className="mt-6 grid items-center gap-5 rounded-[20px] border-2 border-flag/40 bg-flag-soft p-5 md:grid-cols-[auto_1fr] md:p-6" data-testid="stuck-panel">
+          <Arzino mood="flop-cry" size={150} className="mx-auto" />
+          <div className="min-w-0">
+            <p className="eyebrow !text-flag-d dark:!text-danger">{t('stuckEyebrow')}</p>
+            <h2 className="font-display text-[24px] font-black leading-tight">{t('stuckHeadline', { n: data.stuck.length })}</h2>
+            <p className="mb-4 mt-1 text-sm font-semibold text-muted-foreground">{t('groupHint')}</p>
+            <StuckAlertList alerts={data.stuck} classId={id} />
+            <div className="mt-4">
+              <GroupSessionDialog classId={id} />
+            </div>
+          </div>
+        </section>
+      )}
 
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle>{t('heatmapTitle')}</CardTitle>
+          <CardTitle className="text-xl">{t('heatmapTitle')}</CardTitle>
           <CardDescription>{t('heatmapBody')}</CardDescription>
         </CardHeader>
         <CardContent>
@@ -111,27 +129,21 @@ export default function ClassOverviewPage({ params }: { params: Promise<{ id: st
         </CardContent>
       </Card>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
-        <Card className={data.stuck.length ? 'border-coral/40' : undefined}>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertTriangle className="size-5 text-danger" /> {t('stuckTitle')}
-            </CardTitle>
-            <CardDescription>{t('stuckBody')}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <StuckAlertList alerts={data.stuck} classId={id} />
-            {!!data.stuck.length && (
-              <div className="rounded-[16px] bg-violet-soft/60 p-3">
-                <p className="mb-2 text-sm font-semibold">{t('groupHint')}</p>
-                <GroupSessionDialog classId={id} />
-              </div>
-            )}
-          </CardContent>
-        </Card>
+      <div className={data.stuck.length ? 'mt-6 grid gap-6 lg:grid-cols-2' : 'mt-6 grid gap-6 lg:grid-cols-2 xl:grid-cols-3'}>
+        {!data.stuck.length && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-xl">{t('stuckTitle')}</CardTitle>
+              <CardDescription>{t('stuckBody')}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <StuckAlertList alerts={data.stuck} classId={id} />
+            </CardContent>
+          </Card>
+        )}
         <Card>
           <CardHeader>
-            <CardTitle>{t('activityTitle')}</CardTitle>
+            <CardTitle className="text-xl">{t('activityTitle')}</CardTitle>
           </CardHeader>
           <CardContent>
             <ActivityFeed items={data.recent} />
@@ -142,7 +154,7 @@ export default function ClassOverviewPage({ params }: { params: Promise<{ id: st
 
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle>{t('studentsTitle', { n: stats.students })}</CardTitle>
+          <CardTitle className="text-xl">{t('studentsTitle', { n: stats.students })}</CardTitle>
           <CardDescription>{t('studentsBody')}</CardDescription>
         </CardHeader>
         <CardContent>

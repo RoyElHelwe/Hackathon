@@ -1,24 +1,22 @@
-// Generates PWA icons from the Bousla SVG. Run: node scripts/make-icons.cjs
+// Generates the PWA icons from the Arzino "cheer" sticker. Run: node scripts/make-icons.cjs
 const path = require('node:path');
-const fs = require('node:fs');
 const sharp = require(require.resolve('sharp', { paths: [path.join(__dirname, '../apps/api')] }));
 
-const dir = path.join(__dirname, '../apps/web/public/icons');
-const svg = fs.readFileSync(path.join(dir, 'bousla.svg'));
+const web = path.join(__dirname, '../apps/web/public');
+const src = path.join(web, 'arzino/cheer.webp');
 
-async function icon(size, file, { pad = 0.1, bg = '#FAF8FF' } = {}) {
+async function icon(size, pad, file, background) {
   const inner = Math.round(size * (1 - pad * 2));
-  const mascot = await sharp(svg, { density: 600 }).resize(inner, inner, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).png().toBuffer();
-  await sharp({ create: { width: size, height: size, channels: 4, background: bg } })
-    .composite([{ input: mascot, gravity: 'center' }])
-    .png()
-    .toFile(path.join(dir, file));
+  const mascot = await sharp(src).resize({ width: inner, height: inner, fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).toBuffer();
+  await sharp({ create: { width: size, height: size, channels: 4, background } }).composite([{ input: mascot, gravity: 'center' }]).png().toFile(file);
 }
 
 (async () => {
-  await icon(192, 'icon-192.png');
-  await icon(512, 'icon-512.png');
-  await icon(512, 'maskable-512.png', { pad: 0.2, bg: '#ECE7FF' });
-  await icon(180, 'apple-touch-icon.png', { pad: 0.12 });
-  console.log('icons written to', dir);
+  const soft = '#E2F5EA';
+  await icon(192, 0.06, path.join(web, 'icons/icon-192.png'), soft);
+  await icon(512, 0.06, path.join(web, 'icons/icon-512.png'), soft);
+  await icon(512, 0.16, path.join(web, 'icons/maskable-512.png'), soft);
+  await icon(180, 0.08, path.join(web, 'icons/apple-touch-icon.png'), soft);
+  await icon(64, 0.02, path.join(web, 'arzino/favicon.png'), { r: 0, g: 0, b: 0, alpha: 0 });
+  console.log('icons written');
 })();

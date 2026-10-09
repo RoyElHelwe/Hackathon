@@ -3,8 +3,8 @@
 import { Pencil, Trash2 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useState } from 'react';
-import { PageHeader } from '@/components/app/adult-shell';
-import { ErrorState, PageSkeleton } from '@/components/app/states';
+import { EmptyState, ErrorState, PageSkeleton } from '@/components/app/states';
+import { PageHero } from '@/components/director/page-hero';
 import { subjectLabel, SubjectChip } from '@/components/director/subject-chip';
 import { SubjectForm, type SubjectFormValue } from '@/components/director/subject-form';
 import { useToast } from '@/components/director/toast';
@@ -81,11 +81,11 @@ export default function SubjectsPage() {
 
   return (
     <div>
-      <PageHeader title={t('title')} subtitle={t('subtitle')} />
+      <PageHero mood="reading" title={t('title')} subtitle={t('subtitle')} />
       <div className="space-y-5">
         <Card data-testid="subject-add-card">
           <CardHeader>
-            <CardTitle>{t('add')}</CardTitle>
+            <CardTitle className="text-xl">{t('add')}</CardTitle>
           </CardHeader>
           <CardContent>
             <SubjectForm key={addKey} busy={addBusy} onSubmit={addSubject} />
@@ -95,23 +95,23 @@ export default function SubjectsPage() {
         <Card>
           <CardContent className="p-0">
             {subjects.length === 0 ? (
-              <p className="px-5 py-10 text-center text-sm font-semibold text-muted-foreground" data-testid="subjects-empty">
-                {t('empty')}
-              </p>
+              <div data-testid="subjects-empty">
+                <EmptyState mood="bored-waiting" title={t('empty')} />
+              </div>
             ) : (
               <ul className="divide-y divide-border">
                 {subjects.map((s) => {
                   const initialName = subjectLabel(s.name, locale);
                   const blocked = s.classCount > 0 ? t('deleteBlocked') : s.topicCount > 0 ? t('deleteBlockedTopics') : undefined;
                   return (
-                  <li key={s.id} className="p-4" data-testid="subject-row">
+                  <li key={s.id} className="p-4 transition-colors hover:bg-muted/60" data-testid="subject-row">
                     {editingId === s.id ? (
                       <SubjectForm initial={{ name: initialName, color: s.color, icon: s.icon }} busy={editBusy} onSubmit={(v) => editSubject(s.id, initialName, v)} onCancel={() => setEditingId(null)} />
                     ) : (
                       <div className="flex flex-wrap items-center gap-3">
                         <SubjectChip name={s.name} color={s.color} locale={locale} />
-                        <span className="text-sm text-muted-foreground">{t('classes', { n: s.classCount })}</span>
-                        <span className="text-sm text-muted-foreground">{t('teachers', { n: s.teacherCount })}</span>
+                        <span className="text-sm font-bold text-muted-foreground">{t('classes', { n: s.classCount })}</span>
+                        <span className="text-sm font-bold text-muted-foreground">{t('teachers', { n: s.teacherCount })}</span>
                         <div className="ms-auto flex items-center gap-1">
                           <Button variant="ghost" size="icon" aria-label={t('rename')} onClick={() => setEditingId(s.id)} data-testid="subject-edit">
                             <Pencil className="size-4" />
@@ -148,7 +148,7 @@ export default function SubjectsPage() {
                 {tc('cancel')}
               </Button>
             </DialogClose>
-            <Button type="button" variant="destructive" loading={!!deletingId} onClick={() => confirming && deleteSubject(confirming)} data-testid="subject-delete-confirm">
+            <Button type="button" variant="kidCoral" loading={!!deletingId} onClick={() => confirming && deleteSubject(confirming)} data-testid="subject-delete-confirm">
               {t('delete')}
             </Button>
           </div>

@@ -40,13 +40,13 @@ export interface TurnView {
 
 const LINES = {
   en: {
-    hello: (n: number, min: number) => `Hi! I'm Bousla 👋 We'll talk for about ${min} minutes — ${n} questions. Take your time and think out loud. Ready? Here's the first one:`,
+    hello: (n: number, min: number) => `Hi! I'm Arzino 👋 We'll talk for about ${min} minutes — ${n} questions. Take your time and think out loud. Ready? Here's the first one:`,
     bye: "That's all my questions! You did great. Your teacher will share your results soon. 🎉",
     goOn: "Thanks for sharing that! Let's keep going.",
     timeUp: "Time's up! Thanks for talking with me — your teacher will share your results soon.",
   },
   ar: {
-    hello: (n: number, min: number) => `مرحباً! أنا بوصلة 👋 سنتحدث لمدة ${min} دقائق تقريباً — ${n} أسئلة. خذ وقتك وفكّر بصوت عالٍ. جاهز؟ إليك السؤال الأول:`,
+    hello: (n: number, min: number) => `مرحباً! أنا أرزينو 👋 سنتحدث لمدة ${min} دقائق تقريباً — ${n} أسئلة. خذ وقتك وفكّر بصوت عالٍ. جاهز؟ إليك السؤال الأول:`,
     bye: 'انتهت أسئلتي! أحسنت كثيراً. سيشاركك معلمك النتيجة قريباً. 🎉',
     goOn: 'شكراً لمشاركتك! لنكمل.',
     timeUp: 'انتهى الوقت! شكراً لحديثك معي — سيشاركك معلمك النتيجة قريباً.',
@@ -143,7 +143,7 @@ export class ExamRoomService implements OnModuleInit, OnModuleDestroy {
       await this.finish(attemptId, 'TIME_UP');
       return this.view(a, await this.reload(attemptId));
     }
-    if (this.busy.has(attemptId)) throw new ConflictException({ message: 'Bousla is still thinking about your last answer.', code: 'BUSY' });
+    if (this.busy.has(attemptId)) throw new ConflictException({ message: 'Arzino is still thinking about your last answer.', code: 'BUSY' });
     this.busy.add(attemptId);
     const job = this.evaluate(a, att, text, now);
     this.inflight.set(attemptId, job);

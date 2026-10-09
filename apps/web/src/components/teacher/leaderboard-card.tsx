@@ -38,8 +38,8 @@ export function LeaderboardCard({ classId, enabled }: { classId: string; enabled
     <Card className="h-full">
       <CardHeader className="flex-row items-start justify-between gap-3">
         <div>
-          <CardTitle className="flex items-center gap-2">
-            <Trophy className="size-5 text-warning" /> {t('title')}
+          <CardTitle className="flex items-center gap-2 text-xl">
+            <Trophy className="size-5 text-flame" /> {t('title')}
           </CardTitle>
           <CardDescription className="mt-1">{t('explain')}</CardDescription>
         </div>
@@ -49,16 +49,16 @@ export function LeaderboardCard({ classId, enabled }: { classId: string; enabled
         {on && board?.top.length ? (
           <ol className="space-y-1.5">
             {board.top.map((r) => (
-              <li key={r.studentId} className="flex items-center gap-2 rounded-[12px] bg-muted/60 px-3 py-1.5 text-sm">
-                <span className="w-5 text-center font-extrabold tabular-nums text-muted-foreground">{r.rank}</span>
+              <li key={r.studentId} className="flex items-center gap-2 rounded-[12px] border-2 border-border px-3 py-1.5 text-sm first:border-flame/50 first:bg-flame-soft">
+                <span className="w-5 text-center font-black tabular-nums text-muted-foreground">{r.rank}</span>
                 <Avatar name={r.name} src={r.avatarUrl} className="size-6 text-[10px]" />
-                <span className="flex-1 truncate font-semibold">{r.name}</span>
-                <span className="font-bold tabular-nums text-muted-foreground">{r.xp} XP</span>
+                <span className="flex-1 truncate font-extrabold">{r.name}</span>
+                <span className="font-black tabular-nums text-med-d dark:text-med">{r.xp} XP</span>
               </li>
             ))}
           </ol>
         ) : (
-          <p className="rounded-[14px] bg-muted/60 px-3 py-2 text-sm text-muted-foreground">{on ? t('previewEmpty') : t('offNote')}</p>
+          <p className="rounded-[14px] bg-muted px-3 py-2.5 text-sm font-semibold text-muted-foreground">{on ? t('previewEmpty') : t('offNote')}</p>
         )}
       </CardContent>
     </Card>

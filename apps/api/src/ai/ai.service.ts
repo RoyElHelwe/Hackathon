@@ -82,7 +82,7 @@ export class OpenRouterTransport implements AiTransport {
 
 export class AiUnavailableError extends ServiceUnavailableException {
   constructor() {
-    super({ message: 'Bousla is thinking too hard right now. Please try again.', code: 'AI_UNAVAILABLE' });
+    super({ message: 'Arzino is thinking too hard right now. Please try again.', code: 'AI_UNAVAILABLE' });
   }
 }
 

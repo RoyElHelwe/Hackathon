@@ -32,7 +32,7 @@ export function EditableSteps({ steps, onSave, disabled }: { steps: string[]; on
       <div className="space-y-2" data-testid="steps-editor">
         {draft.map((s, i) => (
           <div key={i} className="flex items-center gap-2">
-            <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-violet-soft text-xs font-extrabold text-primary dark:text-white">{i + 1}</span>
+            <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-med text-xs font-black text-white">{i + 1}</span>
             <Input value={s} onChange={(e) => setDraft((d) => d.map((x, j) => (j === i ? e.target.value : x)))} className="h-10 text-sm" aria-label={t('stepN', { n: i + 1 })} />
             <Button size="icon" variant="ghost" className="size-10 shrink-0" onClick={() => setDraft((d) => d.filter((_, j) => j !== i))} aria-label={t('removeStep')}>
               <Trash2 className="!size-4" />
@@ -60,7 +60,7 @@ export function EditableSteps({ steps, onSave, disabled }: { steps: string[]; on
       <ol className="space-y-1.5">
         {steps.map((s, i) => (
           <li key={i} className="flex gap-2.5 text-sm leading-relaxed">
-            <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-violet-soft text-xs font-extrabold text-primary dark:text-white">{i + 1}</span>
+            <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-med text-xs font-black text-white">{i + 1}</span>
             <span>{s}</span>
           </li>
         ))}

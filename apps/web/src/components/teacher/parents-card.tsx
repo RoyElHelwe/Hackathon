@@ -41,10 +41,10 @@ export function ParentsCard({ student }: { student: ClassStudent }) {
       {student.parents.length ? (
         <ul className="space-y-2" data-testid="parent-links">
           {student.parents.map((p) => (
-            <li key={p.id} className="flex items-center gap-3 rounded-[16px] border border-border p-3">
+            <li key={p.id} className="flex items-center gap-3 rounded-[16px] border-2 border-flame/30 bg-flame-soft/50 p-3">
               <Avatar name={p.name} className="size-10" />
               <div className="min-w-0 flex-1">
-                <p className="truncate font-bold">{p.name}</p>
+                <p className="truncate font-extrabold">{p.name}</p>
                 <p className="truncate text-xs text-muted-foreground">{p.email}</p>
               </div>
               <Button asChild size="sm" variant="outline">
@@ -56,7 +56,7 @@ export function ParentsCard({ student }: { student: ClassStudent }) {
           ))}
         </ul>
       ) : (
-        <p className="rounded-[14px] bg-muted px-4 py-3 text-sm text-muted-foreground">{t('noParents', { name: first })}</p>
+        <p className="rounded-[14px] bg-muted px-4 py-3 text-sm font-semibold text-muted-foreground">{t('noParents', { name: first })}</p>
       )}
 
       <form onSubmit={invite} className="space-y-2">
@@ -75,20 +75,20 @@ export function ParentsCard({ student }: { student: ClassStudent }) {
               data-testid="invite-parent-email"
             />
           </div>
-          <Button type="submit" loading={busy} disabled={!email.trim()} data-testid="invite-parent-submit">
+          <Button type="submit" variant="mint" loading={busy} disabled={!email.trim()} data-testid="invite-parent-submit">
             <UserPlus /> {t('invite')}
           </Button>
         </div>
         <p className="text-xs text-muted-foreground">{t('inviteHint', { name: first })}</p>
         {error && (
-          <p className="rounded-[12px] bg-coral-soft px-3 py-2 text-sm font-bold text-danger" role="alert">
+          <p className="rounded-[12px] bg-flag-soft px-3 py-2 text-sm font-bold text-flag-d dark:text-danger" role="alert">
             {error}
           </p>
         )}
       </form>
 
       {link && (
-        <div className="rounded-[16px] border border-mint/50 bg-mint-soft p-4" data-testid="invite-link">
+        <div className="rounded-[16px] border-2 border-cedar/40 bg-cedar-soft p-4" data-testid="invite-link">
           <p className="text-sm font-bold">{t('inviteReady', { email: link.email })}</p>
           <div className="mt-2 flex items-center gap-2">
             <code className="min-w-0 flex-1 truncate rounded-[10px] bg-card px-3 py-2 text-xs" data-testid="invite-link-url">

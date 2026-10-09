@@ -22,8 +22,14 @@ export function FamilyKeypad({ onComplete, disabled, error }: { onComplete: (cod
           <div
             key={i}
             className={cn(
-              'flex h-14 w-11 items-center justify-center rounded-[14px] border-2 font-display text-3xl font-extrabold',
-              error ? 'border-danger bg-coral-soft' : code[i] ? 'border-primary bg-violet-soft text-primary dark:text-white' : 'border-border bg-card',
+              'flex h-16 w-12 items-center justify-center rounded-[14px] border-2 font-display text-3xl transition-colors',
+              error
+                ? 'border-flag bg-flag-soft text-flag-d shadow-[0_4px_0_var(--flag-d)] dark:text-danger'
+                : code[i]
+                  ? 'border-cedar bg-cedar-soft text-cedar-ink shadow-[0_4px_0_var(--cedar-d)] dark:text-white'
+                  : i === code.length
+                    ? 'border-med bg-card shadow-[0_4px_0_var(--med)]'
+                    : 'border-border bg-card shadow-[0_4px_0_var(--border)]',
             )}
             data-testid={`code-digit-${i}`}
           >
@@ -49,13 +55,13 @@ export function FamilyKeypad({ onComplete, disabled, error }: { onComplete: (cod
             {d}
           </Key>
         ))}
-        <Key onClick={() => setCode('')} disabled={disabled} className="text-base">
+        <Key onClick={() => setCode('')} disabled={disabled} className="bg-muted text-base text-muted-foreground">
           C
         </Key>
         <Key onClick={() => press('0')} disabled={disabled}>
           0
         </Key>
-        <Key onClick={del} disabled={disabled} aria-label="Delete">
+        <Key onClick={del} disabled={disabled} aria-label="Delete" className="bg-muted text-muted-foreground">
           <Delete className="size-7" />
         </Key>
       </div>
@@ -67,7 +73,7 @@ function Key({ className, ...props }: React.ButtonHTMLAttributes<HTMLButtonEleme
   return (
     <button
       type="button"
-      className={cn('kid-press flex h-16 items-center justify-center rounded-[18px] border-2 border-border bg-card font-display text-3xl font-extrabold [--press:var(--border)] disabled:opacity-50', className)}
+      className={cn('kid-press flex h-16 items-center justify-center rounded-[18px] border-2 border-border bg-card font-display text-3xl [--press:var(--border)] hover:bg-muted disabled:opacity-50', className)}
       {...props}
     />
   );

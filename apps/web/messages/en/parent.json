@@ -19,11 +19,15 @@
     "noBadges": "The first badge is just one mission away!",
     "classes": "Classes",
     "teacher": "with {names}",
-    "message": "Message the teacher"
+    "message": "Message the teacher",
+    "eyebrow": "This week",
+    "statLevel": "Level",
+    "statXp": "XP earned",
+    "statStreak": "{days, plural, one {day in a row} other {days in a row}}"
   },
   "summary": {
     "title": "This week",
-    "subtitle": "Written by Bousla for you",
+    "subtitle": "Written by Arzino for you",
     "weekOf": "Week of {date}",
     "highlights": "Highlights",
     "struggles": "Where a little help goes far",
@@ -31,7 +35,7 @@
     "howToHelp": "How you can help (10 min)",
     "familyMission": "Try together",
     "regenerate": "Refresh summary",
-    "thinking": "Bousla is writing your weekly summary…",
+    "thinking": "Arzino is writing your weekly summary…",
     "error": "We couldn't prepare the summary right now."
   },
   "work": {
@@ -91,7 +95,8 @@
     "yourNote": "Your note",
     "photoAlt": "Photo of {name}'s work",
     "submitted": "Sent {date}",
-    "noSubmissions": "Your child hasn't started this one yet. Ask them about it tonight!"
+    "noSubmissions": "Your child hasn't started this one yet. Ask them about it tonight!",
+    "eyebrow": "Learn together"
   },
   "messages": {
     "title": "Messages",

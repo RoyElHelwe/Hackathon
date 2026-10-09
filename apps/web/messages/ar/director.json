@@ -1,5 +1,12 @@
 {
-  "nav": { "overview": "نظرة عامة", "subjects": "المواد", "coverage": "تغطية المنهج", "classes": "الصفوف", "members": "الأعضاء", "settings": "الإعدادات" },
+  "nav": {
+    "overview": "نظرة عامة",
+    "subjects": "المواد",
+    "coverage": "تغطية المنهج",
+    "classes": "الصفوف",
+    "members": "الأعضاء",
+    "settings": "الإعدادات"
+  },
   "overview": {
     "title": "نظرة عامة على المدرسة",
     "subtitle": "{school} · {city}",
@@ -23,7 +30,10 @@
     "topClassesSubtitle": "حسب التفاعل هذا الأسبوع",
     "allClasses": "كل الصفوف",
     "coverageCta": "تغطية المنهج",
-    "noClasses": "لا صفوف بعد. يستوردها المعلّمون من Google Classroom."
+    "noClasses": "لا صفوف بعد. يستوردها المعلّمون من Google Classroom.",
+    "needsAttention": "بحاجة إلى انتباه",
+    "pendingShort": "{n, plural, one {شخص بانتظار الموافقة} two {شخصان بانتظار الموافقة} few {أشخاص بانتظار الموافقة} many {شخصًا بانتظار الموافقة} other {شخص بانتظار الموافقة}}",
+    "heroSubtitle": "{city} · {classes, plural, one {صف واحد} two {صفّان} few {# صفوف} many {# صفًا} other {# صف}} · {students, plural, one {طالب واحد} two {طالبان} few {# طلاب} many {# طالبًا} other {# طالب}}"
   },
   "code": {
     "title": "رمز المدرسة",
@@ -46,7 +56,10 @@
     "students": "{n, plural, one {طالب واحد} two {طالبان} few {# طلاب} many {# طالباً} other {# طالب}}",
     "notInSection": "{topic} · {cls}: ليست ضمن هذه الشعبة",
     "cell": "{topic} · {cls}: {pct}% متقن",
-    "avg": "المدرسة"
+    "avg": "المدرسة",
+    "legendLow": "أقل من 50%",
+    "legendMid": "50–69%",
+    "legendHigh": "70% فأكثر"
   },
   "classes": {
     "title": "الصفوف",

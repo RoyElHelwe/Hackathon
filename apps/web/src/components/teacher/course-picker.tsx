@@ -99,7 +99,7 @@ export function CoursePicker({ onImported }: { onImported: (r: ImportResult[]) =
   return (
     <div>
       {noSubjects && (
-        <p className="mb-4 rounded-[14px] bg-sunny-soft px-4 py-3 text-sm font-bold text-warning" role="status" data-testid="no-subjects">
+        <p className="mb-4 rounded-[14px] bg-flame-soft px-4 py-3 text-sm font-bold text-warning" role="status" data-testid="no-subjects">
           {tc('noSubjects')}
         </p>
       )}
@@ -114,7 +114,7 @@ export function CoursePicker({ onImported }: { onImported: (r: ImportResult[]) =
               key={c.id}
               className={cn(
                 'rounded-[18px] border-2 transition-colors',
-                c.imported ? 'border-border bg-muted/60' : checked ? 'border-primary bg-violet-soft/60' : 'border-border bg-card hover:border-primary/40',
+                c.imported ? 'border-border bg-muted' : checked ? 'border-med bg-med-soft shadow-[0_4px_0_var(--med)]' : 'border-border bg-card shadow-[0_4px_0_var(--border)] hover:bg-muted',
               )}
             >
               <label className={cn('flex items-center gap-4 p-4', c.imported ? 'cursor-default' : 'cursor-pointer')}>
@@ -129,19 +129,19 @@ export function CoursePicker({ onImported }: { onImported: (r: ImportResult[]) =
                 <span
                   className={cn(
                     'flex size-6 shrink-0 items-center justify-center rounded-[8px] border-2 peer-focus-visible:ring-4 peer-focus-visible:ring-ring/40',
-                    checked ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card',
+                    checked ? 'border-med bg-med text-white' : 'border-border bg-card',
                     c.imported && 'border-muted-foreground/40 bg-muted-foreground/40',
                   )}
                   aria-hidden
                 >
                   {checked && <Check className="size-4" strokeWidth={3} />}
                 </span>
-                <span className="flex size-11 shrink-0 items-center justify-center rounded-[14px] bg-violet-soft text-primary dark:text-white">
+                <span className="flex size-11 shrink-0 items-center justify-center rounded-[14px] bg-med text-white">
                   <GraduationCap className="size-5" />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate font-extrabold">{c.name}</span>
-                  <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                  <span className="block truncate font-display text-lg font-black">{c.name}</span>
+                  <span className="flex items-center gap-1.5 text-sm font-semibold text-muted-foreground">
                     {c.section && <span>{c.section}</span>}
                     {/* Google's course list has no roster size; the count is only known for already imported classes */}
                     {typeof c.studentCount === 'number' && (
@@ -155,12 +155,12 @@ export function CoursePicker({ onImported }: { onImported: (r: ImportResult[]) =
                 {c.imported && <Badge variant="muted">{t('alreadyImported')}</Badge>}
               </label>
               {active && !noSubjects && (
-                <div className="grid gap-3 border-t border-primary/20 px-4 pb-4 pt-3 sm:grid-cols-[1fr_9rem_7rem]">
+                <div className="grid gap-3 border-t border-med/20 px-4 pb-4 pt-3 sm:grid-cols-[1fr_9rem_7rem]">
                   <div>
                     <label className="mb-1 flex items-center gap-1.5 text-xs font-bold text-muted-foreground" htmlFor={`subject-${c.id}`}>
                       {tc('subject')}
                       {aiFilled && (
-                        <span className="inline-flex items-center gap-0.5 text-primary">
+                        <span className="inline-flex items-center gap-0.5 text-med">
                           <Sparkles className="size-3" /> {tc('aiSuggested')}
                         </span>
                       )}
@@ -220,9 +220,9 @@ export function CoursePicker({ onImported }: { onImported: (r: ImportResult[]) =
       </ul>
 
       {groups.size > 0 && (
-        <div className="mt-5 rounded-[16px] border border-border bg-card p-4" data-testid="import-preview">
+        <div className="mt-5 rounded-[16px] border-2 border-cedar/30 bg-cedar-soft/60 p-4" data-testid="import-preview">
           <p className="mb-2 flex items-center gap-1.5 text-sm font-extrabold">
-            <Layers className="size-4 text-primary" /> {tc('previewTitle')}
+            <Layers className="size-4 text-cedar" /> {tc('previewTitle')}
           </p>
           <ul className="space-y-1.5 text-sm">
             {[...groups.values()].map((g) => (
@@ -237,13 +237,13 @@ export function CoursePicker({ onImported }: { onImported: (r: ImportResult[]) =
       )}
 
       {err && (
-        <p className="mt-4 rounded-[14px] bg-coral-soft px-4 py-3 text-sm font-bold text-danger" role="alert">
+        <p className="mt-4 rounded-[14px] bg-flag-soft px-4 py-3 text-sm font-bold text-danger" role="alert">
           {err}
         </p>
       )}
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">{incomplete.length > 0 ? tc('completeRows') : t('rosterNote')}</p>
-        <Button size="lg" onClick={doImport} disabled={!canImport} loading={busy} data-testid="import-classes">
+        <p className="text-sm font-semibold text-muted-foreground">{incomplete.length > 0 ? tc('completeRows') : t('rosterNote')}</p>
+        <Button size="lg" variant="kidMint" onClick={doImport} disabled={!canImport} loading={busy} data-testid="import-classes">
           {chosen.length ? t('importN', { n: chosen.length }) : t('importNone')}
         </Button>
       </div>

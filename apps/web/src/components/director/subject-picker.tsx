@@ -4,13 +4,13 @@ import { cn } from '@/lib/cn';
 import { subjectLabel } from './subject-chip';
 
 const BG: Record<string, string> = {
-  violet: 'bg-violet-soft',
-  sky: 'bg-sky-soft',
+  violet: 'bg-cedar-soft',
+  sky: 'bg-med-soft',
   mint: 'bg-mint-soft',
   green: 'bg-green-soft',
-  coral: 'bg-coral-soft',
-  sunny: 'bg-sunny-soft',
-  pink: 'bg-coral-soft',
+  coral: 'bg-flag-soft',
+  sunny: 'bg-flame-soft',
+  pink: 'bg-flag-soft',
   slate: 'bg-muted',
 };
 
@@ -47,9 +47,9 @@ export function SubjectPicker({
             aria-pressed={selected}
             onClick={() => toggle(o.id)}
             className={cn(
-              'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold text-foreground transition-all',
-              BG[o.color ?? 'violet'] ?? BG.slate,
-              selected ? 'ring-2 ring-primary ring-offset-1 ring-offset-card' : 'opacity-60 hover:opacity-100',
+              'inline-flex h-8 items-center rounded-full border-2 px-3 text-xs font-extrabold text-foreground transition-all',
+              BG[o.color ?? 'slate'] ?? BG.slate,
+              selected ? 'border-med shadow-[0_2px_0_var(--med)]' : 'border-transparent opacity-60 hover:opacity-100',
             )}
             data-testid="subject-option"
           >

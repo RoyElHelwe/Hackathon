@@ -1,14 +1,18 @@
 'use client';
 
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { motion, useReducedMotion } from 'motion/react';
 import { useTranslations } from 'next-intl';
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
-import { BouslaSays } from '@/components/bousla';
+import { Arzino } from '@/components/arzino';
+import { GoogleG } from '@/components/app/google-g';
 import { LanguageSwitch } from '@/components/app/locale';
 import { Logo } from '@/components/app/logo';
-import { Card } from '@/components/ui/card';
+import { roleStyle } from '@/components/app/role-style';
 import { Avatar } from '@/components/ui/misc';
-import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/cn';
 import { useApi } from '@/lib/hooks';
 
 interface DevUser {
@@ -21,6 +25,7 @@ interface DevUser {
 function LoginInner() {
   const t = useTranslations('auth');
   const tc = useTranslations('common');
+  const reduce = useReducedMotion();
   const params = useSearchParams();
   const next = params.get('next') ?? '';
   const error = params.get('error');
@@ -29,58 +34,88 @@ function LoginInner() {
   const q = next ? `&next=${encodeURIComponent(next)}` : '';
 
   return (
-    <div className="min-h-dvh bg-background bg-dots">
-      <header className="mx-auto flex max-w-4xl items-center justify-between px-4 py-4">
-        <Logo />
-        <LanguageSwitch />
+    <div className="min-h-dvh bg-background">
+      <header className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-4">
+        <Link href="/" className="inline-flex items-center gap-1 text-[15px] font-black uppercase tracking-[0.08em] text-med-ink hover:text-med dark:text-med">
+          <ChevronLeft className="rtl-flip size-5" /> {t('home')}
+        </Link>
+        <Logo small className="max-sm:hidden" />
+        <LanguageSwitch compact />
       </header>
-      <main className="mx-auto max-w-4xl px-4 pb-16">
-        <div className="mx-auto max-w-md pt-6 text-center">
-          <BouslaSays mood="happy" size={88} className="justify-center">
-            {t('title')}
-          </BouslaSays>
-          <p className="mt-2 text-muted-foreground">{t('subtitle')}</p>
-          {error && <p className="mt-4 rounded-[14px] bg-coral-soft p-3 font-semibold text-danger">{t.has(`errors.${error}`) ? t(`errors.${error}`) : tc('error')}</p>}
-          <a
-            href={`/api/auth/google${next ? `?next=${encodeURIComponent(next)}` : ''}`}
-            className="kid-press mt-6 inline-flex h-14 w-full items-center justify-center gap-3 rounded-full border-2 border-border bg-card px-6 font-display text-lg font-bold [--press:var(--border)]"
-            data-testid="google-signin"
-          >
-            <svg viewBox="0 0 48 48" className="size-6" aria-hidden>
-              <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z" />
-              <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z" />
-              <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z" />
-              <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z" />
-            </svg>
-            {t('google')}
-          </a>
-          {cfg && !cfg.google && <p className="mt-3 text-sm text-muted-foreground">{t('googleMissing')}</p>}
+
+      <main className="mx-auto max-w-5xl px-4 pb-16">
+        <div className="mx-auto flex max-w-md flex-col items-center pt-2 text-center sm:pt-6">
+          <Arzino mood="welcome" size={200} pop priority className="max-sm:size-[160px]!" />
+          <motion.div initial={reduce ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="w-full">
+            <p className="mt-2 font-display text-lg text-cedar">{t('loginSays')}</p>
+            <h1 className="mt-1 font-display text-[30px] leading-tight sm:text-[34px]">{t('title')}</h1>
+            <p className="mt-2 text-muted-foreground">{t('subtitle')}</p>
+            {error && (
+              <p className="mt-4 rounded-[16px] border-2 border-flag/30 bg-flag-soft p-3 font-bold text-flag-d dark:text-danger" role="alert">
+                {t.has(`errors.${error}`) ? t(`errors.${error}`) : tc('error')}
+              </p>
+            )}
+            <a
+              href={`/api/auth/google${next ? `?next=${encodeURIComponent(next)}` : ''}`}
+              className="kid-press mt-6 inline-flex h-14 w-full items-center justify-center gap-3 rounded-[16px] border-2 border-border bg-card px-6 text-lg font-extrabold [--press:var(--border)] hover:bg-muted"
+              data-testid="google-signin"
+            >
+              <GoogleG />
+              {t('google')}
+            </a>
+            {cfg && !cfg.google && <p className="mt-3 text-sm font-semibold text-muted-foreground">{t('googleMissing')}</p>}
+          </motion.div>
         </div>
 
         {cfg?.devLogin && users && (
-          <section id="demo" className="mt-12">
-            <h2 className="font-display text-2xl font-extrabold">{t('devTitle')}</h2>
-            <p className="text-muted-foreground">{t('devSubtitle')}</p>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {users.map((u) => (
-                <a key={u.handle} href={`/api/auth/dev?as=${u.handle}${q}`} data-testid={`dev-login-${u.handle}`}>
-                  <Card className="flex items-center gap-3 p-4 transition-transform hover:-translate-y-0.5 hover:border-primary">
-                    <Avatar name={u.name} src={u.avatarUrl} className="size-12" />
-                    <div className="min-w-0">
+          <section id="demo" className="mx-auto mt-12 max-w-4xl scroll-mt-6">
+            <div className="flex items-center gap-3">
+              <span className="h-0.5 flex-1 bg-border" />
+              <h2 className="eyebrow">{t('devTitle')}</h2>
+              <span className="h-0.5 flex-1 bg-border" />
+            </div>
+            <p className="mt-2 text-center text-sm text-muted-foreground">{t('devSubtitle')}</p>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {users.map((u, i) => {
+                const main = roleStyle(u.roles[0]?.role ?? 'STUDENT');
+                return (
+                  <motion.a
+                    key={u.handle}
+                    href={`/api/auth/dev?as=${u.handle}${q}`}
+                    data-testid={`dev-login-${u.handle}`}
+                    initial={reduce ? false : { opacity: 0, y: 14 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.05 * i }}
+                    className="chunky chunky-hover group flex items-center gap-3 rounded-[18px] p-3.5"
+                  >
+                    <Avatar name={u.name} src={u.avatarUrl} className={cn('size-12 text-lg', main.solid)} />
+                    <div className="min-w-0 flex-1 text-start">
                       <p className="truncate font-extrabold">{u.name}</p>
                       <div className="mt-1 flex flex-wrap gap-1">
-                        {u.roles.map((r) => (
-                          <Badge key={r.role} variant={r.status === 'PENDING' ? 'sunny' : 'default'}>
-                            {tc(`roles.${r.role}`)}
-                            {r.status === 'PENDING' ? ' · ⏳' : ''}
-                          </Badge>
-                        ))}
+                        {u.roles.map((r) => {
+                          const s = roleStyle(r.role);
+                          const pending = r.status === 'PENDING';
+                          return (
+                            <span
+                              key={r.role}
+                              className={cn(
+                                'rounded-full px-2 py-0.5 text-[11px] font-black uppercase tracking-wider',
+                                pending ? 'border-2 border-dashed border-lock-d text-muted-foreground' : s.solid,
+                              )}
+                            >
+                              {tc(`roles.${r.role}`)}
+                              {pending ? ' · ⏳' : ''}
+                            </span>
+                          );
+                        })}
                       </div>
                     </div>
-                  </Card>
-                </a>
-              ))}
+                    <ChevronRight className="rtl-flip size-5 shrink-0 text-lock-d transition-colors group-hover:text-cedar" />
+                  </motion.a>
+                );
+              })}
             </div>
+            <p className="mt-4 text-center text-xs font-bold text-muted-foreground">{t('devFoot')}</p>
           </section>
         )}
       </main>

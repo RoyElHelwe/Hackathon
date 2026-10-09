@@ -128,7 +128,7 @@ export function useSpeechToText(locale: string) {
 
 const EMOJI = /[\p{Extended_Pictographic}‍️]/gu;
 
-/** Bousla's voice: browser speech synthesis in the exam language. Resolves when finished (or immediately if muted). */
+/** Arzino's voice: browser speech synthesis in the exam language. Resolves when finished (or immediately if muted). */
 export function useTextToSpeech(locale: string) {
   const [speaking, setSpeaking] = useState(false);
   const [muted, setMuted] = useState(false);

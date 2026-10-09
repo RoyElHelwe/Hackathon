@@ -29,11 +29,11 @@ export function useToast() {
             initial={{ opacity: 0, y: 20, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10 }}
-            className={cn('pointer-events-auto flex items-center gap-2 rounded-full px-5 py-3 font-bold shadow-xl', msg.tone === 'success' ? 'bg-ink text-white dark:bg-card' : 'bg-danger text-white')}
+            className={cn('pointer-events-auto flex items-center gap-2 rounded-[16px] border-2 px-5 py-3 font-extrabold shadow-[0_4px_0_rgba(0,0,0,0.18)]', msg.tone === 'success' ? 'border-ink bg-ink text-white dark:border-border dark:bg-card' : 'border-flag-d bg-flag text-white')}
             role="status"
             data-testid="toast"
           >
-            {msg.tone === 'success' ? <CheckCircle2 className="size-5 text-mint" /> : <XCircle className="size-5" />}
+            {msg.tone === 'success' ? <CheckCircle2 className="size-5 text-cedar" /> : <XCircle className="size-5" />}
             {msg.text}
           </motion.div>
         )}

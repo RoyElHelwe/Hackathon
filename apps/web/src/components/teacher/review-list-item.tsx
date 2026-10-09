@@ -23,7 +23,7 @@ export function ReviewListItem({ s, active, onSelect }: { s: Submission; active:
         onClick={onSelect}
         className={cn(
           'flex w-full items-start gap-3 rounded-[16px] border-2 p-3 text-start transition-colors',
-          active ? 'border-primary bg-violet-soft/60' : 'border-transparent bg-card hover:border-border',
+          active ? 'border-med/60 bg-med-soft shadow-[0_3px_0_0_var(--med)]' : 'border-border bg-card shadow-[0_3px_0_0_var(--border)] hover:bg-muted',
         )}
         aria-current={active || undefined}
         data-testid="review-item"
@@ -32,12 +32,12 @@ export function ReviewListItem({ s, active, onSelect }: { s: Submission; active:
         <Avatar name={s.student?.name ?? '?'} src={s.student?.avatarUrl} className="size-10" />
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2">
-            <p className="truncate font-bold">{s.student?.name}</p>
-            {score !== null && <span className={cn('text-sm font-extrabold tabular-nums', scoreTone(score))}>{score}</span>}
+            <p className="truncate font-extrabold">{s.student?.name}</p>
+            {score !== null && <span className={cn('font-display text-lg font-black tabular-nums', scoreTone(score))}>{score}</span>}
           </div>
-          <p className="truncate text-sm text-muted-foreground">{l(s.mission.title)}</p>
+          <p className="truncate text-sm font-semibold text-muted-foreground">{l(s.mission.title)}</p>
           <div className="mt-1.5 flex flex-wrap items-center gap-1">
-            {s.status === 'PEER_REVIEW' && <Badge variant="default">{t('withPeer', { name: s.peer?.evaluatorFirstName ?? '' })}</Badge>}
+            {s.status === 'PEER_REVIEW' && <Badge variant="sky">{t('withPeer', { name: s.peer?.evaluatorFirstName ?? '' })}</Badge>}
             {s.gradeSyncPending && (
               <Badge variant="sunny" data-testid="grade-sync-pending">
                 <CloudOff /> {t('syncPending')}

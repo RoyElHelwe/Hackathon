@@ -2,7 +2,7 @@
 
 import { RefreshCw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { Bousla, type BouslaMood } from '@/components/bousla';
+import { Arzino, type ArzinoMood } from '@/components/arzino';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/misc';
 import { cn } from '@/lib/cn';
@@ -11,8 +11,15 @@ export function Thinking({ label, className }: { label?: string; className?: str
   const t = useTranslations('common');
   return (
     <div className={cn('flex flex-col items-center justify-center gap-3 py-10 text-center', className)} role="status" aria-live="polite">
-      <Bousla mood="thinking" size={96} />
-      <p className="font-display text-lg font-bold text-muted-foreground">{label ?? t('thinking')}</p>
+      <Arzino mood="thinking" size={130} />
+      <p className="font-display text-lg text-muted-foreground">
+        {label ?? t('thinking')}
+        <span className="ms-1 inline-flex gap-0.5 align-middle" aria-hidden>
+          {[0, 1, 2].map((i) => (
+            <span key={i} className="size-1.5 animate-bounce rounded-full bg-cedar" style={{ animationDelay: `${i * 0.15}s` }} />
+          ))}
+        </span>
+      </p>
     </div>
   );
 }
@@ -21,10 +28,10 @@ export function ErrorState({ message, onRetry, className }: { message?: string; 
   const t = useTranslations('common');
   return (
     <div className={cn('flex flex-col items-center justify-center gap-3 py-10 text-center', className)} role="alert">
-      <Bousla mood="curious" size={88} />
-      <p className="max-w-sm font-semibold">{message ?? t('error')}</p>
+      <Arzino mood="oops" size={140} />
+      <p className="max-w-sm font-display text-lg leading-snug">{message ?? t('error')}</p>
       {onRetry && (
-        <Button variant="outline" onClick={onRetry}>
+        <Button variant="kidGhost" onClick={onRetry} className="mt-1">
           <RefreshCw /> {t('retry')}
         </Button>
       )}
@@ -32,11 +39,11 @@ export function ErrorState({ message, onRetry, className }: { message?: string; 
   );
 }
 
-export function EmptyState({ title, body, mood = 'sleepy', action, className }: { title: string; body?: string; mood?: BouslaMood; action?: React.ReactNode; className?: string }) {
+export function EmptyState({ title, body, mood = 'bored-waiting', action, className }: { title: string; body?: string; mood?: ArzinoMood; action?: React.ReactNode; className?: string }) {
   return (
     <div className={cn('flex flex-col items-center justify-center gap-2 py-10 text-center', className)}>
-      <Bousla mood={mood} size={88} />
-      <p className="font-display text-lg font-bold">{title}</p>
+      <Arzino mood={mood} size={130} />
+      <p className="font-display text-xl">{title}</p>
       {body && <p className="max-w-sm text-sm text-muted-foreground">{body}</p>}
       {action && <div className="mt-2">{action}</div>}
     </div>

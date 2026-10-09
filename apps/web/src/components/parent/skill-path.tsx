@@ -1,23 +1,28 @@
 'use client';
 
 import type { I18nText, MasteryState } from '@tajriba/shared';
-import { Lock, Map as MapIcon, Star } from 'lucide-react';
+import { Check, Lock, Star } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 import { EmptyState } from '@/components/app/states';
-import { SubjectIcon, topicIcon } from '@/components/app/subject-icon';
+import { SubjectIcon } from '@/components/app/subject-icon';
+import { Arzino } from '@/components/arzino';
+import { masteryTone, TONE_TEXT } from '@/components/director/tone';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress, Skeleton } from '@/components/ui/misc';
 import { cn } from '@/lib/cn';
 import { useApi, useL } from '@/lib/hooks';
 import type { MiniGraph } from './types';
 
-const STATE_STYLE: Record<MasteryState, { tile: string; icon: string }> = {
-  MASTERED: { tile: 'border-sunny bg-sunny-soft', icon: 'bg-sunny text-ink' },
-  IN_PROGRESS: { tile: 'border-sky/50 bg-sky-soft', icon: 'bg-sky text-white' },
-  AVAILABLE: { tile: 'border-primary/30 bg-violet-soft', icon: 'bg-primary text-white' },
-  LOCKED: { tile: 'border-border bg-muted/60 opacity-70', icon: 'bg-muted text-muted-foreground' },
+/** Path node look, matching the student path: cedar done (check), cedar star for "now", grey locked. */
+const NODE: Record<MasteryState, string> = {
+  MASTERED: 'bg-cedar text-white shadow-[0_6px_0_var(--cedar-d)]',
+  IN_PROGRESS: 'bg-cedar text-white shadow-[0_6px_0_var(--cedar-d)] ring-[6px] ring-cedar-soft',
+  AVAILABLE: 'bg-cedar text-white shadow-[0_6px_0_var(--cedar-d)] ring-[6px] ring-cedar-soft',
+  LOCKED: 'bg-lock text-muted-foreground shadow-[0_6px_0_var(--lock-d)]',
 };
+/** Zig-zag offsets (px, inline-start) so the path winds like the student one. */
+const WIND = [8, 44, 68, 44];
 
 /** Orders topics so prerequisites come first (stable topological sort). */
 function ordered(g: MiniGraph) {
@@ -52,11 +57,12 @@ export function SkillPath({ studentId }: { studentId: string }) {
 
   return (
     <Card data-testid="skill-map">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <MapIcon className="size-5 text-primary" /> {t('title')}
-        </CardTitle>
-        <CardDescription>{t('subtitle')}</CardDescription>
+      <CardHeader className="flex-row items-center gap-3">
+        <div className="min-w-0 flex-1">
+          <CardTitle className="text-xl">{t('title')}</CardTitle>
+          <CardDescription className="font-semibold">{t('subtitle')}</CardDescription>
+        </div>
+        <Arzino mood="reading" size={72} animate={false} className="-my-3 shrink-0" />
       </CardHeader>
       <CardContent>
         {withTopics.length > 1 && (
@@ -69,8 +75,8 @@ export function SkillPath({ studentId }: { studentId: string }) {
                 aria-selected={s.key === subject}
                 onClick={() => setChosen(s.key)}
                 className={cn(
-                  'inline-flex h-9 items-center gap-2 rounded-full border-2 px-3 text-sm font-bold transition-colors',
-                  s.key === subject ? 'border-primary bg-violet-soft' : 'border-border bg-card hover:border-primary/40',
+                  'inline-flex h-10 items-center gap-2 rounded-[14px] border-2 px-3 text-sm font-extrabold transition-colors',
+                  s.key === subject ? 'border-med bg-med-soft text-med-ink shadow-[0_3px_0_var(--med)] dark:text-white' : 'border-border bg-card shadow-[0_3px_0_var(--border)] hover:bg-muted',
                 )}
                 data-testid={`skill-subject-${s.key}`}
               >
@@ -80,33 +86,41 @@ export function SkillPath({ studentId }: { studentId: string }) {
           </div>
         )}
         {isLoading ? (
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-2">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-20" />
+          <div className="space-y-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-16 w-3/4 rounded-full" style={{ marginInlineStart: WIND[i % WIND.length] }} />
             ))}
           </div>
         ) : error || !nodes.length ? (
-          <EmptyState title={emptyTitle} className="py-4" />
+          <EmptyState mood="bored-waiting" title={emptyTitle} className="py-4" />
         ) : (
           <>
-            <div className="mb-4 flex items-center gap-3">
-              <Progress value={(mastered / nodes.length) * 100} barClassName="bg-gradient-to-r from-sunny to-mint" className="h-2.5" />
-              <span className="shrink-0 text-sm font-bold text-muted-foreground">{t('mastered', { count: mastered, total: nodes.length })}</span>
+            <div className="mb-5 flex items-center gap-3">
+              <Progress value={(mastered / nodes.length) * 100} barClassName="bg-cedar" className="h-3" />
+              <span className="shrink-0 text-sm font-black text-cedar-ink dark:text-success">{t('mastered', { count: mastered, total: nodes.length })}</span>
             </div>
-            <ol className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-2">
-              {nodes.map((n) => {
-                const Icon = n.state === 'LOCKED' ? Lock : topicIcon(n.icon);
-                const s = STATE_STYLE[n.state];
+            <ol className="space-y-5 pb-2">
+              {nodes.map((n, i) => {
+                const now = n.state === 'AVAILABLE' || n.state === 'IN_PROGRESS';
+                const Icon = n.state === 'MASTERED' ? Check : n.state === 'LOCKED' ? Lock : Star;
                 return (
-                  <li key={n.id} className={cn('relative flex items-center gap-2.5 rounded-[16px] border-2 p-2.5', s.tile)} data-testid="skill-tile" data-state={n.state}>
-                    <span className={cn('flex size-10 shrink-0 items-center justify-center rounded-full', s.icon)}>
-                      <Icon className="size-5" />
+                  <li
+                    key={n.id}
+                    className="flex items-center gap-4"
+                    style={{ marginInlineStart: WIND[i % WIND.length] }}
+                    data-testid="skill-tile"
+                    data-state={n.state}
+                  >
+                    <span className={cn('relative flex size-[60px] shrink-0 items-center justify-center rounded-full', NODE[n.state])}>
+                      <Icon className={cn('size-7', n.state !== 'LOCKED' && 'drop-shadow-[0_2px_0_rgba(0,0,0,0.15)]', now && 'fill-current')} strokeWidth={n.state === 'MASTERED' ? 3.5 : 2.5} />
                     </span>
                     <div className="min-w-0">
-                      <p className="text-sm font-bold leading-tight [overflow-wrap:anywhere]">{l(n.name)}</p>
-                      <p className="text-xs font-semibold text-muted-foreground">{tm(n.state)}</p>
+                      <p className={cn('font-extrabold leading-tight [overflow-wrap:anywhere]', n.state === 'LOCKED' && 'text-muted-foreground')}>{l(n.name)}</p>
+                      <p className={cn('text-xs font-black uppercase tracking-[0.06em]', now ? 'text-cedar-ink dark:text-success' : 'text-muted-foreground')}>
+                        {tm(n.state)}
+                        {n.state === 'MASTERED' && n.bestScore > 0 && <span className={cn('ms-1.5', TONE_TEXT[masteryTone(n.bestScore)])}>· {n.bestScore}%</span>}
+                      </p>
                     </div>
-                    {n.state === 'MASTERED' && <Star className="absolute -top-2 end-2 size-5 fill-sunny text-sunny drop-shadow-sm" aria-hidden />}
                   </li>
                 );
               })}

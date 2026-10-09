@@ -6,6 +6,7 @@ import { useFormatter, useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { Arzino } from '@/components/arzino';
 import { PageHeader } from '@/components/app/adult-shell';
 import { ErrorState, PageSkeleton, Thinking } from '@/components/app/states';
 import { AttemptStatusBadge, ExamStatusBadge } from '@/components/campus/exam-status';
@@ -61,40 +62,47 @@ export default function TeacherExamPage() {
 
   const graded = e.attempts?.filter((a) => a.status === 'GRADED').length ?? 0;
 
+  const heroMood = e.status === 'PREPARING' ? 'thinking' : e.status === 'FAILED' ? 'oops' : e.status === 'OPEN' ? 'teaching' : e.status === 'CLOSED' ? 'clipboard' : 'writing';
+
   return (
-    <div className="space-y-5">
-      <PageHeader
-        title={e.title}
-        subtitle={
-          <span className="flex flex-wrap items-center gap-2">
-            {e.className} · {e.durationMin} min · {t('detail.window', { opens: when(e.opensAt), closes: when(e.closesAt) })}
-            <ExamStatusBadge status={e.status} />
-          </span>
-        }
-        actions={
-          e.attempts?.length || graded > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {!!e.attempts?.length && (e.status === 'OPEN' || e.status === 'SCHEDULED') && (
-                <Button asChild variant="secondary" data-testid="open-hall">
-                  <Link href={`/teacher/exams/${e.id}/hall`}>
-                    <DoorOpen /> {t('hall.open')}
-                  </Link>
-                </Button>
-              )}
-              {graded > 0 && (
-                <Button onClick={() => act('release', () => api(`${path}/release-all`, { method: 'POST' }), t('detail.released', { n: graded }))} loading={busy === 'release'} data-testid="release-all">
-                  {t('detail.releaseAll', { n: graded })}
-                </Button>
-              )}
-            </div>
-          ) : undefined
-        }
-      />
+    <div className="space-y-6">
+      <div className="flex items-center gap-4">
+        <Arzino mood={heroMood} size={96} className="hidden sm:inline-flex" />
+        <div className="min-w-0 flex-1">
+          <PageHeader
+            title={e.title}
+            subtitle={
+              <span className="flex flex-wrap items-center gap-2">
+                {e.className} · {e.durationMin} min · {t('detail.window', { opens: when(e.opensAt), closes: when(e.closesAt) })}
+                <ExamStatusBadge status={e.status} />
+              </span>
+            }
+            actions={
+              e.attempts?.length || graded > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {!!e.attempts?.length && (e.status === 'OPEN' || e.status === 'SCHEDULED') && (
+                    <Button asChild variant="kidMint" data-testid="open-hall">
+                      <Link href={`/teacher/exams/${e.id}/hall`}>
+                        <DoorOpen /> {t('hall.open')}
+                      </Link>
+                    </Button>
+                  )}
+                  {graded > 0 && (
+                    <Button variant="kid" onClick={() => act('release', () => api(`${path}/release-all`, { method: 'POST' }), t('detail.released', { n: graded }))} loading={busy === 'release'} data-testid="release-all">
+                      {t('detail.releaseAll', { n: graded })}
+                    </Button>
+                  )}
+                </div>
+              ) : undefined
+            }
+          />
+        </div>
+      </div>
 
       <div className="flex flex-wrap items-center gap-2 text-sm">
-        <span className="font-bold text-muted-foreground">{t('detail.lessonsUsed')}:</span>
+        <span className="eyebrow">{t('detail.lessonsUsed')}</span>
         {e.lessons.map((l) => (
-          <Badge key={l.id} variant="outline">
+          <Badge key={l.id} variant="sky">
             {l.title}
           </Badge>
         ))}
@@ -107,9 +115,10 @@ export default function TeacherExamPage() {
       )}
 
       {e.status === 'FAILED' && (
-        <Card className="flex flex-wrap items-center justify-between gap-3 p-5">
-          <p className="font-semibold text-danger">{t('detail.failed')}</p>
-          <Button onClick={() => act('prepare', () => api(`${path}/prepare`, { method: 'POST' }))} loading={busy === 'prepare'}>
+        <Card className="flex flex-wrap items-center gap-4 border-flag/40 p-5">
+          <Arzino mood="oops" size={72} />
+          <p className="min-w-0 flex-1 font-display text-lg font-black text-flag">{t('detail.failed')}</p>
+          <Button variant="kidCoral" onClick={() => act('prepare', () => api(`${path}/prepare`, { method: 'POST' }))} loading={busy === 'prepare'}>
             <RefreshCw /> {t('detail.retry')}
           </Button>
         </Card>
@@ -128,21 +137,26 @@ export default function TeacherExamPage() {
 
       {!!e.attempts?.length && (
         <section className="space-y-3">
-          <h2 className="text-xl font-extrabold">{t('detail.rooms')}</h2>
+          <h2 className="font-display text-2xl font-black">{t('detail.rooms')}</h2>
           <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" data-testid="room-grid">
             {e.attempts.map((a) => {
               const left = a.status === 'IN_PROGRESS' && a.endsAt ? Math.max(0, Math.round((new Date(a.endsAt).getTime() - Date.now()) / 1000)) : null;
               return (
                 <li key={a.id}>
-                  <Card className={cn('flex h-full flex-col gap-2 p-4', a.status === 'IN_PROGRESS' && 'border-sky', a.status === 'GRADED' && 'border-primary')} data-testid={`room-${a.student.name.split(' ')[0].toLowerCase()}`}>
+                  <Card
+                    className={cn(
+                      'flex h-full flex-col gap-3 p-4',
+                      a.status === 'IN_PROGRESS' && 'border-med shadow-[0_4px_0_0_var(--med-d)]',
+                      a.status === 'GRADED' && 'border-cedar shadow-[0_4px_0_0_var(--cedar-d)]',
+                    )} data-testid={`room-${a.student.name.split(' ')[0].toLowerCase()}`}>
                     <div className="flex items-center gap-3">
                       <div className="relative">
                         <Avatar name={a.student.name} src={a.student.avatarUrl} className="size-10" />
-                        {a.online && <span className="absolute -bottom-0.5 -end-0.5 size-3.5 rounded-full border-2 border-card bg-mint" title={t('detail.online')} />}
+                        {a.online && <span className="absolute -bottom-0.5 -end-0.5 size-4 rounded-full border-[3px] border-card bg-cedar" title={t('detail.online')} />}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate font-bold">{a.student.name}</p>
-                        <p className="text-xs text-muted-foreground">#{a.roomIndex}</p>
+                        <p className="truncate font-display text-base font-black">{a.student.name}</p>
+                        <p className="text-xs font-black text-muted-foreground">#{a.roomIndex}</p>
                       </div>
                       {a.lastEmoji && a.status === 'IN_PROGRESS' && <span className="text-3xl" title={a.lastMood ?? ''}>{a.lastEmoji}</span>}
                     </div>
@@ -150,22 +164,22 @@ export default function TeacherExamPage() {
                       <AttemptStatusBadge status={a.status} />
                       {a.status === 'IN_PROGRESS' && (
                         <>
-                          <span className="text-xs font-bold">Q{a.questionIdx + 1}/{e.questions?.length ?? '?'}</span>
-                          {left !== null && <span className="font-mono text-xs font-bold text-sky">⏱ {mmss(left)}</span>}
+                          <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-black">Q{a.questionIdx + 1}/{e.questions?.length ?? '?'}</span>
+                          {left !== null && <span className="font-mono text-xs font-black text-med">⏱ {mmss(left)}</span>}
                         </>
                       )}
                       {a.spectators > 0 && <span className="text-xs text-muted-foreground">👀 {t('detail.watchers', { n: a.spectators })}</span>}
-                      {a.score != null && <span className="ms-auto text-lg font-extrabold">{a.score}/100</span>}
+                      {a.score != null && <span className={cn('ms-auto font-display text-xl font-black', a.score >= 70 ? 'text-cedar' : a.score >= 50 ? 'text-med' : 'text-flag')}>{a.score}/100</span>}
                     </div>
                     <div className="mt-auto pt-1">
                       {a.status === 'IN_PROGRESS' ? (
-                        <Button asChild size="sm" variant="secondary" data-testid="watch-live">
+                        <Button asChild size="sm" variant="kidMint" data-testid="watch-live">
                           <Link href={`/teacher/exams/attempts/${a.id}`}>
                             <Eye /> {t('detail.watch')}
                           </Link>
                         </Button>
                       ) : a.status === 'GRADED' || a.status === 'RELEASED' || a.status === 'GRADING' ? (
-                        <Button asChild size="sm" variant={a.status === 'GRADED' ? 'default' : 'outline'} data-testid="review-attempt">
+                        <Button asChild size="sm" variant={a.status === 'GRADED' ? 'kid' : 'outline'} data-testid="review-attempt">
                           <Link href={`/teacher/exams/attempts/${a.id}`}>{t('detail.review')}</Link>
                         </Button>
                       ) : null}
@@ -180,6 +194,9 @@ export default function TeacherExamPage() {
 
       <Dialog open={publishOpen} onOpenChange={setPublishOpen}>
         <DialogContent>
+          <div className="flex justify-center">
+            <Arzino mood="teaching" size={120} />
+          </div>
           <DialogTitle>{t('detail.publishTitle')}</DialogTitle>
           <DialogDescription>{t('detail.publishBody', { opens: when(e.opensAt), closes: when(e.closesAt) })}</DialogDescription>
           <div className="mt-4 flex justify-end gap-2">
@@ -187,6 +204,7 @@ export default function TeacherExamPage() {
               ✕
             </Button>
             <Button
+              variant="kid"
               onClick={() => act('publish', () => api(`${path}/publish`, { method: 'POST' }), t('detail.published')).then(() => setPublishOpen(false))}
               loading={busy === 'publish'}
               data-testid="confirm-publish"
@@ -209,7 +227,7 @@ function QuestionEditor({ questions: initial, busy, onSave, onRegenerate, onPubl
   return (
     <section className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-xl font-extrabold">
+        <h2 className="font-display text-2xl font-black">
           {t('questions')} <span className="text-muted-foreground">({qs.length})</span>
         </h2>
         <div className="flex flex-wrap gap-2">
@@ -220,7 +238,7 @@ function QuestionEditor({ questions: initial, busy, onSave, onRegenerate, onPubl
             <Save /> {t('save')}
           </Button>
           {onPublish && (
-            <Button onClick={onPublish} disabled={dirty} data-testid="publish-exam">
+            <Button variant="kid" onClick={onPublish} disabled={dirty} data-testid="publish-exam">
               <Rocket /> {t('publish')}
             </Button>
           )}
@@ -231,8 +249,8 @@ function QuestionEditor({ questions: initial, busy, onSave, onRegenerate, onPubl
           <li key={i}>
             <Card className="space-y-2 p-4">
               <div className="flex items-center gap-2">
-                <span className="flex size-7 items-center justify-center rounded-full bg-violet-soft text-sm font-black text-violet">{i + 1}</span>
-                <Badge variant="muted">{q.difficulty}</Badge>
+                <span className="flex size-9 items-center justify-center rounded-[12px] bg-med font-display text-base font-black text-white shadow-[0_3px_0_0_var(--med-d)]">{i + 1}</span>
+                <Badge variant={q.difficulty === 'HARD' ? 'coral' : q.difficulty === 'EASY' ? 'mint' : 'sky'}>{q.difficulty}</Badge>
                 <Button variant="ghost" size="sm" className="ms-auto" onClick={() => setQs((l) => l.filter((_, k) => k !== i))} disabled={qs.length <= 1} aria-label={t('remove')}>
                   <Trash2 />
                 </Button>
@@ -247,7 +265,7 @@ function QuestionEditor({ questions: initial, busy, onSave, onRegenerate, onPubl
         ))}
       </ol>
       {qs.length < 15 && (
-        <Button variant="ghost" onClick={() => setQs((l) => [...l, { id: `q${l.length + 1}`, text: '', expectedPoints: ['…'], difficulty: 'MEDIUM', followUp: '' }])}>
+        <Button variant="outline" onClick={() => setQs((l) => [...l, { id: `q${l.length + 1}`, text: '', expectedPoints: ['…'], difficulty: 'MEDIUM', followUp: '' }])}>
           <Plus /> {t('add')}
         </Button>
       )}

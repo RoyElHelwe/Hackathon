@@ -4,13 +4,16 @@ import { useTranslations } from 'next-intl';
 import { TopicGlyph } from '@/components/app/subject-icon';
 import { cn } from '@/lib/cn';
 import { useL } from '@/lib/hooks';
+import { EYEBROW, masteryTone, TONE_TEXT } from './tone';
 import type { CoverageCourse } from './types';
 
-/** Sequential single-hue scale: 0 → muted surface, 100 → full mint. */
-export function cellStyle(pct: number): React.CSSProperties {
-  if (pct <= 0) return { background: 'var(--muted)' };
-  const mix = Math.round(18 + (pct / 100) * 82);
-  return { background: `color-mix(in oklab, var(--mint) ${mix}%, var(--muted))` };
+/** Cell colors follow the 3-color mastery rule: red < 50 %, blue 50–69 %, cedar ≥ 70 %. 0 % = not started (quiet surface). */
+export function cellClass(pct: number): string {
+  if (pct <= 0) return 'bg-muted text-muted-foreground/70';
+  const tone = masteryTone(pct);
+  if (tone === 'cedar') return 'bg-cedar text-white shadow-[inset_0_-4px_0_var(--cedar-d)]';
+  if (tone === 'med') return 'bg-med-soft text-med-ink shadow-[inset_0_-4px_0_color-mix(in_oklab,var(--med)_35%,transparent)] dark:text-white';
+  return 'bg-flag-soft text-flag-d shadow-[inset_0_-4px_0_color-mix(in_oklab,var(--flag)_30%,transparent)] dark:text-danger';
 }
 
 /** One course: rows = the course's skills, columns = its sections, cell = % of the section's students who mastered it. */
@@ -24,17 +27,17 @@ export function CoverageMatrix({ course }: { course: CoverageCourse }) {
       <table className="w-full border-separate border-spacing-[3px] text-sm">
         <thead>
           <tr>
-            <th scope="col" className="sticky start-0 z-10 min-w-48 bg-card px-3 pb-2 text-start text-xs font-extrabold uppercase tracking-wider text-muted-foreground">
+            <th scope="col" className={cn(EYEBROW, 'sticky start-0 z-10 min-w-48 bg-card px-3 pb-2 text-start text-muted-foreground')}>
               {t('topic')}
             </th>
             {sections.map((s) => (
-              <th key={s.id} scope="col" className="min-w-24 px-2 pb-2 text-center font-extrabold">
+              <th key={s.id} scope="col" className="min-w-24 px-2 pb-2 text-center font-black">
                 <span className="block">{s.name}</span>
-                <span className="block text-[11px] font-semibold text-muted-foreground">{t('students', { n: s.students })}</span>
+                <span className="block text-[11px] font-bold text-muted-foreground">{t('students', { n: s.students })}</span>
               </th>
             ))}
             {sections.length > 1 && (
-              <th scope="col" className="min-w-20 px-2 pb-2 text-center text-xs font-extrabold uppercase tracking-wider text-muted-foreground">
+              <th scope="col" className={cn(EYEBROW, 'min-w-20 px-2 pb-2 text-center text-muted-foreground')}>
                 {t('avg')}
               </th>
             )}
@@ -48,7 +51,7 @@ export function CoverageMatrix({ course }: { course: CoverageCourse }) {
             const avg = shown.length ? Math.round(shown.reduce((a, b) => a + b, 0) / shown.length) : 0;
             return (
               <tr key={r.topicId} data-testid="coverage-row">
-                <th scope="row" className="sticky start-0 z-10 bg-card px-3 py-1 text-start font-semibold">
+                <th scope="row" className="sticky start-0 z-10 bg-card px-3 py-1 text-start font-bold">
                   <span className="inline-flex items-center gap-2">
                     <span className="flex size-6 shrink-0 items-center justify-center text-base text-muted-foreground">
                       <TopicGlyph topicKey={r.topicKey} icon={r.icon} />
@@ -59,7 +62,7 @@ export function CoverageMatrix({ course }: { course: CoverageCourse }) {
                 {sections.map((s, i) => (
                   <Cell key={s.id} pct={vals[i]} label={vals[i] === null ? t('notInSection', { topic: l(r.topicName), cls: s.name }) : t('cell', { topic: l(r.topicName), cls: s.name, pct: vals[i] ?? 0 })} />
                 ))}
-                {sections.length > 1 && <td className="px-2 text-center font-extrabold tabular-nums text-muted-foreground">{avg}%</td>}
+                {sections.length > 1 && <td className={cn('px-2 text-center font-black tabular-nums', avg > 0 ? TONE_TEXT[masteryTone(avg)] : 'text-muted-foreground')}>{avg}%</td>}
               </tr>
             );
           })}
@@ -72,14 +75,13 @@ export function CoverageMatrix({ course }: { course: CoverageCourse }) {
 function Cell({ pct, label }: { pct: number | null; label: string }) {
   if (pct === null)
     return (
-      <td className="h-11 rounded-[10px] border-2 border-dashed border-border text-center text-muted-foreground/70" title={label} aria-label={label} data-testid="coverage-cell">
+      <td className="h-12 rounded-[12px] border-2 border-dashed border-border text-center text-muted-foreground/70" title={label} aria-label={label} data-testid="coverage-cell">
         —
       </td>
     );
   return (
     <td
-      className={cn('h-11 rounded-[10px] text-center font-bold tabular-nums transition-shadow hover:ring-2 hover:ring-primary/60', pct >= 45 ? 'text-ink' : pct > 0 ? 'text-foreground' : 'text-muted-foreground/70')}
-      style={cellStyle(pct)}
+      className={cn('h-12 rounded-[12px] text-center font-black tabular-nums transition-[outline] hover:outline-2 hover:outline-offset-1 hover:outline-med', cellClass(pct))}
       title={label}
       aria-label={label}
       data-testid="coverage-cell"
@@ -91,18 +93,20 @@ function Cell({ pct, label }: { pct: number | null; label: string }) {
 
 export function CoverageLegend() {
   const t = useTranslations('director.coverage');
-  const steps = [0, 25, 50, 75, 100];
+  const steps: { pct: number; label: string }[] = [
+    { pct: 0, label: t('none') },
+    { pct: 30, label: t('legendLow') },
+    { pct: 60, label: t('legendMid') },
+    { pct: 85, label: t('legendHigh') },
+  ];
   return (
-    <div className="flex flex-wrap items-center gap-3 text-xs font-semibold text-muted-foreground" data-testid="coverage-legend">
-      <span>{t('none')}</span>
-      <div className="flex gap-1">
-        {steps.map((s) => (
-          <span key={s} className={cn('flex h-6 w-11 items-center justify-center rounded-[6px] font-bold tabular-nums', s >= 45 ? 'text-ink' : 'text-foreground')} style={cellStyle(s)}>
-            {s}%
-          </span>
-        ))}
-      </div>
-      <span>{t('legend')}</span>
+    <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-muted-foreground" data-testid="coverage-legend">
+      <span className={cn(EYEBROW, 'me-1')}>{t('legend')}</span>
+      {steps.map((s) => (
+        <span key={s.pct} className={cn('inline-flex h-8 items-center rounded-[10px] px-3 font-black', cellClass(s.pct))}>
+          {s.label}
+        </span>
+      ))}
     </div>
   );
 }

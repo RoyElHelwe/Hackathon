@@ -1,13 +1,15 @@
 'use client';
 
-import { BookOpen, CheckCircle2, Grid3x3, HeartHandshake, Target, Users } from 'lucide-react';
+import { CheckCircle2, Grid3x3, HeartHandshake, Target, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { PageHeader } from '@/components/app/adult-shell';
 import { ErrorState, PageSkeleton } from '@/components/app/states';
+import { Arzino } from '@/components/arzino';
 import { KpiCard } from '@/components/director/kpi-card';
+import { PageHero } from '@/components/director/page-hero';
 import { PendingCallout } from '@/components/director/pending-callout';
 import { SchoolCodeCard } from '@/components/director/school-code-card';
+import { masteryTone } from '@/components/director/tone';
 import { TopClasses } from '@/components/director/top-classes';
 import { TrendChart } from '@/components/director/trend-chart';
 import type { SchoolSubject } from '@/components/director/types';
@@ -28,12 +30,15 @@ export default function DirectorOverviewPage() {
   const k = data.kpis;
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title={t('title')}
-        subtitle={t('subtitle', { school: data.school.name, city: data.school.city })}
+    <div className="space-y-5">
+      <PageHero
+        mood="lebanese-pride"
+        size={128}
+        eyebrow={t('title')}
+        title={data.school.name}
+        subtitle={t('heroSubtitle', { city: data.school.city, classes: data.classes.length, students: k.totalStudents })}
         actions={
-          <Button asChild variant="outline" size="sm">
+          <Button asChild variant="kidGhost">
             <Link href="/director/coverage">
               <Grid3x3 /> {t('coverageCta')}
             </Link>
@@ -42,15 +47,13 @@ export default function DirectorOverviewPage() {
       />
 
       {subjects.data?.length === 0 && (
-        <Card className="flex flex-wrap items-center gap-4 border-2 border-violet/40 bg-violet-soft p-5" data-testid="subjects-nudge">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-[12px] bg-violet text-white">
-            <BookOpen className="size-5" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <h3 className="text-lg font-extrabold leading-tight">{ts('nudgeTitle')}</h3>
-            <p className="text-sm text-muted-foreground">{ts('nudgeBody')}</p>
+        <Card className="flex flex-wrap items-center gap-4 p-4 pe-5" data-testid="subjects-nudge">
+          <Arzino mood="writing" size={80} animate={false} className="-my-2" />
+          <div className="min-w-0 flex-1 basis-48">
+            <h3 className="text-lg font-black leading-tight">{ts('nudgeTitle')}</h3>
+            <p className="text-sm font-semibold text-muted-foreground">{ts('nudgeBody')}</p>
           </div>
-          <Button asChild size="sm" data-testid="subjects-nudge-cta">
+          <Button asChild variant="kidCoral" data-testid="subjects-nudge-cta">
             <Link href="/director/subjects">{ts('nudgeCta')}</Link>
           </Button>
         </Card>
@@ -60,15 +63,15 @@ export default function DirectorOverviewPage() {
         <KpiCard
           testId="kpi-active"
           icon={Users}
-          tone="violet"
+          tone="cedar"
           label={t('kpiActive')}
           value={k.activeStudentsWeek}
           percent={k.totalStudents ? (k.activeStudentsWeek / k.totalStudents) * 100 : 0}
           hint={t('kpiActiveHint', { total: k.totalStudents })}
         />
-        <KpiCard testId="kpi-validated" icon={CheckCircle2} tone="mint" label={t('kpiValidated')} value={k.missionsValidated} hint={t('kpiValidatedHint', { week: k.missionsValidatedWeek })} />
-        <KpiCard testId="kpi-mastery" icon={Target} tone="sky" label={t('kpiMastery')} value={k.avgMastery} suffix="%" percent={k.avgMastery} hint={t('kpiMasteryHint')} />
-        <KpiCard testId="kpi-parents" icon={HeartHandshake} tone="coral" label={t('kpiParents')} value={k.parentParticipation} suffix="%" percent={k.parentParticipation} hint={t('kpiParentsHint')} />
+        <KpiCard testId="kpi-validated" icon={CheckCircle2} tone="med" label={t('kpiValidated')} value={k.missionsValidated} hint={t('kpiValidatedHint', { week: k.missionsValidatedWeek })} mood="trophy" />
+        <KpiCard testId="kpi-mastery" icon={Target} tone={masteryTone(k.avgMastery)} label={t('kpiMastery')} value={k.avgMastery} suffix="%" percent={k.avgMastery} hint={t('kpiMasteryHint')} />
+        <KpiCard testId="kpi-parents" icon={HeartHandshake} tone="flame" label={t('kpiParents')} value={k.parentParticipation} suffix="%" percent={k.parentParticipation} hint={t('kpiParentsHint')} />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">

@@ -1,11 +1,11 @@
 'use client';
 
-import { ArrowRight, BookOpenCheck, Hourglass, Mic } from 'lucide-react';
+import { ArrowRight, BookOpenCheck, Mic } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useState } from 'react';
-import { Bousla, BouslaSays } from '@/components/bousla';
+import { Arzino, ArzinoSays } from '@/components/arzino';
 import { ErrorState, PageSkeleton } from '@/components/app/states';
 import { BadgeCard } from '@/components/kid/celebrations';
 import { Coins, LevelRing, StreakFlame, XpBar } from '@/components/kid/stats';
@@ -15,7 +15,6 @@ import { RewardCelebration } from '@/components/student/reward-celebration';
 import { TopicGlyph } from '@/components/app/subject-icon';
 import { subjectStyle } from '@/components/student/subject-style';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { useApi, useL, useMe } from '@/lib/hooks';
 import type { MyExam } from '@/lib/campus/types';
 import type { Gamification, Mission, NotificationItem, Rewards } from '@/lib/types';
@@ -57,25 +56,31 @@ export default function StudentHome() {
   // an exam room that is open right now beats everything else on home
   const openExam = exams.data?.find((e) => e.examStatus === 'OPEN' && (e.status === 'NOT_STARTED' || e.status === 'IN_PROGRESS'));
 
+  const fst = feature ? subjectStyle(feature.topic?.subject?.key, feature.topic?.subject?.color, feature.topic?.subject?.icon) : null;
+  const firstName = me?.user.name.split(' ')[0] ?? '';
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {unseenRewards && !celebrated && (
         <div className="relative">
           <RewardCelebration rewards={unseenRewards} onDone={() => setCelebrated(true)} />
         </div>
       )}
 
-      <section className="flex items-center gap-4">
-        <Bousla mood="happy" size={86} heading={50} />
+      {/* Hello: big Arzino + one line */}
+      <section className="flex items-center gap-2 sm:gap-4">
+        <Arzino mood={gm.streak.current >= 3 ? 'cheer' : 'welcome'} size={132} pop priority className="-ms-2 sm:hidden" />
+        <Arzino mood={gm.streak.current >= 3 ? 'cheer' : 'welcome'} size={176} pop priority className="hidden sm:inline-flex" />
         <div className="min-w-0 flex-1">
-          <h1 className="font-display text-3xl font-extrabold leading-tight" data-testid="greeting">
-            {t('greeting', { name: me?.user.name.split(' ')[0] ?? '' })}
+          <h1 className="font-display text-[32px] font-black leading-[1.05]" data-testid="greeting">
+            {t('greeting', { name: firstName })}
           </h1>
-          <p className="text-muted-foreground">{t('greetingSub')}</p>
+          <p className="mt-1 text-[17px] font-bold text-muted-foreground">{t('greetingSub')}</p>
         </div>
       </section>
 
-      <Card className="flex items-center gap-4 p-4">
+      {/* Level + streak + wallet (the right rail shows this on desktop) */}
+      <div className="chunky flex items-center gap-4 rounded-[20px] p-4 min-[1180px]:hidden">
         <LevelRing level={gm.level.level} progress={gm.level.progress} />
         <div className="min-w-0 flex-1 space-y-3">
           <XpBar progress={gm.level.progress} xp={gm.xp} nextLevelXp={gm.level.nextLevelXp} />
@@ -84,40 +89,54 @@ export default function StudentHome() {
             <Coins points={gm.wallet} />
           </div>
         </div>
-      </Card>
+      </div>
 
       {openExam && (
-        <Card className="flex items-center gap-4 border-2 border-sky p-4 shadow-[0_0_0_3px_rgba(76,184,255,0.25)]" data-testid="home-exam">
-          <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-sky/15 text-sky">
-            <Mic className="size-6" />
-          </span>
+        <div className="chunky flex flex-wrap items-center gap-3 rounded-[20px] border-med/50 p-4 shadow-[0_4px_0_0_var(--med)]" data-testid="home-exam">
+          <Arzino mood="laser-focus" size={76} />
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-bold uppercase tracking-wider text-sky">{tcampus('exams.title')}</p>
-            <p className="truncate font-display text-lg font-bold leading-tight">{openExam.title}</p>
-            <p className="text-xs text-muted-foreground">
+            <p className="eyebrow !text-med-ink dark:!text-med">
+              <Mic className="me-1 inline size-3.5" />
+              {tcampus('exams.title')}
+            </p>
+            <p className="truncate font-display text-lg font-black leading-tight">{openExam.title}</p>
+            <p className="text-xs font-bold text-muted-foreground">
               {openExam.className} · {tcampus('exams.minutes', { n: openExam.durationMin })}
             </p>
           </div>
-          <Button asChild variant="kid" size="sm">
+          <Button asChild variant="kidMint" size="sm" className="w-full sm:w-auto">
             <Link href={`/student/exams/${openExam.attemptId}`}>{tcampus('exams.enter')}</Link>
           </Button>
-        </Card>
+        </div>
       )}
 
-      {feature && (
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-          <Link href={missionHref(feature)} data-testid="continue-mission">
-            <div className={cn('relative overflow-hidden rounded-[28px] p-5 text-white shadow-xl', 'bg-gradient-to-br from-violet to-[#8B6CFF]')}>
-              <div className="absolute -end-6 -top-6 text-[120px] opacity-20" aria-hidden>
+      {/* The next mission: a subject-colored unit block, like the path's banner */}
+      {feature && fst && (
+        <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 220, damping: 20 }}>
+          <Link href={missionHref(feature)} data-testid="continue-mission" className="group block">
+            <div
+              className="relative overflow-hidden rounded-[24px] p-5 pe-24 text-white transition-transform group-hover:-translate-y-0.5 group-active:translate-y-[3px] sm:pe-40"
+              style={{ background: fst.hex, boxShadow: `0 6px 0 ${fst.hexD}` }}
+            >
+              <div className="pointer-events-none absolute -bottom-10 -start-6 text-[150px] leading-none opacity-[0.13]" aria-hidden>
                 <TopicGlyph topicKey={feature.topic?.key} icon={feature.topic?.icon} />
               </div>
-              <p className="text-sm font-bold uppercase tracking-wider text-white/80">{active ? t('continueMission') : t('nextMission')}</p>
-              <p className="mt-1 font-display text-2xl font-extrabold leading-tight">{l(feature.title)}</p>
-              <p className="mt-1 line-clamp-2 text-white/85">{l(feature.story)}</p>
-              <div className="mt-4 flex items-center justify-between gap-3">
-                <span className="rounded-full bg-white/20 px-3 py-1 text-sm font-bold">⚡ {t('xp', { xp: feature.xpReward })} · {tc('minutes', { n: feature.estimatedMin })}</span>
-                <span className="kid-press inline-flex h-12 items-center gap-2 rounded-full bg-sunny px-5 font-display text-lg font-bold text-ink [--press:#d99f12]">
+              <div className="pointer-events-none absolute -bottom-1 end-1 sm:end-3" aria-hidden>
+                <Arzino mood={active ? 'determined' : 'reading'} size={96} className="sm:hidden" title="" />
+                <Arzino mood={active ? 'determined' : 'reading'} size={150} className="hidden sm:inline-flex" title="" />
+              </div>
+              <p className="relative text-[12px] font-black uppercase tracking-[0.09em] text-white/85">
+                {feature.topic?.subject ? `${l(feature.topic.subject.name)} · ` : ''}
+                {active ? t('continueMission') : t('nextMission')}
+              </p>
+              <p className="relative mt-1 font-display text-[22px] font-black leading-tight sm:text-[24px]">{l(feature.title)}</p>
+              <p className="relative mt-1 line-clamp-2 font-semibold text-white/90">{l(feature.story)}</p>
+              <div className="relative mt-4 flex flex-wrap items-center gap-2">
+                <span className="kid-press inline-flex h-12 items-center gap-2 rounded-[16px] bg-white px-5 font-display text-[15px] font-black uppercase tracking-[0.08em] [--press:rgba(0,0,0,0.18)]" style={{ color: fst.hexD }}>
                   {active ? t('resume') : t('go')} <ArrowRight className="rtl-flip size-5" />
+                </span>
+                <span className="rounded-[12px] bg-black/15 px-3 py-1.5 text-sm font-black">
+                  ⚡ {t('xp', { xp: feature.xpReward })} · {tc('minutes', { n: feature.estimatedMin })}
                 </span>
               </div>
             </div>
@@ -126,27 +145,26 @@ export default function StudentHome() {
       )}
 
       {toReview.length > 0 && (
-        <Link href="/student/reviews" data-testid="reviews-waiting">
-          <Card className="flex items-center gap-4 border-2 border-sunny bg-sunny-soft p-4">
-            <div className="flex size-12 shrink-0 items-center justify-center rounded-[14px] bg-sunny text-ink">
-              <BookOpenCheck className="size-6" />
-            </div>
+        <Link href="/student/reviews" data-testid="reviews-waiting" className="block">
+          <div className="chunky chunky-hover flex items-center gap-3 rounded-[20px] p-4">
+            <Arzino mood="clipboard" size={84} />
             <div className="min-w-0 flex-1">
-              <p className="font-display text-lg font-extrabold">{t('reviewsWaiting', { count: toReview.length })}</p>
-              <p className="text-sm text-muted-foreground">{t('reviewsWaitingBody')}</p>
+              <p className="font-display text-lg font-black leading-tight">{t('reviewsWaiting', { count: toReview.length })}</p>
+              <p className="text-sm font-bold text-muted-foreground">{t('reviewsWaitingBody')}</p>
             </div>
-            <Button variant="kidSunny" size="sm" tabIndex={-1}>
-              {t('review')}
+            <Button variant="kid" size="sm" tabIndex={-1} className="shrink-0">
+              <BookOpenCheck className="!size-4" /> {t('review')}
             </Button>
-          </Card>
+          </div>
         </Link>
       )}
 
       {waiting.length > 0 && (
         <section>
-          <h2 className="mb-2 flex items-center gap-2 font-display text-xl font-extrabold">
-            <Hourglass className="size-5 text-sky" /> {t('waitingResults')}
-          </h2>
+          <div className="mb-3 flex items-center gap-2">
+            <Arzino mood="bored-waiting" size={56} />
+            <h2 className="font-display text-xl font-black">{t('waitingResults')}</h2>
+          </div>
           <div className="space-y-3">
             {waiting.map((m) => (
               <MissionCard key={m.id} mission={m} />
@@ -157,32 +175,55 @@ export default function StudentHome() {
 
       {badges.length > 0 && (
         <section>
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="font-display text-xl font-extrabold">{t('latestBadges')}</h2>
-            <Link href="/student/me" className="text-sm font-bold text-primary">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="font-display text-xl font-black">{t('latestBadges')}</h2>
+            <Link href="/student/me" className="text-sm font-black uppercase tracking-[0.08em] text-med-ink dark:text-med">
               {t('seeAll')}
             </Link>
           </div>
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {badges.map((b) => (
-              <BadgeCard key={b.key} icon={b.icon} name={b.name} size="sm" />
+              <BadgeCard key={b.key} icon={b.icon} name={b.name} badgeKey={b.key} size="sm" />
             ))}
           </div>
         </section>
       )}
 
       {gm.subjects.length > 0 && (
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          {gm.subjects.map((s) => (
-            <span key={s.key} className={cn('inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-sm font-bold', subjectStyle(s.key, s.color, s.icon).soft)}>
-              {subjectStyle(s.key, s.color, s.icon).emoji} {l(s.name)} · {t('level')} {s.level.level}
-            </span>
-          ))}
-        </div>
+        <section>
+          <h2 className="mb-3 font-display text-xl font-black">{t('yourSubjects')}</h2>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {gm.subjects.map((s) => {
+              const ss = subjectStyle(s.key, s.color, s.icon);
+              return (
+                <Link key={s.key} href="/student/map" className="chunky chunky-hover flex items-center gap-3 rounded-[20px] p-3.5">
+                  <span className="flex size-12 shrink-0 items-center justify-center rounded-[14px] text-2xl" style={{ background: ss.hex, boxShadow: `0 4px 0 ${ss.hexD}` }} aria-hidden>
+                    {ss.emoji}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <p className="truncate font-black">{l(s.name)}</p>
+                      <span className={cn('shrink-0 text-sm font-black', ss.text)}>
+                        {t('level')} {s.level.level}
+                      </span>
+                    </div>
+                    <div className="mt-1.5 h-3 overflow-hidden rounded-full bg-lock">
+                      <div className="bar-gloss h-full rounded-full" style={{ width: `${Math.max(6, s.level.progress * 100)}%`, background: ss.hex }} />
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
       )}
 
       <InstallCard />
-      {!feature && !waiting.length && <BouslaSays mood="sleepy">{t('noAvailable')}</BouslaSays>}
+      {!feature && !waiting.length && (
+        <ArzinoSays mood="bored-waiting" size={110}>
+          {t('noAvailable')}
+        </ArzinoSays>
+      )}
     </div>
   );
 }

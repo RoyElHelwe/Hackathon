@@ -59,7 +59,7 @@ export class ExamsService {
   /** Regenerate the questions (AI reads the lessons again). */
   async prepare(a: AuthContext, id: string) {
     const exam = await this.load(a, id, 'write');
-    if (exam.status === 'PREPARING') throw new ConflictException({ message: 'Bousla is already preparing this exam.', code: 'PREPARING' });
+    if (exam.status === 'PREPARING') throw new ConflictException({ message: 'Arzino is already preparing this exam.', code: 'PREPARING' });
     if (!['DRAFT', 'READY', 'FAILED'].includes(exam.status)) throw new ConflictException({ message: 'This exam is already published.', code: 'PUBLISHED' });
     await this.prep.start(id);
     return this.detail(a, id);

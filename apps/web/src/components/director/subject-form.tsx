@@ -9,13 +9,13 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/cn';
 
 const SWATCH: Record<string, string> = {
-  violet: 'bg-violet',
-  sky: 'bg-sky',
+  violet: 'bg-cedar',
+  sky: 'bg-med',
   mint: 'bg-mint',
   green: 'bg-green',
-  coral: 'bg-coral',
-  sunny: 'bg-sunny',
-  pink: 'bg-coral',
+  coral: 'bg-flag',
+  sunny: 'bg-flame',
+  pink: 'bg-flag-d',
   slate: 'bg-muted-foreground',
 };
 
@@ -50,7 +50,7 @@ export function SubjectForm({ initial, busy, onSubmit, onCancel }: { initial?: S
         data-testid="subject-name"
       />
       <div>
-        <p className="mb-1.5 text-sm font-bold">{t('color')}</p>
+        <p className="mb-2 text-sm font-black">{t('color')}</p>
         <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={t('color')}>
           {SUBJECT_COLORS.map((c) => (
             <button
@@ -60,14 +60,14 @@ export function SubjectForm({ initial, busy, onSubmit, onCancel }: { initial?: S
               aria-checked={color === c}
               aria-label={c}
               onClick={() => setColor(c)}
-              className={cn('size-8 rounded-full transition-transform', SWATCH[c] ?? SWATCH.slate, color === c ? 'scale-110 ring-2 ring-primary ring-offset-2 ring-offset-card' : '')}
+              className={cn('size-9 rounded-full shadow-[inset_0_-3px_0_rgba(0,0,0,0.18)] transition-transform', SWATCH[c] ?? SWATCH.slate, color === c ? 'scale-110 ring-[3px] ring-med ring-offset-2 ring-offset-card' : '')}
               data-testid={`subject-color-${c}`}
             />
           ))}
         </div>
       </div>
       <div>
-        <p className="mb-1.5 text-sm font-bold">{t('icon')}</p>
+        <p className="mb-2 text-sm font-black">{t('icon')}</p>
         <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={t('icon')}>
           {SUBJECT_ICONS.map((i) => {
             const Icon = subjectIcon(i);
@@ -80,7 +80,7 @@ export function SubjectForm({ initial, busy, onSubmit, onCancel }: { initial?: S
                 aria-checked={on}
                 aria-label={i}
                 onClick={() => setIcon(i)}
-                className={cn('flex size-10 items-center justify-center rounded-[12px] border-2 transition-colors', on ? 'border-primary bg-violet-soft' : 'border-border hover:bg-muted')}
+                className={cn('flex size-11 items-center justify-center rounded-[12px] border-2 transition-colors', on ? 'border-med bg-med-soft text-med-ink shadow-[0_3px_0_var(--med)] dark:text-white' : 'border-border shadow-[0_3px_0_var(--border)] hover:bg-muted')}
                 data-testid={`subject-icon-${i}`}
               >
                 <Icon className="size-5" />
@@ -90,7 +90,7 @@ export function SubjectForm({ initial, busy, onSubmit, onCancel }: { initial?: S
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <Button type="submit" loading={busy} disabled={!name.trim()} data-testid="subject-save">
+        <Button type="submit" variant="kid" loading={busy} disabled={!name.trim()} data-testid="subject-save">
           {t('save')}
         </Button>
         {onCancel && (

@@ -55,7 +55,7 @@ export class LessonGamifyService implements OnModuleInit {
       where: { id: lessonId, OR: [{ status: { not: 'GAMIFYING' } }, { updatedAt: { lt: new Date(Date.now() - STALE_MS) } }] },
       data: { status: 'GAMIFYING', gamifyError: null },
     });
-    if (!flipped.count) throw new ConflictException({ message: 'Bousla is already reading this lesson.', code: 'GAMIFYING' });
+    if (!flipped.count) throw new ConflictException({ message: 'Arzino is already reading this lesson.', code: 'GAMIFYING' });
     const locale = a.user.locale || 'en';
     const job = this.run(lessonId, { teacherId: a.userId, locale, count }).finally(() => this.running.delete(lessonId));
     this.running.set(lessonId, job);

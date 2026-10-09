@@ -1,14 +1,15 @@
 import { cn } from '@/lib/cn';
+import { masteryTone, TONE_BAR, TONE_TEXT } from './tone';
 
-/** Compact percentage bar + number. Mint ≥ 60, sunny ≥ 30, coral below. */
+/** Compact glossy percentage bar + number, colored by the 3-color rule (red < 50, blue 50–69, cedar ≥ 70). */
 export function EngagementBar({ value, className }: { value: number; className?: string }) {
-  const color = value >= 60 ? 'bg-mint' : value >= 30 ? 'bg-sunny' : 'bg-coral';
+  const tone = masteryTone(value);
   return (
     <div className={cn('flex items-center gap-2', className)}>
-      <div className="h-2 w-full min-w-16 overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuenow={value} aria-valuemin={0} aria-valuemax={100}>
-        <div className={cn('h-full rounded-full', color)} style={{ width: `${Math.max(value > 0 ? 3 : 0, Math.min(100, value))}%` }} />
+      <div className="h-3 w-full min-w-16 overflow-hidden rounded-full bg-lock" role="progressbar" aria-valuenow={value} aria-valuemin={0} aria-valuemax={100}>
+        <div className={cn('bar-gloss h-full rounded-full', TONE_BAR[tone])} style={{ width: `${Math.max(value > 0 ? 4 : 0, Math.min(100, value))}%` }} />
       </div>
-      <span className="w-10 shrink-0 text-end text-sm font-bold tabular-nums">{value}%</span>
+      <span className={cn('w-11 shrink-0 text-end text-sm font-black tabular-nums', TONE_TEXT[tone])}>{value}%</span>
     </div>
   );
 }

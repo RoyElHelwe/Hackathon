@@ -40,7 +40,7 @@ export function MemberGroups({ schoolId }: { schoolId: string }) {
   return (
     <Card data-testid="approved-members">
       <CardHeader>
-        <CardTitle>{t('approvedTitle')}</CardTitle>
+        <CardTitle className="text-xl">{t('approvedTitle')}</CardTitle>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -52,7 +52,7 @@ export function MemberGroups({ schoolId }: { schoolId: string }) {
             <TabsList className="mb-4 flex w-full flex-wrap justify-start">
               {groups.map((g) => (
                 <TabsTrigger key={g.role} value={g.role} className="flex items-center gap-1.5" data-testid={`members-tab-${g.role}`}>
-                  {tr(g.role)} <span className="rounded-full bg-muted px-1.5 text-xs tabular-nums">{g.items.length}</span>
+                  {tr(g.role)} <span className="rounded-full bg-lock px-1.5 text-xs tabular-nums text-foreground">{g.items.length}</span>
                 </TabsTrigger>
               ))}
             </TabsList>
@@ -99,23 +99,23 @@ function RoleList({
   const t = useTranslations('director.members');
   const tr = useTranslations('common.roles');
   const [all, setAll] = useState(false);
-  if (!items.length) return <p className="py-4 text-center text-sm text-muted-foreground">{t('emptyRole')}</p>;
+  if (!items.length) return <p className="py-4 text-center text-sm font-bold text-muted-foreground">{t('emptyRole')}</p>;
   const shown = all ? items : items.slice(0, PREVIEW);
   return (
     <>
       <ul className="grid gap-2 sm:grid-cols-2">
         {shown.map((m) => (
-          <li key={m.id} className="flex items-start gap-3 rounded-[14px] p-2 hover:bg-muted/60" data-testid="member-row">
+          <li key={m.id} className="flex items-start gap-3 rounded-[16px] p-2.5 transition-colors hover:bg-muted" data-testid="member-row">
             <Avatar name={m.user.name} src={m.user.avatarUrl} className="size-9 text-sm" />
             <div className="min-w-0 flex-1">
-              <p className="truncate font-bold">{m.user.name}</p>
+              <p className="truncate font-black">{m.user.name}</p>
               <p className="truncate text-xs text-muted-foreground" dir="ltr">
                 {m.user.email}
               </p>
               {role === 'TEACHER' && (
                 <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                   {m.subjects.map((s) => (
-                    <SubjectChip key={s.id} name={s.name} color={subjectOptions.find((o) => o.id === s.id)?.color ?? 'violet'} locale={locale} />
+                    <SubjectChip key={s.id} name={s.name} color={subjectOptions.find((o) => o.id === s.id)?.color ?? 'slate'} locale={locale} />
                   ))}
                   <TeacherSubjectsEditor
                     member={m}
@@ -221,7 +221,7 @@ function TeacherSubjectsEditor({
               {err}
             </p>
           )}
-          <Button onClick={save} loading={busy} disabled={ids.length === 0} className="w-full" data-testid="save-subjects">
+          <Button variant="kid" onClick={save} loading={busy} disabled={ids.length === 0} className="w-full" data-testid="save-subjects">
             {t('saveSubjects')}
           </Button>
         </div>

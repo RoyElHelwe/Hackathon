@@ -1,24 +1,28 @@
 import type { LucideIcon } from 'lucide-react';
+import { Arzino, type ArzinoMood } from '@/components/arzino';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/misc';
 import { cn } from '@/lib/cn';
 
 const TONES = {
-  violet: { chip: 'bg-violet-soft text-primary dark:text-white', bar: 'bg-primary' },
-  mint: { chip: 'bg-mint-soft text-success', bar: 'bg-mint' },
-  sky: { chip: 'bg-sky-soft text-sky dark:text-white', bar: 'bg-sky' },
-  coral: { chip: 'bg-coral-soft text-danger', bar: 'bg-coral' },
+  cedar: { chip: 'bg-cedar-soft text-cedar-d dark:text-success', bar: 'bg-cedar', num: 'text-cedar-ink dark:text-success' },
+  med: { chip: 'bg-med-soft text-med-d dark:text-ring', bar: 'bg-med', num: 'text-med-ink dark:text-ring' },
+  flag: { chip: 'bg-flag-soft text-flag-d dark:text-danger', bar: 'bg-flag', num: 'text-flag-d dark:text-danger' },
+  flame: { chip: 'bg-flame-soft text-flame-d dark:text-warning', bar: 'bg-flame', num: 'text-flame-d dark:text-warning' },
 } as const;
 
-/** A single headline number with context. `percent` adds a thin meter. */
+export type KpiTone = keyof typeof TONES;
+
+/** A big headline number with a short label. `percent` adds a glossy meter; `mood` puts a small Arzino in the corner. */
 export function KpiCard({
   label,
   value,
   suffix,
   hint,
   icon: Icon,
-  tone = 'violet',
+  tone = 'cedar',
   percent,
+  mood,
   testId,
 }: {
   label: string;
@@ -26,25 +30,28 @@ export function KpiCard({
   suffix?: string;
   hint?: React.ReactNode;
   icon: LucideIcon;
-  tone?: keyof typeof TONES;
+  tone?: KpiTone;
   percent?: number;
+  mood?: ArzinoMood;
   testId: string;
 }) {
   const s = TONES[tone];
   return (
-    <Card className="flex flex-col gap-3 p-5" data-testid={testId}>
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-bold text-muted-foreground">{label}</p>
-        <span className={cn('flex size-9 items-center justify-center rounded-[12px]', s.chip)}>
+    <Card className="relative flex flex-col gap-2 overflow-hidden p-5" data-testid={testId}>
+      {mood ? (
+        <Arzino mood={mood} size={72} animate={false} className="absolute -bottom-1 end-1 opacity-95" />
+      ) : (
+        <span className={cn('absolute end-4 top-4 flex size-10 items-center justify-center rounded-[12px]', s.chip)}>
           <Icon className="size-5" />
         </span>
-      </div>
-      <p className="font-display text-4xl font-extrabold tabular-nums leading-none" data-testid={`${testId}-value`}>
+      )}
+      <p className={cn('font-display text-[44px] font-black leading-none tabular-nums', s.num)} data-testid={`${testId}-value`}>
         {value}
-        {suffix && <span className="ms-0.5 text-2xl text-muted-foreground">{suffix}</span>}
+        {suffix && <span className="ms-0.5 text-2xl">{suffix}</span>}
       </p>
-      {percent != null && <Progress value={percent} className="h-1.5" barClassName={s.bar} />}
-      {hint && <p className="text-xs font-semibold text-muted-foreground">{hint}</p>}
+      <p className="pe-12 font-extrabold leading-tight">{label}</p>
+      {hint && <p className={cn('text-xs font-bold text-muted-foreground', mood && 'pe-16')}>{hint}</p>}
+      {percent != null && <Progress value={percent} className={cn('mt-auto h-3', mood && 'w-[calc(100%-72px)]')} barClassName={s.bar} />}
     </Card>
   );
 }

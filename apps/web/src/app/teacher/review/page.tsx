@@ -48,6 +48,8 @@ export default function ReviewQueuePage() {
   return (
     <div>
       <PageHeader
+        mood="clipboard"
+        eyebrow={t('eyebrow')}
         title={t('title')}
         subtitle={data ? t('subtitle', { n: groups.needs.length }) : undefined}
         actions={
@@ -71,8 +73,8 @@ export default function ReviewQueuePage() {
       ) : error ? (
         <ErrorState message={error.message} onRetry={() => refetch()} />
       ) : !all.length ? (
-        <div className="rounded-[20px] border border-dashed border-border bg-card">
-          <EmptyState mood="cheering" title={t('emptyTitle')} body={t('emptyBody')} className="py-16" />
+        <div className="rounded-[20px] border-2 border-dashed border-cedar/40 bg-cedar-soft/50">
+          <EmptyState mood="celebrate" title={t('emptyTitle')} body={t('emptyBody')} className="py-16" />
         </div>
       ) : (
         <div className="grid items-start gap-6 lg:grid-cols-[340px_1fr]">
@@ -81,7 +83,7 @@ export default function ReviewQueuePage() {
               {groups.needs.length ? (
                 groups.needs.map((s) => <ReviewListItem key={s.id} s={s} active={selected?.id === s.id} onSelect={() => setSelectedId(s.id)} />)
               ) : (
-                <li className="rounded-[14px] bg-mint-soft px-3 py-3 text-sm font-semibold text-success">{t('nothingNeedsYou')}</li>
+                <li className="rounded-[14px] border-2 border-cedar/30 bg-cedar-soft px-3 py-3 text-sm font-extrabold text-cedar-ink dark:text-white">{t('nothingNeedsYou')}</li>
               )}
             </ListSection>
             {groups.peer.length > 0 && (
@@ -89,7 +91,7 @@ export default function ReviewQueuePage() {
                 <button
                   type="button"
                   onClick={() => setPeerOpen((o) => !o)}
-                  className="mb-2 flex w-full items-center justify-between gap-2 text-xs font-bold uppercase tracking-wide text-muted-foreground"
+                  className="eyebrow mb-2 flex w-full items-center justify-between gap-2"
                   aria-expanded={peerOpen}
                   data-testid="toggle-peer"
                 >
@@ -119,8 +121,8 @@ export default function ReviewQueuePage() {
             {selected ? (
               <ReviewDetail key={selected.id} s={selected} onDone={onDone} />
             ) : (
-              <div className="rounded-[20px] border border-dashed border-border bg-card">
-                <EmptyState mood="happy" title={t('pickOne')} className="py-16" />
+              <div className="rounded-[20px] border-2 border-dashed border-border bg-card">
+                <EmptyState mood="clipboard" title={t('pickOne')} className="py-16" />
               </div>
             )}
           </div>
@@ -133,7 +135,7 @@ export default function ReviewQueuePage() {
 function ListSection({ title, icon, children }: { title: string; icon?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div>
-      <h2 className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+      <h2 className="eyebrow mb-2 flex items-center gap-1.5">
         {icon} {title}
       </h2>
       <ul className="space-y-2">{children}</ul>

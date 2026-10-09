@@ -13,7 +13,7 @@ export function ClassesTable({ classes }: { classes: DirectorClass[] }) {
     <div className="overflow-x-auto">
       <table className="w-full min-w-[820px] text-sm" data-testid="classes-table">
         <thead>
-          <tr className="border-b border-border text-xs font-extrabold uppercase tracking-wider text-muted-foreground">
+          <tr className="border-b-2 border-border bg-muted text-[12px] font-black uppercase tracking-[0.09em] text-muted-foreground">
             <th scope="col" className="px-4 py-3 text-start">{t('name')}</th>
             <th scope="col" className="px-4 py-3 text-start">{t('teachers')}</th>
             <th scope="col" className="px-4 py-3 text-end">{t('students')}</th>
@@ -25,10 +25,10 @@ export function ClassesTable({ classes }: { classes: DirectorClass[] }) {
         </thead>
         <tbody className="divide-y divide-border">
           {classes.map((c) => (
-            <tr key={c.id} className="transition-colors hover:bg-muted/50" data-testid="class-row">
+            <tr key={c.id} className="transition-colors hover:bg-muted/60" data-testid="class-row">
               <td className="px-4 py-3">
-                <p className="font-extrabold">{c.name}</p>
-                {c.gradeLevel != null && <p className="text-xs text-muted-foreground">{t('grade', { n: c.gradeLevel })}</p>}
+                <p className="text-base font-black">{c.name}</p>
+                {c.gradeLevel != null && <p className="text-xs font-bold text-muted-foreground">{t('grade', { n: c.gradeLevel })}</p>}
               </td>
               <td className="px-4 py-3">
                 <div className="flex flex-col gap-1">
@@ -40,12 +40,12 @@ export function ClassesTable({ classes }: { classes: DirectorClass[] }) {
                   ))}
                 </div>
               </td>
-              <td className="px-4 py-3 text-end font-bold tabular-nums">{c.students}</td>
+              <td className="px-4 py-3 text-end text-base font-black tabular-nums">{c.students}</td>
               <td className="px-4 py-3">
                 <EngagementBar value={c.engagement} />
               </td>
               <td className="px-4 py-3">
-                <MasteryBar value={c.avgMastery} />
+                <EngagementBar value={c.avgMastery} />
               </td>
               <td className="px-4 py-3">
                 {c.stuckCount > 0 ? (
@@ -53,7 +53,7 @@ export function ClassesTable({ classes }: { classes: DirectorClass[] }) {
                     <AlertTriangle /> {t('stuckCount', { n: c.stuckCount })}
                   </Badge>
                 ) : (
-                  <span className="text-muted-foreground">{t('none')}</span>
+                  <span className="font-bold text-muted-foreground">{t('none')}</span>
                 )}
               </td>
               <td className="px-4 py-3">
@@ -75,13 +75,3 @@ export function ClassesTable({ classes }: { classes: DirectorClass[] }) {
   );
 }
 
-function MasteryBar({ value }: { value: number }) {
-  return (
-    <div className="flex items-center gap-2">
-      <div className="h-2 w-full min-w-16 overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuenow={value} aria-valuemin={0} aria-valuemax={100}>
-        <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(100, value)}%` }} />
-      </div>
-      <span className="w-10 shrink-0 text-end text-sm font-bold tabular-nums">{value}%</span>
-    </div>
-  );
-}

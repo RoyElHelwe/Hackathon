@@ -8,9 +8,11 @@ import { useMemo } from 'react';
 import { PageHeader } from '@/components/app/adult-shell';
 import { EmptyState, ErrorState, PageSkeleton } from '@/components/app/states';
 import { ClassMasteryChart } from '@/components/teacher/class-mastery-chart';
+import { BAND_BAR, BAND_TEXT, band } from '@/components/teacher/helpers';
 import { StatTile } from '@/components/teacher/stat-tile';
 import { StuckAlertItem } from '@/components/teacher/stuck-alerts';
 import type { TeacherDashboard } from '@/components/teacher/types';
+import { Arzino } from '@/components/arzino';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress, Skeleton } from '@/components/ui/misc';
@@ -67,21 +69,21 @@ export default function InsightsPage() {
 
   return (
     <div>
-      <PageHeader title={t('title')} subtitle={t('subtitle', { n: classes.data.length })} />
+      <PageHeader mood="laser-focus" eyebrow={t('eyebrow')} title={t('title')} subtitle={t('subtitle', { n: classes.data.length })} />
       {dashError && <ErrorState message={dashError.message} onRetry={() => dashboards.forEach((d) => d.refetch())} className="py-4" />}
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
-        <StatTile icon={Users} label={t('students')} value={loadingDash ? '…' : totals.students} />
-        <StatTile icon={Gauge} label={t('avgMastery')} value={loadingDash ? '…' : `${totals.avgMastery}%`} tone="mint" />
-        <StatTile icon={CheckCircle2} label={t('validated')} value={loadingDash ? '…' : totals.validated} hint={t('thisWeek')} tone="sky" />
-        <StatTile icon={ClipboardCheck} label={t('pending')} value={loadingDash ? '…' : totals.pending} tone="sunny" href="/teacher/review" />
-        <StatTile icon={AlertTriangle} label={t('stuck')} value={loadingDash ? '…' : totals.stuck} tone="coral" />
+        <StatTile icon={Users} label={t('students')} value={loadingDash ? '…' : totals.students} tone="med" />
+        <StatTile icon={Gauge} label={t('avgMastery')} value={loadingDash ? '…' : `${totals.avgMastery}%`} tone="cedar" />
+        <StatTile icon={CheckCircle2} label={t('validated')} value={loadingDash ? '…' : totals.validated} hint={t('thisWeek')} tone="cedar" />
+        <StatTile icon={ClipboardCheck} label={t('pending')} value={loadingDash ? '…' : totals.pending} tone="flame" href="/teacher/review" />
+        <StatTile icon={AlertTriangle} label={t('stuck')} value={loadingDash ? '…' : totals.stuck} tone="flag" alert={!loadingDash && totals.stuck > 0} />
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>{t('chartTitle')}</CardTitle>
+            <CardTitle className="text-xl">{t('chartTitle')}</CardTitle>
             <CardDescription>{t('chartBody')}</CardDescription>
           </CardHeader>
           <CardContent>
@@ -90,26 +92,29 @@ export default function InsightsPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>{t('topicsTitle')}</CardTitle>
+            <CardTitle className="text-xl">{t('topicsTitle')}</CardTitle>
             <CardDescription>{t('topicsBody')}</CardDescription>
           </CardHeader>
           <CardContent>
             {loadingDash ? (
               <Skeleton className="h-64" />
             ) : struggling.length ? (
-              <ul className="space-y-3" data-testid="topic-attention">
+              <ul className="space-y-4" data-testid="topic-attention">
                 {struggling.map((r) => (
                   <li key={r.key}>
-                    <div className="mb-1 flex items-center justify-between gap-2 text-sm">
-                      <span className="truncate font-bold">
-                        {r.name} <span className="font-normal text-muted-foreground">· {r.className}</span>
+                    <div className="mb-1.5 flex items-center justify-between gap-2 text-sm">
+                      <span className="truncate font-extrabold">
+                        {r.name} <span className="font-semibold text-muted-foreground">· {r.className}</span>
                       </span>
                       <span className="flex shrink-0 items-center gap-2">
-                        {r.inProgress > 0 && <Badge variant="sunny">{t('inProgressN', { n: r.inProgress })}</Badge>}
-                        <span className="w-10 text-end font-bold tabular-nums text-muted-foreground">{r.pct}%</span>
+                        {r.inProgress > 0 && <Badge variant="sky">{t('inProgressN', { n: r.inProgress })}</Badge>}
+                        <span className={`w-11 text-end font-black tabular-nums ${BAND_TEXT[band(r.pct)]}`}>{r.pct}%</span>
                       </span>
                     </div>
-                    <Progress value={r.pct} className="h-2" barClassName="bg-mint" />
+                    <div className="relative">
+                      <Progress value={r.pct} className="h-3.5" barClassName={BAND_BAR[band(r.pct)]} />
+                      <span className="absolute inset-y-[-3px] start-1/2 border-s-2 border-dashed border-lock-d" aria-hidden />
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -123,32 +128,32 @@ export default function InsightsPage() {
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_380px]">
         <Card>
           <CardHeader>
-            <CardTitle>{t('classesTitle')}</CardTitle>
+            <CardTitle className="text-xl">{t('classesTitle')}</CardTitle>
           </CardHeader>
           <CardContent>
-            <ul className="divide-y divide-border">
+            <ul className="divide-y-2 divide-border">
               {classes.data.map((c) => {
                 const d = loaded.find((x) => x.class.id === c.id);
                 return (
                   <li key={c.id}>
                     <Link href={`/teacher/classes/${c.id}`} className="group flex items-center gap-4 py-3" data-testid="insight-class">
                       <div className="min-w-0 flex-1">
-                        <p className="font-extrabold group-hover:text-primary">{c.name}</p>
-                        <p className="text-xs text-muted-foreground">{t('classLine', { students: c.studentCount, missions: c.missionCount })}</p>
+                        <p className="font-display text-lg font-black group-hover:text-med-d dark:group-hover:text-med">{c.name}</p>
+                        <p className="text-xs font-semibold text-muted-foreground">{t('classLine', { students: c.studentCount, missions: c.missionCount })}</p>
                       </div>
                       {d ? (
                         <div className="hidden w-48 sm:block">
                           <div className="mb-1 flex justify-between text-xs font-bold text-muted-foreground">
                             <span>{t('avgMastery')}</span>
-                            <span className="tabular-nums">{d.stats.avgMastery}%</span>
+                            <span className={`font-black tabular-nums ${BAND_TEXT[band(d.stats.avgMastery)]}`}>{d.stats.avgMastery}%</span>
                           </div>
-                          <Progress value={d.stats.avgMastery} className="h-2" barClassName="bg-mint" />
+                          <Progress value={d.stats.avgMastery} className="h-3" barClassName={BAND_BAR[band(d.stats.avgMastery)]} />
                         </div>
                       ) : (
                         <Skeleton className="h-6 w-48" />
                       )}
                       <div className="hidden w-44 justify-end gap-1.5 md:flex">
-                        {!!d?.stats.pendingReviews && <Badge variant="sunny">{t('toReviewN', { n: d.stats.pendingReviews })}</Badge>}
+                        {!!d?.stats.pendingReviews && <Badge variant="sky">{t('toReviewN', { n: d.stats.pendingReviews })}</Badge>}
                         {!!d?.stats.stuckCount && <Badge variant="coral">{t('stuckN', { n: d.stats.stuckCount })}</Badge>}
                       </div>
                       <ChevronRight className="rtl-flip size-4 text-muted-foreground" />
@@ -159,11 +164,10 @@ export default function InsightsPage() {
             </ul>
           </CardContent>
         </Card>
-        <Card className="self-start">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertTriangle className="size-5 text-danger" /> {t('stuckTitle')}
-            </CardTitle>
+        <Card className={stuck.length ? 'self-start border-flag/40' : 'self-start'}>
+          <CardHeader className="flex-row items-center gap-3">
+            <Arzino mood={stuck.length ? 'flop-cry' : 'cool'} size={84} />
+            <CardTitle className="text-xl">{t('stuckTitle')}</CardTitle>
           </CardHeader>
           <CardContent>
             {loadingDash ? (
@@ -175,7 +179,7 @@ export default function InsightsPage() {
                 ))}
               </ul>
             ) : (
-              <p className="rounded-[14px] bg-mint-soft px-4 py-3 text-sm font-semibold text-success">{t('noStuck')}</p>
+              <p className="rounded-[14px] border-2 border-cedar/30 bg-cedar-soft px-4 py-3 text-sm font-extrabold text-cedar-ink dark:text-white">{t('noStuck')}</p>
             )}
           </CardContent>
         </Card>

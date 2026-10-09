@@ -20,14 +20,17 @@ export function WorkGallery({ items }: { items: Work[] }) {
   return (
     <Card data-testid="recent-work">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Camera className="size-5 text-primary" /> {t('title')}
+        <CardTitle className="flex items-center gap-2 text-xl">
+          <span className="flex size-9 items-center justify-center rounded-[12px] bg-flame-soft text-flame-d dark:text-warning">
+            <Camera className="size-5" />
+          </span>
+          {t('title')}
         </CardTitle>
-        <CardDescription>{t('subtitle')}</CardDescription>
+        <CardDescription className="font-semibold">{t('subtitle')}</CardDescription>
       </CardHeader>
       <CardContent>
         {items.length === 0 ? (
-          <EmptyState title={t('empty')} mood="sleepy" className="py-4" />
+          <EmptyState title={t('empty')} mood="bored-waiting" className="py-4" />
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {items.map((w) => (
@@ -50,23 +53,26 @@ function WorkTile({ work, onOpen }: { work: Work; onOpen: () => void }) {
   const now = useNow({ updateInterval: 60_000 });
   const photo = work.photoUploadIds[0];
   return (
-    <button type="button" onClick={onOpen} className="group text-start" data-testid="work-photo">
-      <div className="relative aspect-square overflow-hidden rounded-[16px] bg-muted">
+    <button type="button" onClick={onOpen} className="group rounded-[18px] text-start outline-none focus-visible:ring-4 focus-visible:ring-ring/40" data-testid="work-photo">
+      <div className="relative aspect-square overflow-hidden rounded-[18px] border-2 border-border bg-muted shadow-[0_4px_0_var(--border)] transition-transform group-hover:-translate-y-0.5">
         {photo ? (
           // eslint-disable-next-line @next/next/no-img-element -- authenticated upload served through the API proxy
           <img src={uploadUrl(photo)} alt={l(work.title)} loading="lazy" className="size-full object-cover transition-transform duration-300 group-hover:scale-105" />
         ) : (
-          <div className="flex size-full items-center justify-center text-sm font-semibold text-muted-foreground">{t('noPhoto')}</div>
+          <div className="flex size-full flex-col items-center justify-center gap-1 text-sm font-bold text-muted-foreground">
+            <Camera className="size-6 opacity-60" />
+            {t('noPhoto')}
+          </div>
         )}
-        <StatusBadge status={work.status} className="absolute start-2 top-2 shadow-sm" />
+        <StatusBadge status={work.status} className="absolute start-2 top-2" />
         {work.audience === 'FAMILY' && (
-          <span className="absolute bottom-2 end-2 flex size-7 items-center justify-center rounded-full bg-card/90 text-coral shadow-sm" title={t('family')}>
+          <span className="absolute bottom-2 end-2 flex size-8 items-center justify-center rounded-full bg-card text-flag shadow-[0_2px_0_var(--border)]" title={t('family')}>
             <Heart className="size-4 fill-current" />
           </span>
         )}
       </div>
-      <p className="mt-2 line-clamp-2 text-sm font-bold leading-snug">{l(work.title)}</p>
-      <p className="text-xs text-muted-foreground">
+      <p className="mt-2.5 line-clamp-2 text-sm font-extrabold leading-snug">{l(work.title)}</p>
+      <p className="text-xs font-bold text-muted-foreground">
         {format.relativeTime(new Date(work.at), now)}
         {work.finalScore != null && <> · {t('score', { score: work.finalScore })}</>}
       </p>
@@ -89,7 +95,7 @@ function WorkDetail({ work }: { work: Work }) {
       <div className="mt-4 grid gap-3">
         {work.photoUploadIds.map((id) => (
           // eslint-disable-next-line @next/next/no-img-element -- authenticated upload served through the API proxy
-          <img key={id} src={uploadUrl(id)} alt={l(work.title)} className="max-h-[65vh] w-full rounded-[16px] object-contain bg-muted" />
+          <img key={id} src={uploadUrl(id)} alt={l(work.title)} className="max-h-[65vh] w-full rounded-[16px] border-2 border-border bg-muted object-contain" />
         ))}
       </div>
     </div>

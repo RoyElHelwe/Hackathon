@@ -1,10 +1,10 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { PageHeader } from '@/components/app/adult-shell';
 import { ErrorState, PageSkeleton } from '@/components/app/states';
 import { InviteTeacher } from '@/components/director/invite-teacher';
 import { MemberGroups } from '@/components/director/member-groups';
+import { PageHero } from '@/components/director/page-hero';
 import { PendingMembers } from '@/components/director/pending-members';
 import { SchoolCodeCard } from '@/components/director/school-code-card';
 import { useToast } from '@/components/director/toast';
@@ -24,7 +24,7 @@ export default function MembersPage() {
 
   return (
     <div>
-      <PageHeader title={t('title')} subtitle={t('subtitle')} />
+      <PageHero mood="welcome" eyebrow={school.data?.name} title={t('title')} subtitle={t('subtitle')} />
       <div className="grid gap-5 lg:grid-cols-3">
         <div className="space-y-5 lg:col-span-2">
           <PendingMembers schoolId={schoolId} onToast={toast} />

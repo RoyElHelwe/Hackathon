@@ -5,6 +5,7 @@ import { Sparkles } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
+import { Arzino } from '@/components/arzino';
 import { PageHeader } from '@/components/app/adult-shell';
 import { ErrorState, PageSkeleton } from '@/components/app/states';
 import type { CourseLesson } from '@/components/teacher/types';
@@ -69,8 +70,13 @@ export default function NewExamPage() {
 
   return (
     <div className="max-w-3xl">
-      <PageHeader title={t('title')} />
-      <Card className="space-y-5 p-5">
+      <div className="flex items-center gap-4">
+        <Arzino mood="writing" size={96} className="hidden sm:inline-flex" pop />
+        <div className="min-w-0 flex-1">
+          <PageHeader title={t('title')} subtitle={t('lessonsHint')} />
+        </div>
+      </div>
+      <Card className="space-y-6 p-5 sm:p-6">
         <div className="space-y-1.5">
           <Label htmlFor="exam-class">{t('class')}</Label>
           <Select id="exam-class" value={classId} onChange={(e) => setClassId(e.target.value)} data-testid="exam-class">
@@ -84,11 +90,13 @@ export default function NewExamPage() {
 
         <div className="space-y-1.5">
           <Label>{t('lessons')}</Label>
-          <p className="text-xs text-muted-foreground">{t('lessonsHint')}</p>
           {lessons.isLoading ? (
             <PageSkeleton />
           ) : !usable.length ? (
-            <p className="rounded-[12px] bg-muted p-3 text-sm">{t('noLessons')}</p>
+            <div className="flex items-center gap-3 rounded-[16px] border-2 border-dashed border-border bg-muted p-3 text-sm font-semibold">
+              <Arzino mood="bored-waiting" size={56} />
+              {t('noLessons')}
+            </div>
           ) : (
             <ul className="grid gap-2 sm:grid-cols-2" data-testid="lesson-picker">
               {usable.map((l) => {
@@ -99,12 +107,15 @@ export default function NewExamPage() {
                       type="button"
                       onClick={() => toggle(l.id)}
                       aria-pressed={on}
-                      className={cn('flex w-full items-start gap-2 rounded-[14px] border-2 p-3 text-start transition-colors', on ? 'border-primary bg-violet-soft' : 'border-border hover:bg-muted')}
+                      className={cn(
+                        'flex w-full items-start gap-3 rounded-[16px] border-2 p-3 text-start transition-[colors,transform] active:translate-y-[2px]',
+                        on ? 'border-med bg-med-soft shadow-[0_4px_0_0_var(--med-d)]' : 'border-border bg-card shadow-[0_4px_0_0_var(--border)] hover:bg-muted',
+                      )}
                       data-testid="lesson-option"
                     >
-                      <span className={cn('mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-md border-2 text-xs font-black', on ? 'border-primary bg-primary text-white' : 'border-border')}>{on ? '✓' : ''}</span>
+                      <span className={cn('mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-[8px] border-2 text-xs font-black', on ? 'border-med bg-med text-white' : 'border-lock-d bg-card')}>{on ? '✓' : ''}</span>
                       <span className="min-w-0">
-                        <span className="block font-bold">{l.title}</span>
+                        <span className="block font-black">{l.title}</span>
                         {l.description && <span className="line-clamp-2 text-xs text-muted-foreground">{l.description}</span>}
                       </span>
                     </button>
@@ -123,7 +134,7 @@ export default function NewExamPage() {
         <div className="space-y-1.5">
           <Label>{t('duration')}</Label>
           <Slider min={EXAM_DURATION.min} max={EXAM_DURATION.max} step={1} value={[duration]} onValueChange={(v) => setDuration(v[0])} aria-label={t('duration')} />
-          <p className="text-sm font-bold text-primary" data-testid="duration-value">{t('durationValue', { min: duration, n: questionCountFor(duration) })}</p>
+          <p className="w-fit rounded-full bg-med-soft px-3 py-1 text-sm font-black text-med-ink dark:text-white" data-testid="duration-value">{t('durationValue', { min: duration, n: questionCountFor(duration) })}</p>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-3">
@@ -145,7 +156,7 @@ export default function NewExamPage() {
         </div>
 
         {error && <p className="text-sm font-semibold text-danger">{error}</p>}
-        <Button size="lg" onClick={create} loading={busy} disabled={!classId || !usable.length} data-testid="create-exam">
+        <Button variant="kidMint" size="lg" className="w-full sm:w-auto" onClick={create} loading={busy} disabled={!classId || !usable.length} data-testid="create-exam">
           <Sparkles /> {t('create')}
         </Button>
       </Card>

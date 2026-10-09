@@ -27,7 +27,7 @@ export class GamificationController {
     return this.gamification.progressMe(a.userId);
   }
 
-  /** Teachers can grant evaluation points (42-style wallet). */
+  /** Teachers can grant evaluation points (peer-review wallet). */
   @Can('override', 'peer_evaluation')
   @Post('gamification/wallet/grant')
   async grant(@Auth() a: AuthContext, @Body(new ZodPipe(walletGrantBody)) body: { studentId: string; points: number }) {

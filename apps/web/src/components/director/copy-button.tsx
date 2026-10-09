@@ -38,7 +38,7 @@ export function useCopy() {
 export function CopyButton({ text, label, copiedLabel, ...props }: { text: string; label: string; copiedLabel: string } & Omit<ButtonProps, 'onClick' | 'children'>) {
   const { copied, copy } = useCopy();
   return (
-    <Button variant={copied ? 'mint' : 'outline'} onClick={() => copy(text)} aria-live="polite" {...props}>
+    <Button variant={copied ? 'kid' : 'kidGhost'} onClick={() => copy(text)} aria-live="polite" {...props}>
       {copied ? <Check /> : <Copy />}
       {copied ? copiedLabel : label}
     </Button>

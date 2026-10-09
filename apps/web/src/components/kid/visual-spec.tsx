@@ -1,15 +1,23 @@
 import type { VisualSpec } from '@tajriba/shared';
 
+/** AI color names (legacy + Arzino palette) → hex. Unknown names pass through as CSS colors. */
 const COLORS: Record<string, string> = {
-  violet: '#6C4CF1',
-  mint: '#2DD4A7',
-  sunny: '#FFC83D',
-  coral: '#FF7A59',
-  sky: '#4CB8FF',
-  green: '#5CC45C',
+  violet: '#1C8BE0',
+  mint: '#22C58B',
+  sunny: '#FFC21A',
+  coral: '#E4252D',
+  sky: '#1C8BE0',
+  green: '#58CC02',
+  cedar: '#00A651',
+  flag: '#E4252D',
+  red: '#E4252D',
+  med: '#1C8BE0',
+  blue: '#1C8BE0',
+  flame: '#FF9600',
+  orange: '#FF9600',
   ink: 'currentColor',
 };
-const col = (c?: string) => (c ? (COLORS[c] ?? c) : COLORS.violet);
+const col = (c?: string) => (c ? (COLORS[c] ?? c) : COLORS.cedar);
 
 /** Renders the AI "visualSpec" (simple shapes in a 0..100 viewBox) as an SVG illustration. */
 export function VisualSpecView({ spec, className }: { spec: VisualSpec | null | undefined; className?: string }) {
@@ -50,7 +58,7 @@ export function VisualSpecView({ spec, className }: { spec: VisualSpec | null | 
           }
         })}
       </svg>
-      {spec.caption && <figcaption className="mt-2 text-center text-sm font-bold text-muted-foreground">{spec.caption}</figcaption>}
+      {spec.caption && <figcaption className="mt-3 text-center text-sm font-extrabold text-muted-foreground">{spec.caption}</figcaption>}
     </figure>
   );
 }

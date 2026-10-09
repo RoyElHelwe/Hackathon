@@ -4,16 +4,18 @@ import { ArrowRight, BookOpenCheck, CheckCircle2, GraduationCap, Send } from 'lu
 import { useTranslations } from 'next-intl';
 import { use, useState } from 'react';
 import { PageSkeleton } from '@/components/app/states';
-import { Bousla } from '@/components/bousla';
+import { Arzino } from '@/components/arzino';
 import { CoursePicker } from '@/components/teacher/course-picker';
 import { ImportSuccess } from '@/components/teacher/import-success';
 import { Stepper } from '@/components/teacher/stepper';
 import type { ImportResult } from '@/components/teacher/types';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { cn } from '@/lib/cn';
 import { useMe } from '@/lib/hooks';
 
 type Step = 'connect' | 'import' | 'done';
+
+const PERK_TONES = ['bg-med-soft text-med-d dark:text-med', 'bg-cedar-soft text-cedar-d dark:text-success', 'bg-flame-soft text-flame-d dark:text-warning'];
 
 export default function TeacherOnboardingPage({ searchParams }: { searchParams: Promise<{ step?: string }> }) {
   const sp = use(searchParams);
@@ -26,21 +28,36 @@ export default function TeacherOnboardingPage({ searchParams }: { searchParams: 
   const step: Step = override ?? (sp.step === 'import' || me.classroomConnected ? 'import' : 'connect');
   const index = { connect: 0, import: 1, done: 3 }[step];
 
+  const panelMood = step === 'done' ? 'lebanese-pride' : step === 'import' ? 'teaching' : 'welcome';
+
   return (
-    <div className="mx-auto max-w-3xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-extrabold tracking-tight md:text-3xl">{t('title')}</h1>
-        <p className="mt-1 text-muted-foreground">{t('subtitle')}</p>
-      </div>
-      <Card className="mb-6 p-4">
-        <Stepper steps={[t('stepConnect'), t('stepImport'), t('stepDone')]} current={index} />
-      </Card>
-      <Card className="p-6 md:p-8">
+    <div className="mx-auto grid max-w-5xl overflow-hidden rounded-[24px] border-2 border-border bg-card shadow-[0_4px_0_0_var(--border)] lg:grid-cols-[320px_1fr]">
+      {/* Role-colored side panel (teacher = blue); phones drop it */}
+      <aside className="relative hidden flex-col gap-6 bg-med p-8 text-white lg:flex">
+        <div>
+          <p className="eyebrow !text-white/80">{t('panelEyebrow')}</p>
+          <h1 className="mt-1 font-display text-[32px] font-black leading-[1.1]">{t('title')}</h1>
+          <p className="mt-2 font-semibold text-white/90">{t('subtitle')}</p>
+        </div>
+        <Arzino mood={panelMood} size={230} className="mx-auto my-auto" pop />
+        <Stepper steps={[t('stepConnect'), t('stepImport'), t('stepDone')]} current={index} vertical onDark />
+      </aside>
+      <div className="min-w-0 p-6 md:p-9">
+        <div className="mb-6 flex items-center gap-4 lg:hidden">
+          <Arzino mood={panelMood} size={84} />
+          <div>
+            <h1 className="font-display text-[28px] font-black leading-tight">{t('title')}</h1>
+            <p className="mt-1 text-sm font-semibold text-muted-foreground">{t('subtitle')}</p>
+          </div>
+        </div>
+        <div className="mb-7 lg:hidden">
+          <Stepper steps={[t('stepConnect'), t('stepImport'), t('stepDone')]} current={index} />
+        </div>
         {step === 'connect' && <ConnectStep connected={me.classroomConnected} onNext={() => setOverride('import')} />}
         {step === 'import' && (
           <>
-            <h2 className="text-xl font-extrabold">{t('importTitle')}</h2>
-            <p className="mb-5 mt-1 text-sm text-muted-foreground">{t('importBody')}</p>
+            <h2 className="font-display text-[24px] font-black leading-tight">{t('importTitle')}</h2>
+            <p className="mb-6 mt-1 text-sm font-semibold text-muted-foreground">{t('importBody')}</p>
             <CoursePicker
               onImported={(r) => {
                 setResults(r);
@@ -50,7 +67,7 @@ export default function TeacherOnboardingPage({ searchParams }: { searchParams: 
           </>
         )}
         {step === 'done' && <ImportSuccess results={results} />}
-      </Card>
+      </div>
     </div>
   );
 }
@@ -63,15 +80,15 @@ function ConnectStep({ connected, onNext }: { connected: boolean; onNext: () => 
     { icon: BookOpenCheck, text: t('perkGrades') },
   ];
   return (
-    <div className="grid items-center gap-8 md:grid-cols-[1fr_auto]">
+    <div>
       <div>
-        <h2 className="text-xl font-extrabold">{t('connectTitle')}</h2>
-        <p className="mt-1 text-muted-foreground">{t('connectBody')}</p>
-        <ul className="mt-5 space-y-3">
-          {perks.map((p) => (
-            <li key={p.text} className="flex items-center gap-3 text-sm font-semibold">
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-[12px] bg-mint-soft text-success">
-                <p.icon className="size-4" />
+        <h2 className="font-display text-[24px] font-black leading-tight">{t('connectTitle')}</h2>
+        <p className="mt-1 font-semibold text-muted-foreground">{t('connectBody')}</p>
+        <ul className="mt-6 space-y-3">
+          {perks.map((p, i) => (
+            <li key={p.text} className="flex items-center gap-3 rounded-[16px] border-2 border-border p-3 text-[15px] font-bold">
+              <span className={cn('flex size-11 shrink-0 items-center justify-center rounded-[14px]', PERK_TONES[i])}>
+                <p.icon className="size-5" strokeWidth={2.4} />
               </span>
               {p.text}
             </li>
@@ -80,24 +97,23 @@ function ConnectStep({ connected, onNext }: { connected: boolean; onNext: () => 
         <div className="mt-7">
           {connected ? (
             <div className="flex flex-wrap items-center gap-3">
-              <span className="inline-flex items-center gap-2 font-bold text-success">
+              <span className="inline-flex items-center gap-2 font-extrabold text-cedar-d dark:text-success">
                 <CheckCircle2 className="size-5" /> {t('connected')}
               </span>
-              <Button onClick={onNext} data-testid="onboarding-next">
+              <Button variant="kidMint" onClick={onNext} data-testid="onboarding-next">
                 {t('next')} <ArrowRight className="rtl-flip" />
               </Button>
             </div>
           ) : (
-            <Button asChild size="pill">
+            <Button asChild size="pill" variant="kidMint">
               <a href="/api/classroom/connect" data-testid="connect-classroom">
                 <GoogleMark /> {t('connectCta')}
               </a>
             </Button>
           )}
-          <p className="mt-3 text-xs text-muted-foreground">{t('privacy')}</p>
+          <p className="mt-4 text-xs font-semibold text-muted-foreground">{t('privacy')}</p>
         </div>
       </div>
-      <Bousla mood={connected ? 'happy' : 'curious'} size={150} className="mx-auto hidden md:block" />
     </div>
   );
 }

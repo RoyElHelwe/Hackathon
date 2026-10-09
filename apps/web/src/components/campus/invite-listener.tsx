@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { Bousla } from '@/components/bousla';
+import { Arzino } from '@/components/arzino';
 import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
 import { useSocketEvent } from '@/lib/campus/use-room';
@@ -54,18 +54,18 @@ export function InviteListener() {
           initial={{ opacity: 0, y: -24, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: -16 }}
-          className="fixed inset-x-3 top-20 z-[60] mx-auto flex max-w-md items-center gap-3 rounded-[20px] border-2 border-violet bg-card p-3 shadow-2xl"
+          className="fixed inset-x-3 top-20 z-[60] mx-auto flex max-w-md items-center gap-3 rounded-[20px] border-2 border-cedar bg-card p-3 shadow-[0_5px_0_0_var(--cedar-d),0_20px_40px_-12px_rgba(0,0,0,0.3)]"
           role="alertdialog"
           aria-live="assertive"
           data-testid="study-invite-popup"
         >
-          <Bousla mood="cheering" size={52} />
-          <p className="min-w-0 flex-1 font-display text-base font-bold leading-tight">{t('invites.from', { name: invite.fromName.split(' ')[0] })}</p>
+          <Arzino mood="streak-buddy" size={72} />
+          <p className="min-w-0 flex-1 font-display text-lg font-black leading-tight">{t('invites.from', { name: invite.fromName.split(' ')[0] })}</p>
           <div className="flex flex-col gap-1.5">
             <Button size="sm" variant="kid" onClick={join} loading={busy} data-testid="invite-join">
               {t('invites.accept')}
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => setInvite(null)}>
+            <Button size="sm" variant="kidGhost" onClick={() => setInvite(null)}>
               {t('invites.decline')}
             </Button>
           </div>

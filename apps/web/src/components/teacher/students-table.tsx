@@ -14,7 +14,7 @@ export function StudentsTable({ students, classId }: { students: ClassStudent[];
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-border text-xs font-bold uppercase tracking-wide text-muted-foreground">
+          <tr className="eyebrow border-b-2 border-border">
             <th className="py-2 text-start font-bold">{t('colStudent')}</th>
             <th className="px-2 py-2 text-start font-bold">{t('colLevel')}</th>
             <th className="px-2 py-2 text-end font-bold">XP</th>
@@ -25,9 +25,9 @@ export function StudentsTable({ students, classId }: { students: ClassStudent[];
         </thead>
         <tbody>
           {students.map((s) => (
-            <tr key={s.id} className="group border-b border-border last:border-0 hover:bg-muted/40" data-testid="student-row">
+            <tr key={s.id} className="group border-b-2 border-border last:border-0 hover:bg-muted" data-testid="student-row">
               <td className="py-2.5">
-                <Link href={`/teacher/students/${s.id}?classId=${classId}`} className="flex items-center gap-3 font-bold group-hover:text-primary">
+                <Link href={`/teacher/students/${s.id}?classId=${classId}`} className="flex items-center gap-3 font-extrabold group-hover:text-med-d dark:group-hover:text-med">
                   <Avatar name={s.name} src={s.avatarUrl} className="size-9 text-xs" />
                   <span className="truncate">{s.name}</span>
                   {s.status === 'INVITED' && <Badge variant="muted">{t('invited')}</Badge>}
@@ -35,10 +35,10 @@ export function StudentsTable({ students, classId }: { students: ClassStudent[];
                 </Link>
               </td>
               <td className="px-2 py-2.5">
-                <Badge variant="default">{t('level', { n: s.level })}</Badge>
+                <Badge variant="sky">{t('level', { n: s.level })}</Badge>
               </td>
-              <td className="px-2 py-2.5 text-end font-semibold tabular-nums">{s.xp}</td>
-              <td className="px-2 py-2.5 text-end font-semibold tabular-nums">{s.mastered}</td>
+              <td className="px-2 py-2.5 text-end font-black tabular-nums">{s.xp}</td>
+              <td className="px-2 py-2.5 text-end font-black tabular-nums text-cedar-d dark:text-success">{s.mastered}</td>
               <td className="hidden px-2 py-2.5 md:table-cell">
                 {s.parents.length ? (
                   <span className="inline-flex items-center gap-1.5 text-muted-foreground">

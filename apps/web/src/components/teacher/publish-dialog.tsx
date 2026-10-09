@@ -4,6 +4,7 @@ import { CalendarDays, Rocket, ShieldAlert } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { fireConfetti } from '@/components/kid/celebrations';
+import { Arzino } from '@/components/arzino';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Input, Label } from '@/components/ui/input';
@@ -60,11 +61,16 @@ export function PublishDialog({ mission, title, className, classroomLinked, open
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
-        <DialogTitle>{t('title')}</DialogTitle>
-        <DialogDescription className="mt-1">{t('body', { title, className })}</DialogDescription>
+        <div className="flex items-center gap-4">
+          <Arzino mood="teaching" size={84} />
+          <div className="min-w-0">
+            <DialogTitle>{t('title')}</DialogTitle>
+            <DialogDescription className="mt-1">{t('body', { title, className })}</DialogDescription>
+          </div>
+        </div>
 
         <div className="mt-5 space-y-4">
-          <div className="flex items-start justify-between gap-4 rounded-[16px] border border-border p-4">
+          <div className="flex items-start justify-between gap-4 rounded-[16px] border-2 border-med/30 bg-med-soft/60 p-4">
             <div>
               <Label htmlFor="post-to-classroom" className="mb-0.5">
                 {t('postLabel')}
@@ -81,8 +87,8 @@ export function PublishDialog({ mission, title, className, classroomLinked, open
             <p className="mt-1 text-xs text-muted-foreground">{t('dueHint')}</p>
           </div>
           {error && (
-            <div className="rounded-[14px] bg-coral-soft p-3 text-sm" role="alert">
-              <p className="flex items-center gap-2 font-bold text-danger">
+            <div className="rounded-[14px] border-2 border-flag/30 bg-flag-soft p-3 text-sm" role="alert">
+              <p className="flex items-center gap-2 font-bold text-flag-d dark:text-danger">
                 <ShieldAlert className="size-4" /> {error}
               </p>
               {!!issues.length && (
@@ -101,7 +107,7 @@ export function PublishDialog({ mission, title, className, classroomLinked, open
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={busy}>
             {t('cancel')}
           </Button>
-          <Button onClick={confirm} loading={busy} data-testid="confirm-publish">
+          <Button variant="kid" onClick={confirm} loading={busy} data-testid="confirm-publish">
             <Rocket /> {t('confirm')}
           </Button>
         </div>

@@ -1,12 +1,11 @@
 'use client';
 
 import { ArrowRight, Info, Plus } from 'lucide-react';
-import { motion } from 'motion/react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { FamilyKeypad } from '@/components/app/family-keypad';
-import { Bousla } from '@/components/bousla';
+import { Arzino } from '@/components/arzino';
 import { fireConfetti } from '@/components/kid/celebrations';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -57,46 +56,48 @@ export function LinkChild() {
   if (result) {
     const name = firstName(result.child.name);
     return (
-      <Card className="mx-auto max-w-md p-6 text-center sm:p-8" data-testid="link-success">
-        <motion.div initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 180, damping: 12 }} className="flex justify-center">
-          <Bousla mood="cheering" size={130} />
-        </motion.div>
-        <h2 className="mt-4 font-display text-3xl font-extrabold">{t('successTitle', { name })}</h2>
-        <p className="mt-2 text-muted-foreground">{t('successBody', { name, school: result.school.name })}</p>
-        <div className="mt-6 flex flex-col gap-3">
-          <Button asChild size="pill" data-testid="see-child">
+      <div className="mx-auto flex max-w-md flex-col items-center text-center" data-testid="link-success">
+        <Arzino mood="celebrate" size={200} pop priority />
+        <h1 className="mt-2 text-[30px] font-black leading-tight">{t('successTitle', { name })}</h1>
+        <p className="mt-2 font-semibold text-muted-foreground">{t('successBody', { name, school: result.school.name })}</p>
+        <div className="mt-6 flex w-full flex-col gap-3">
+          <Button asChild variant="kid" size="pill" data-testid="see-child">
             <Link href={`/parent?child=${result.child.id}`}>
               {t('seeProgress', { name })} <ArrowRight className="rtl-flip" />
             </Link>
           </Button>
-          <Button variant="ghost" onClick={reset}>
+          <Button variant="kidGhost" onClick={reset}>
             <Plus /> {t('another')}
           </Button>
         </div>
-      </Card>
+      </div>
     );
   }
 
   return (
-    <Card className="mx-auto max-w-md p-6 sm:p-8">
-      <div className="mb-5 flex flex-col items-center text-center">
-        <Bousla mood={error ? 'curious' : busy ? 'thinking' : 'happy'} size={88} />
-        <p className="mt-3 flex items-start gap-2 rounded-[14px] bg-sky-soft px-3 py-2 text-start text-sm font-semibold">
-          <Info className="mt-0.5 size-4 shrink-0 text-sky" /> {t('how')}
-        </p>
+    <div className="mx-auto max-w-md">
+      <div className="flex flex-col items-center text-center">
+        <Arzino mood={error ? 'oops' : busy ? 'thinking' : 'welcome'} size={170} pop priority />
+        <h1 className="mt-1 text-[30px] font-black leading-tight">{t('title')}</h1>
+        <p className="mt-1 font-semibold text-muted-foreground">{t('subtitle')}</p>
       </div>
-      <FamilyKeypad key={attempt} onComplete={submit} disabled={busy} error={error} />
-      <div className="mt-5 min-h-12 text-center" aria-live="polite">
-        {busy && <p className="font-bold text-muted-foreground">{t('linking')}</p>}
-        {error && (
-          <div className="space-y-3" role="alert" data-testid="link-error">
-            <p className="font-semibold text-danger">{error}</p>
-            <Button variant="outline" onClick={reset}>
-              {t('tryAgain')}
-            </Button>
-          </div>
-        )}
-      </div>
-    </Card>
+      <Card className="mt-5 p-5 sm:p-7">
+        <FamilyKeypad key={attempt} onComplete={submit} disabled={busy} error={error} />
+        <div className="mt-4 min-h-12 text-center" aria-live="polite">
+          {busy && <p className="font-black text-muted-foreground">{t('linking')}</p>}
+          {error && (
+            <div className="space-y-3" role="alert" data-testid="link-error">
+              <p className="font-bold text-flag-d dark:text-danger">{error}</p>
+              <Button variant="kidGhost" onClick={reset}>
+                {t('tryAgain')}
+              </Button>
+            </div>
+          )}
+        </div>
+      </Card>
+      <p className="mt-4 flex items-start gap-2 rounded-[16px] border-2 border-med/25 bg-med-soft px-4 py-3 text-start text-sm font-bold text-med-ink dark:text-white">
+        <Info className="mt-0.5 size-4 shrink-0" /> {t('how')}
+      </p>
+    </div>
   );
 }

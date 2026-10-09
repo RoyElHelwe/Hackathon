@@ -37,7 +37,7 @@ export function PhotoPicker({ value, onChange, max = 5 }: { value: string[]; onC
     <div>
       <div className="grid grid-cols-3 gap-3">
         {value.map((id) => (
-          <div key={id} className="relative aspect-square overflow-hidden rounded-[16px] border-2 border-border bg-muted">
+          <div key={id} className="relative aspect-square overflow-hidden rounded-[18px] border-2 border-border bg-muted shadow-[0_4px_0_var(--border)]">
             {/* eslint-disable-next-line @next/next/no-img-element -- authenticated upload served by the API */}
             <img src={uploadUrl(id)} alt="" className="size-full object-cover" />
             <button type="button" onClick={() => onChange(value.filter((x) => x !== id))} className="absolute end-1.5 top-1.5 rounded-full bg-ink/70 p-1 text-white" aria-label={t('removePhoto')}>
@@ -54,9 +54,9 @@ export function PhotoPicker({ value, onChange, max = 5 }: { value: string[]; onC
           <button
             type="button"
             onClick={() => input.current?.click()}
-            className={cn('flex aspect-square flex-col items-center justify-center gap-1 rounded-[16px] border-2 border-dashed border-primary/50 bg-violet-soft/50 p-2 text-center text-xs font-bold text-primary dark:text-white')}
+            className={cn('flex aspect-square flex-col items-center justify-center gap-1.5 rounded-[18px] border-2 border-dashed border-med/60 bg-med-soft p-2 text-center text-xs font-black uppercase tracking-[0.05em] text-med-ink transition-colors hover:bg-med/15 dark:text-white')}
           >
-            <Camera className="size-8" />
+            <Camera className="size-9" strokeWidth={2.2} />
             {t('takePhoto')}
           </button>
         )}

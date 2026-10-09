@@ -5,12 +5,10 @@ import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Suspense } from 'react';
-import { PageHeader } from '@/components/app/adult-shell';
 import { EmptyState, ErrorState, PageSkeleton } from '@/components/app/states';
 import { ChildDashboard } from '@/components/parent/child-dashboard';
 import { ChildExams } from '@/components/parent/child-exams';
 import { ChildSwitcher } from '@/components/parent/child-switcher';
-import { firstName } from '@/components/parent/types';
 import { Button } from '@/components/ui/button';
 import { useMe } from '@/lib/hooks';
 
@@ -36,12 +34,12 @@ function ParentHome() {
   if (!kids.length) {
     return (
       <EmptyState
-        mood="curious"
+        mood="warm"
         title={t('noChildrenTitle')}
         body={t('noChildrenBody')}
         className="py-16"
         action={
-          <Button asChild size="pill">
+          <Button asChild variant="kid" size="pill">
             <Link href="/parent/link">
               <Link2 /> {t('linkChild')}
             </Link>
@@ -55,9 +53,8 @@ function ParentHome() {
   const select = (id: string) => router.replace(`${pathname}?child=${id}`, { scroll: false });
 
   return (
-    <div>
+    <div className="mx-auto max-w-6xl">
       <ChildSwitcher items={kids} value={selected.id} onChange={select} />
-      <PageHeader title={t('title', { name: firstName(selected.name) })} subtitle={t('subtitle', { name: firstName(selected.name) })} />
       <ChildDashboard key={selected.id} studentId={selected.id} />
       <ChildExams key={`exams-${selected.id}`} studentId={selected.id} />
     </div>

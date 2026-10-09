@@ -1,8 +1,8 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { PageHeader } from '@/components/app/adult-shell';
 import { ErrorState, PageSkeleton } from '@/components/app/states';
+import { PageHero } from '@/components/director/page-hero';
 import { SettingsForm } from '@/components/director/settings-form';
 import { useToast } from '@/components/director/toast';
 import type { School } from '@/components/director/types';
@@ -18,7 +18,7 @@ export default function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <PageHeader title={t('title')} subtitle={data ? `${data.name} · ${t('subtitle')}` : t('subtitle')} />
+      <PageHero mood="clipboard" eyebrow={data?.name} title={t('title')} subtitle={t('subtitle')} />
       {isLoading || !schoolId ? (
         <PageSkeleton />
       ) : error || !data ? (

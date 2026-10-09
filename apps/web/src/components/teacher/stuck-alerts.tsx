@@ -3,7 +3,7 @@
 import { ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { Bousla } from '@/components/bousla';
+import { Arzino } from '@/components/arzino';
 import { Badge } from '@/components/ui/badge';
 import { Avatar } from '@/components/ui/misc';
 import { useL } from '@/lib/hooks';
@@ -14,17 +14,17 @@ export function StuckAlertItem({ alert, classId, label }: { alert: StuckAlert; c
   const l = useL();
   return (
     <li data-testid="stuck-alert">
-      {label && <p className="mb-1 text-xs font-bold text-muted-foreground">{label}</p>}
+      {label && <p className="eyebrow mb-1">{label}</p>}
       <Link
         href={`/teacher/students/${alert.studentId}?classId=${classId}`}
-        className="group flex items-center gap-3 rounded-[16px] border border-coral/30 bg-coral-soft/60 p-3 transition-colors hover:bg-coral-soft"
+        className="group flex items-center gap-3 rounded-[16px] border-2 border-flag/25 bg-card p-3 transition-colors hover:border-flag/60 hover:bg-flag-soft"
       >
         <Avatar name={alert.studentName} className="size-10" />
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-bold leading-snug">{t('line', { name: alert.studentName, topic: l(alert.topicName) })}</p>
+          <p className="text-sm font-extrabold leading-snug">{t('line', { name: alert.studentName, topic: l(alert.topicName) })}</p>
           <div className="mt-1 flex flex-wrap gap-1">
             {alert.reasons.map((r) => (
-              <Badge key={r} variant="outline" className="bg-card font-semibold">
+              <Badge key={r} variant="coral">
                 {t(`reason.${r}`)}
               </Badge>
             ))}
@@ -40,10 +40,10 @@ export function StuckAlertList({ alerts, classId }: { alerts: StuckAlert[]; clas
   const t = useTranslations('teacher.stuck');
   if (!alerts.length)
     return (
-      <div className="flex items-center gap-3 rounded-[16px] bg-mint-soft p-4">
-        <Bousla mood="happy" size={52} />
+      <div className="flex items-center gap-3 rounded-[16px] border-2 border-cedar/30 bg-cedar-soft p-4">
+        <Arzino mood="cool" size={64} />
         <div>
-          <p className="font-bold">{t('noneTitle')}</p>
+          <p className="font-extrabold text-cedar-ink dark:text-white">{t('noneTitle')}</p>
           <p className="text-sm text-muted-foreground">{t('noneBody')}</p>
         </div>
       </div>

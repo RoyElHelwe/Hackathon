@@ -102,7 +102,7 @@ export function VoiceInput({ onTranscript, onAudio, className }: { onTranscript:
       <button
         type="button"
         onClick={listening ? stop : start}
-        className={cn('kid-press flex h-14 items-center gap-2 rounded-full px-5 font-display text-lg font-bold text-white', listening ? 'bg-coral [--press:#d65a3b]' : 'bg-primary')}
+        className={cn('kid-press flex h-14 items-center gap-2 rounded-[16px] px-5 font-display text-[15px] font-black uppercase tracking-[0.08em] text-white', listening ? 'bg-flag [--press:var(--flag-d)]' : 'bg-cedar [--press:var(--cedar-d)]')}
         aria-pressed={listening}
         data-testid="mic-button"
       >
@@ -110,10 +110,10 @@ export function VoiceInput({ onTranscript, onAudio, className }: { onTranscript:
         {listening ? t('stopSpeaking') : t('speak')}
       </button>
       {listening && (
-        <span className="flex items-center gap-2 text-sm font-semibold text-coral" aria-live="polite">
+        <span className="flex items-center gap-2 text-sm font-semibold text-flag" aria-live="polite">
           <span className="relative flex size-3">
-            <span className="absolute inline-flex size-full animate-ping rounded-full bg-coral opacity-75" />
-            <span className="relative inline-flex size-3 rounded-full bg-coral" />
+            <span className="absolute inline-flex size-full animate-ping rounded-full bg-flag opacity-75" />
+            <span className="relative inline-flex size-3 rounded-full bg-flag" />
           </span>
           {t('listening')}
         </span>

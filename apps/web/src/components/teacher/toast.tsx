@@ -41,7 +41,7 @@ const ICONS = { success: CheckCircle2, error: AlertCircle, info: Info };
 const TONES: Record<Tone, string> = {
   success: 'text-success',
   error: 'text-danger',
-  info: 'text-primary',
+  info: 'text-med',
 };
 
 export function Toaster() {
@@ -61,7 +61,7 @@ export function Toaster() {
               initial={{ opacity: 0, y: 16, scale: 0.96 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 8 }}
-              className="pointer-events-auto flex max-w-md items-center gap-3 rounded-[16px] border border-border bg-card px-4 py-3 text-sm font-bold shadow-xl"
+              className="pointer-events-auto flex max-w-md items-center gap-3 rounded-[16px] border-2 border-border bg-card px-4 py-3 text-sm font-extrabold shadow-[0_4px_0_0_var(--border),0_12px_32px_-12px_rgba(22,38,42,0.25)]"
               role="status"
               data-testid="toast"
             >

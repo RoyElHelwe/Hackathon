@@ -3,60 +3,87 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* ---------- Brand tokens ---------- */
+/* ---------- Brand tokens: Arzino / Lebanon ----------
+   White ground, cedar green, flag red, Mediterranean blue; orange only for the streak flame.
+   Legacy token names (violet, mint, sunny, coral, sky) are kept as aliases so every screen re-themes at once:
+   violet → cedar (primary), mint → fresh leaf, sunny → gold, coral → flag red, sky → Mediterranean blue. */
 :root {
-  --violet: #6c4cf1;
-  --violet-600: #5a3be0;
-  --violet-100: #ece7ff;
-  --mint: #2dd4a7;
-  --mint-100: #d8f8ee;
-  --sunny: #ffc83d;
-  --sunny-100: #fff3cf;
-  --coral: #ff7a59;
-  --coral-100: #ffe5dd;
-  --sky: #4cb8ff;
-  --sky-100: #dcf0ff;
-  --green: #5cc45c;
-  --green-100: #e0f5e0;
-  --ink: #14112b;
+  --cedar: #00a651;
+  --cedar-d: #00843f;
+  --cedar-ink: #006b37;
+  --cedar-soft: #e2f5ea;
+  --flag: #e4252d;
+  --flag-d: #b3171e;
+  --flag-soft: #fde6e7;
+  --med: #1c8be0;
+  --med-d: #136cb2;
+  --med-ink: #0d5a99;
+  --med-soft: #e3f1fc;
+  --flame: #ff9600;
+  --flame-d: #d97a00;
+  --flame-soft: #fff1de;
+  --lock: #e6ebe8;
+  --lock-d: #c9d2cd;
+
+  --violet: var(--cedar);
+  --violet-600: var(--cedar-d);
+  --violet-100: var(--cedar-soft);
+  --mint: #22c58b;
+  --mint-100: #dcf7ec;
+  --sunny: #ffc21a;
+  --sunny-100: #fff5d6;
+  --coral: var(--flag);
+  --coral-100: var(--flag-soft);
+  --sky: var(--med);
+  --sky-100: var(--med-soft);
+  --green: #58cc02;
+  --green-100: #e5f8d6;
+  --ink: #16262a;
 
   /* semantic (light) */
-  --background: #faf8ff;
-  --foreground: #14112b;
+  --background: #ffffff;
+  --foreground: #16262a;
   --card: #ffffff;
-  --card-foreground: #14112b;
-  --muted: #f1eefb;
-  --muted-foreground: #5f5a7a;
-  --border: #e6e1f5;
-  --ring: #6c4cf1;
-  --primary: #6c4cf1;
+  --card-foreground: #16262a;
+  --muted: #f3f7f5;
+  --muted-foreground: #4b5c60;
+  --border: #e2e9e5;
+  --ring: #1c8be0;
+  --primary: #00a651;
   --primary-foreground: #ffffff;
-  --success: #17a37b;
-  --warning: #b77900;
-  --danger: #e2553a;
-  --shadow-press: #4a2fd0;
+  --success: #00843f;
+  --warning: #d97a00;
+  --danger: #e4252d;
+  --shadow-press: #00843f;
 }
 
 .dark {
-  --background: #14112b;
-  --foreground: #f4f1ff;
-  --card: #1e1a3d;
-  --card-foreground: #f4f1ff;
-  --muted: #272247;
-  --muted-foreground: #b7b0d9;
-  --border: #332c5c;
-  --ring: #9b84ff;
-  --primary: #8b72ff;
+  --background: #0d1a17;
+  --foreground: #eef6f2;
+  --card: #132521;
+  --card-foreground: #eef6f2;
+  --muted: #1a302b;
+  --muted-foreground: #a9bdb7;
+  --border: #25403a;
+  --ring: #4fb0ff;
+  --primary: #12c065;
   --primary-foreground: #ffffff;
-  --violet-100: #2c2560;
-  --mint-100: #123d36;
-  --sunny-100: #3d3315;
-  --coral-100: #40231d;
-  --sky-100: #15324a;
-  --green-100: #1b3a1d;
-  --success: #3ddbb0;
-  --warning: #ffd36b;
-  --danger: #ff8a70;
+  --cedar-soft: #12382a;
+  --flag-soft: #3d1618;
+  --med-soft: #10304a;
+  --flame-soft: #3d2a10;
+  --lock: #22332f;
+  --lock-d: #182622;
+  --violet-100: var(--cedar-soft);
+  --mint-100: #0f3a2c;
+  --sunny-100: #3b3212;
+  --coral-100: var(--flag-soft);
+  --sky-100: var(--med-soft);
+  --green-100: #1f3a12;
+  --success: #3ddc84;
+  --warning: #ffb547;
+  --danger: #ff6b70;
+  --shadow-press: #006b37;
 }
 
 @theme inline {
@@ -88,9 +115,25 @@
   --color-green: var(--green);
   --color-green-soft: var(--green-100);
   --color-ink: var(--ink);
+  --color-cedar: var(--cedar);
+  --color-cedar-d: var(--cedar-d);
+  --color-cedar-ink: var(--cedar-ink);
+  --color-cedar-soft: var(--cedar-soft);
+  --color-flag: var(--flag);
+  --color-flag-d: var(--flag-d);
+  --color-flag-soft: var(--flag-soft);
+  --color-med: var(--med);
+  --color-med-d: var(--med-d);
+  --color-med-ink: var(--med-ink);
+  --color-med-soft: var(--med-soft);
+  --color-flame: var(--flame);
+  --color-flame-d: var(--flame-d);
+  --color-flame-soft: var(--flame-soft);
+  --color-lock: var(--lock);
+  --color-lock-d: var(--lock-d);
 
-  --font-sans: var(--font-nunito), var(--font-tajawal), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-baloo), var(--font-nunito), var(--font-tajawal), ui-sans-serif, system-ui;
+  --font-sans: var(--font-nunito), var(--font-kufi), ui-rounded, ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-nunito), var(--font-kufi), ui-rounded, ui-sans-serif, system-ui;
 
   --radius-card: 20px;
   --radius-btn: 16px;
@@ -100,7 +143,8 @@ html {
   -webkit-tap-highlight-color: transparent;
 }
 html[lang='ar'] {
-  --font-sans: var(--font-tajawal), var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-kufi), var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-kufi), var(--font-nunito), ui-sans-serif, system-ui;
 }
 
 body {
@@ -110,8 +154,10 @@ body {
   font-size: 16px;
 }
 
-* {
-  border-color: var(--border);
+@layer base {
+  * {
+    border-color: var(--border);
+  }
 }
 
 :focus-visible {
@@ -121,22 +167,89 @@ body {
 
 /* ---------- Kid mode helpers ---------- */
 .kid-press {
-  box-shadow: 0 4px 0 0 var(--press, var(--shadow-press));
+  box-shadow: 0 5px 0 0 var(--press, var(--shadow-press));
   transition:
     transform 0.08s ease,
     box-shadow 0.08s ease;
 }
 .kid-press:active:not(:disabled) {
-  transform: translateY(4px);
+  transform: translateY(5px);
   box-shadow: 0 0 0 0 var(--press, var(--shadow-press));
 }
 
+
+body {
+  font-weight: 600;
+}
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+@layer components {
 .font-display {
   font-family: var(--font-display);
+  font-weight: 900;
+}
+/* Duolingo-style chunky card: 2px line + solid bottom edge */
+.chunky {
+  border: 2px solid var(--border);
+  box-shadow: 0 4px 0 0 var(--border);
+  background: var(--card);
+}
+.chunky-hover {
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.chunky-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 0 var(--border);
+}
+
+.eyebrow {
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+/* progress bar with the glossy highlight from the design */
+.bar-gloss {
+  position: relative;
+}
+.bar-gloss::after {
+  content: '';
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 3px;
+  height: 30%;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.35);
+}
+
+/* Lebanese flag stripe */
+.flag-stripe {
+  background: linear-gradient(to bottom, var(--flag) 0 25%, #fff 25% 75%, var(--flag) 75%);
+}
+}
+
+@keyframes float-y {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+.float-y {
+  animation: float-y 4s ease-in-out infinite;
 }
 
 .bg-dots {
-  background-image: radial-gradient(color-mix(in srgb, var(--violet) 14%, transparent) 1.2px, transparent 1.2px);
+  background-image: radial-gradient(color-mix(in srgb, var(--cedar) 10%, transparent) 1.2px, transparent 1.2px);
   background-size: 18px 18px;
 }
 

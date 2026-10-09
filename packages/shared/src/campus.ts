@@ -18,7 +18,7 @@ export type FurnitureKind =
   | 'rug'
   | 'shelf'
   | 'lamp'
-  | 'bousla'
+  | 'arzino'
   | 'tree'
   | 'fountain'
   | 'bench';
@@ -39,16 +39,27 @@ export interface Zone extends Rect {
 
 export type CampusMapId = 'campus' | 'study' | 'exam' | 'hall';
 
+/** Purely visual ground details (no collisions, ignored by the API). */
+export type DecorKind = 'building' | 'path' | 'plaza' | 'flowers' | 'flag' | 'window';
+
+export interface Decor extends Rect {
+  kind: DecorKind;
+  /** building floor: wood | tile */
+  floor?: 'wood' | 'tile';
+}
+
 export interface CampusMap {
   id: CampusMapId;
   width: number;
   height: number;
-  /** floor color token: violet | mint | sunny | sky | coral */
+  /** floor style token: mint = grass courtyard · sunny = warm wood · sky = light tiles (violet | coral = stone) */
   floor: string;
   walls: Rect[];
   furniture: Furniture[];
   zones: Zone[];
   spawns: { x: number; y: number }[];
+  /** optional ground art drawn under everything (paths, building floors, flowers, flags, windows) */
+  decor?: Decor[];
 }
 
 const W = 16; // wall thickness
@@ -99,12 +110,14 @@ export const CAMPUS_MAP: CampusMap = {
     { kind: 'tree', x: 380, y: 820, w: 70, h: 70, solid: true },
     { kind: 'tree', x: 1370, y: 620, w: 70, h: 70, solid: true },
     { kind: 'tree', x: 1150, y: 830, w: 70, h: 70, solid: true },
+    { kind: 'tree', x: 470, y: 600, w: 70, h: 70, solid: true },
+    { kind: 'tree', x: 1060, y: 600, w: 70, h: 70, solid: true },
     { kind: 'bench', x: 600, y: 820, w: 110, h: 36, solid: true },
     { kind: 'bench', x: 890, y: 820, w: 110, h: 36, solid: true },
     { kind: 'plant', x: 560, y: 120, w: 40, h: 40, solid: true },
     { kind: 'plant', x: 1000, y: 120, w: 40, h: 40, solid: true },
     { kind: 'board', x: 680, y: 60, w: 240, h: 60, solid: true, label: 'Tajriba Campus' },
-    { kind: 'bousla', x: 770, y: 180, w: 60, h: 60, solid: true },
+    { kind: 'arzino', x: 770, y: 180, w: 60, h: 60, solid: true },
   ],
   zones: [
     { id: 'lobby', kind: 'lobby', x: 540, y: 140, w: 520, h: 400, label: 'Courtyard' },
@@ -118,6 +131,21 @@ export const CAMPUS_MAP: CampusMap = {
     { x: 860, y: 460 },
     { x: 700, y: 380 },
     { x: 900, y: 380 },
+  ],
+  decor: [
+    { kind: 'flowers', x: 110, y: 500, w: 360, h: 220 },
+    { kind: 'flowers', x: 1130, y: 500, w: 360, h: 220 },
+    { kind: 'flowers', x: 110, y: 820, w: 250, h: 150 },
+    { kind: 'flowers', x: 1240, y: 820, w: 250, h: 150 },
+    { kind: 'path', x: 740, y: 700, w: 120, h: 280 },
+    { kind: 'path', x: 100, y: 740, w: 1400, h: 56 },
+    { kind: 'plaza', x: 560, y: 110, w: 480, h: 610 },
+    { kind: 'path', x: 500, y: 222, w: 80, h: 76 },
+    { kind: 'path', x: 1020, y: 222, w: 80, h: 76 },
+    { kind: 'building', x: 80, y: 80, w: 440, h: 360, floor: 'wood' },
+    { kind: 'building', x: 1080, y: 80, w: 440, h: 360, floor: 'tile' },
+    { kind: 'flag', x: 628, y: 40, w: 40, h: 80 },
+    { kind: 'flag', x: 934, y: 40, w: 40, h: 80 },
   ],
 };
 
@@ -137,7 +165,7 @@ export const STUDY_ROOM_MAP: CampusMap = {
     { kind: 'plant', x: 40, y: 40, w: 40, h: 40, solid: true },
     { kind: 'plant', x: 720, y: 480, w: 40, h: 40, solid: true },
     { kind: 'lamp', x: 40, y: 480, w: 36, h: 36, solid: true },
-    { kind: 'bousla', x: 690, y: 240, w: 60, h: 60, solid: true },
+    { kind: 'arzino', x: 690, y: 240, w: 60, h: 60, solid: true },
   ],
   zones: [
     { id: 'table', kind: 'study_room', x: 280, y: 200, w: 240, h: 160, label: 'Table' },
@@ -147,9 +175,15 @@ export const STUDY_ROOM_MAP: CampusMap = {
     { x: 300, y: 440 },
     { x: 500, y: 440 },
   ],
+  decor: [
+    { kind: 'window', x: 100, y: 0, w: 120, h: 16 },
+    { kind: 'window', x: 580, y: 0, w: 40, h: 16 },
+    { kind: 'window', x: 240, y: 544, w: 120, h: 16 },
+    { kind: 'window', x: 440, y: 544, w: 120, h: 16 },
+  ],
 };
 
-/** A quiet private room: the student and Bousla, the AI interviewer. */
+/** A quiet private room: the student and Arzino, the AI interviewer. */
 export const EXAM_ROOM_MAP: CampusMap = {
   id: 'exam',
   width: 720,
@@ -159,7 +193,7 @@ export const EXAM_ROOM_MAP: CampusMap = {
   furniture: [
     { kind: 'rug', x: 200, y: 150, w: 320, h: 220 },
     { kind: 'desk', x: 300, y: 210, w: 120, h: 70, solid: true, label: 'Interview desk' },
-    { kind: 'bousla', x: 330, y: 130, w: 60, h: 60, solid: true },
+    { kind: 'arzino', x: 330, y: 130, w: 60, h: 60, solid: true },
     { kind: 'plant', x: 40, y: 40, w: 40, h: 40, solid: true },
     { kind: 'plant', x: 640, y: 40, w: 40, h: 40, solid: true },
     { kind: 'shelf', x: 40, y: 440, w: 120, h: 40, solid: true },
@@ -167,6 +201,10 @@ export const EXAM_ROOM_MAP: CampusMap = {
   ],
   zones: [{ id: 'desk', kind: 'exam_desk', x: 260, y: 280, w: 200, h: 90, label: 'Your seat' }],
   spawns: [{ x: 360, y: 330 }],
+  decor: [
+    { kind: 'window', x: 140, y: 0, w: 140, h: 16 },
+    { kind: 'window', x: 440, y: 0, w: 140, h: 16 },
+  ],
 };
 
 export const MAPS = { campus: CAMPUS_MAP, study: STUDY_ROOM_MAP, exam: EXAM_ROOM_MAP } as const;
@@ -175,12 +213,12 @@ export const MAPS = { campus: CAMPUS_MAP, study: STUDY_ROOM_MAP, exam: EXAM_ROOM
 
 export const HALL_ROOM = { w: 260, h: 190, door: 80, corridor: 110, margin: 64, maxCols: 6 } as const;
 
-/** One student's room in the hall: its zone (the interior), where the student and Bousla sit, and its door. */
+/** One student's room in the hall: its zone (the interior), where the student and Arzino sit, and its door. */
 export interface HallRoom {
   roomIndex: number;
   zone: Zone;
   seat: { x: number; y: number };
-  bousla: { x: number; y: number };
+  arzino: { x: number; y: number };
   /** just inside the door: where a teacher lands when jumping to the room */
   entry: { x: number; y: number };
 }
@@ -204,7 +242,7 @@ export function hallRooms(roomIndexes: number[]): HallRoom[] {
       roomIndex,
       zone: { id: `room-${roomIndex}`, kind: 'hall_room', x: x + 8, y: y + 8, w: w - 16, h: h - 16, label: `#${roomIndex}` },
       seat: { x: cx - 50, y: y + h - 52 },
-      bousla: { x: cx + 50, y: y + h - 58 },
+      arzino: { x: cx + 50, y: y + h - 58 },
       entry: { x: cx, y: y + 40 },
     };
   });
@@ -236,7 +274,7 @@ export function examHallMap(roomIndexes: number[]): CampusMap {
     furniture.push(
       { kind: 'rug', x: x + 20, y: y + 50, w: w - 40, h: h - 70 },
       { kind: 'desk', x: x + w / 2 - 40, y: y + h - 110, w: 80, h: 40, solid: true },
-      { kind: 'bousla', x: r.bousla.x - 20, y: r.bousla.y - 20, w: 40, h: 40, solid: true },
+      { kind: 'arzino', x: r.arzino.x - 20, y: r.arzino.y - 20, w: 40, h: 40, solid: true },
     );
   }
   return {
@@ -295,8 +333,8 @@ export function voiceGain(dist: number, near = 120, far = 520, min = 0.25): numb
   return 1 - ((dist - near) / (far - near)) * (1 - min);
 }
 
-/** Stable avatar color per user (design tokens). */
-export const AVATAR_COLORS = ['#6c4cf1', '#2dd4a7', '#ffc83d', '#ff7a59', '#4cb8ff', '#5cc45c', '#e86bb4'] as const;
+/** Stable avatar color per user (Arzino palette: cedar, Mediterranean blue, flag red, flame, leaf, gold, rose). */
+export const AVATAR_COLORS = ['#00a651', '#1c8be0', '#e4252d', '#ff9600', '#22c58b', '#ffc21a', '#e86bb4'] as const;
 export function avatarColor(userId: string): string {
   let h = 0;
   for (let i = 0; i < userId.length; i++) h = (h * 31 + userId.charCodeAt(i)) >>> 0;

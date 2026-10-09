@@ -55,7 +55,7 @@ export const prepareExam = defineTask({
   schema: prepareExamOutput,
   maxTokens: 3000,
   timeoutMs: 90_000,
-  system: `You are Bousla, a friendly AI examiner preparing a SPOKEN interview exam for 12–15-year-old students.
+  system: `You are Arzino, a friendly AI examiner preparing a SPOKEN interview exam for 12–15-year-old students.
 Write open questions a student can answer by talking for about one minute each. Mix: explain-in-your-words, real-life application,
 reasoning ("why"), and one small problem to solve out loud (numbers simple enough to compute mentally).
 Order from easier to harder. For each question list 1-4 short "expectedPoints" a good spoken answer should mention, and a short "followUp"
@@ -114,7 +114,7 @@ export const interviewTurn = defineTask({
   // a two-part question plus notes and the next question can pass 600 tokens; a cut-off reply is unparseable
   maxTokens: 1200,
   timeoutMs: 20_000,
-  system: `You are Bousla, a warm, encouraging AI examiner having a SPOKEN interview with a 12–15-year-old. The student's answer is a speech-to-text
+  system: `You are Arzino, a warm, encouraging AI examiner having a SPOKEN interview with a 12–15-year-old. The student's answer is a speech-to-text
 transcript (it may have small recognition errors — be forgiving about wording and spelling).
 1) Assess the answer against the expected points: score 0-10 (10 = all points, clear reasoning), "understood" true if the core idea is right,
    short private "notes" for the teacher (never shown to the student).
@@ -133,7 +133,7 @@ Schema: {"assessment":{"score":number,"understood":boolean,"notes":string},"mood
 Question: ${i.question.text}
 Expected points: ${i.question.expectedPoints.join(' | ')}
 ${i.question.followUp ? `Suggested follow-up: ${i.question.followUp}\n` : ''}Follow-ups used for this question: ${i.followUpsUsed}/${i.maxFollowUps}. Last question: ${i.isLastQuestion ? 'yes' : 'no'}. Seconds left: ${Math.max(0, Math.round(i.secondsLeft))}.
-Recent conversation: ${i.recentTurns.map((t) => `${t.role === 'AI' ? 'Bousla' : 'Student'}: ${t.text}`).join(' / ') || '(start)'}
+Recent conversation: ${i.recentTurns.map((t) => `${t.role === 'AI' ? 'Arzino' : 'Student'}: ${t.text}`).join(' / ') || '(start)'}
 <student_answer>
 ${i.answer}
 </student_answer>`,
@@ -200,7 +200,7 @@ Schema: {"score":integer,"perQuestion":[{"questionId":string,"score":number,"com
     `Write in ${lang(i.locale)}. Subject: ${i.subject}. Ended because: ${i.finishReason}.
 Questions: ${i.questions.map((q) => `${q.id}: ${q.text}`).join(' | ')}
 Transcript:
-${i.turns.map((t) => `${t.role === 'AI' ? 'Bousla' : 'Student'}${t.questionId ? ` [${t.questionId}]` : ''}${t.score != null ? ` (score ${t.score}/10)` : ''}: ${t.text}`).join('\n')}`,
+${i.turns.map((t) => `${t.role === 'AI' ? 'Arzino' : 'Student'}${t.questionId ? ` [${t.questionId}]` : ''}${t.score != null ? ` (score ${t.score}/10)` : ''}: ${t.text}`).join('\n')}`,
   mock: (i: ExamReportInput): ExamReport => {
     const ar = i.locale === 'ar';
     const best = new Map<string, number>();

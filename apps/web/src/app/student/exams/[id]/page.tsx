@@ -7,7 +7,7 @@ import { useFormatter, useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Bousla, type BouslaMood } from '@/components/bousla';
+import { Arzino, type ArzinoMood } from '@/components/arzino';
 import { CampusCanvas } from '@/components/campus/campus-canvas';
 import { mmss, useCountdown } from '@/components/campus/use-countdown';
 import { ErrorState, PageSkeleton, Thinking } from '@/components/app/states';
@@ -25,8 +25,8 @@ import { useVoice } from '@/lib/campus/use-voice';
 import { cn } from '@/lib/cn';
 import { useApi, useInvalidate } from '@/lib/hooks';
 
-/** The student's feeling (detected by the AI) → how Bousla reacts. */
-const BOUSLA_FOR: Record<string, BouslaMood> = { nervous: 'happy', confused: 'curious', confident: 'cheering', happy: 'cheering', calm: 'happy', thinking: 'thinking' };
+/** The student's feeling (detected by the AI) → how Arzino reacts. */
+const ARZINO_FOR: Record<string, ArzinoMood> = { nervous: 'warm', confused: 'thinking', confident: 'cheer', happy: 'correct', calm: 'teaching', thinking: 'thinking' };
 
 export default function ExamRoomPage() {
   const { id } = useParams<{ id: string }>();
@@ -67,22 +67,33 @@ export default function ExamRoomPage() {
     return (
       <div className="space-y-4">
         <BackLink />
-        <Card className="flex flex-col items-center gap-4 p-6 text-center" data-testid="exam-intro">
-          <Bousla mood="happy" size={110} />
-          <h1 className="font-display text-3xl font-extrabold">{a.exam.title}</h1>
-          <h2 className="font-display text-xl font-bold text-primary">{t('exam.introTitle')}</h2>
+        <Card className="mx-auto flex max-w-[680px] flex-col items-center gap-4 p-6 text-center sm:p-8" data-testid="exam-intro">
+          <Arzino mood={a.exam.status === 'OPEN' ? 'teaching' : 'bored-waiting'} size={180} pop />
+          <p className="eyebrow">{t('exam.introTitle')}</p>
+          <h1 className="font-display text-3xl font-black md:text-[34px]">{a.exam.title}</h1>
           <p className="max-w-md text-muted-foreground">{t('exam.introBody', { n, min: a.exam.durationMin })}</p>
-          <ul className="space-y-1.5 text-start text-sm font-semibold">
-            <li>🎙️ {t('exam.ruleRecorded')}</li>
-            <li>👀 {t('exam.ruleWatch')}</li>
-            <li>🔒 {t('exam.ruleHidden')}</li>
+          <ul className="grid w-full max-w-md gap-2 text-start text-sm font-bold">
+            {(
+              [
+                ['🎙️', 'exam.ruleRecorded', 'bg-flag-soft'],
+                ['👀', 'exam.ruleWatch', 'bg-med-soft'],
+                ['🔒', 'exam.ruleHidden', 'bg-cedar-soft'],
+              ] as const
+            ).map(([icon, key, bg]) => (
+              <li key={key} className="flex items-center gap-3 rounded-[16px] border-2 border-border bg-card p-2.5 shadow-[0_3px_0_0_var(--border)]">
+                <span className={cn('flex size-9 shrink-0 items-center justify-center rounded-[12px] text-lg', bg)} aria-hidden>
+                  {icon}
+                </span>
+                {t(key)}
+              </li>
+            ))}
           </ul>
           {a.exam.status === 'OPEN' ? (
-            <Button variant="kid" size="lg" onClick={start} loading={starting} data-testid="start-interview">
+            <Button variant="kid" size="lg" className="w-full max-w-md" onClick={start} loading={starting} data-testid="start-interview">
               <Mic /> {t('exam.start')}
             </Button>
           ) : a.exam.status === 'SCHEDULED' ? (
-            <p className="font-bold text-primary">{t('exam.notOpen', { date: when(a.exam.opensAt) })}</p>
+            <p className="rounded-full bg-med-soft px-4 py-2 font-black text-med-ink dark:text-white">{t('exam.notOpen', { date: when(a.exam.opensAt) })}</p>
           ) : (
             <p className="font-bold text-muted-foreground">{t('exam.closed')}</p>
           )}
@@ -98,9 +109,9 @@ export default function ExamRoomPage() {
     return (
       <div className="space-y-4">
         <BackLink />
-        <Card className="flex flex-col items-center gap-3 p-6 text-center">
-          <Bousla mood="sleepy" size={100} />
-          <h1 className="font-display text-2xl font-extrabold">{t('exam.missedTitle')}</h1>
+        <Card className="mx-auto flex max-w-[680px] flex-col items-center gap-3 p-6 text-center sm:p-8">
+          <Arzino mood="sad" size={160} />
+          <h1 className="font-display text-3xl font-black">{t('exam.missedTitle')}</h1>
           <p className="text-muted-foreground">{t('exam.missedBody')}</p>
         </Card>
       </div>
@@ -113,7 +124,7 @@ export default function ExamRoomPage() {
 function BackLink() {
   const t = useTranslations('campus');
   return (
-    <Button asChild variant="ghost" size="sm">
+    <Button asChild variant="kidGhost" size="sm">
       <Link href="/student/campus">
         <ArrowLeft className="rtl-flip" /> {t('exam.back')}
       </Link>
@@ -131,16 +142,19 @@ function Finished({ attempt }: { attempt: AttemptView }) {
     <div className="space-y-4">
       <BackLink />
       {r ? (
-        <Card className="space-y-3 p-6" data-testid="exam-result">
-          <div className="flex items-center gap-4">
-            <Bousla mood="cheering" size={90} />
+        <Card className="space-y-4 p-6" data-testid="exam-result">
+          <div className="flex flex-wrap items-center gap-4">
+            <Arzino mood={(r.score ?? 0) >= 70 ? 'trophy' : (r.score ?? 0) >= 50 ? 'proud' : 'determined'} size={150} pop />
             <div>
-              <p className="text-sm font-bold text-muted-foreground">{t('exam.resultTitle')}</p>
-              <p className="font-display text-5xl font-extrabold text-primary">{r.score ?? '–'}<span className="text-2xl text-muted-foreground">/100</span></p>
+              <p className="eyebrow">{t('exam.resultTitle')}</p>
+              <p className={cn('font-display text-6xl font-black', (r.score ?? 0) >= 70 ? 'text-cedar' : (r.score ?? 0) >= 50 ? 'text-med' : 'text-flag')}>
+                {r.score ?? '–'}
+                <span className="text-2xl text-muted-foreground">/100</span>
+              </p>
             </div>
           </div>
           {r.teacherComment && (
-            <p className="rounded-[14px] bg-violet-soft p-3 text-sm">
+            <p className="rounded-[16px] border-2 border-med/30 bg-med-soft p-3 text-sm">
               <b>{t('exam.teacherComment')}:</b> {r.teacherComment}
             </p>
           )}
@@ -152,22 +166,22 @@ function Finished({ attempt }: { attempt: AttemptView }) {
           <div className="grid gap-3 sm:grid-cols-2">
             {r.strengths.length > 0 && (
               <div>
-                <p className="font-bold text-success">{t('exam.strengths')}</p>
+                <p className="eyebrow !text-success">{t('exam.strengths')}</p>
                 <ul className="list-disc ps-5 text-sm">{r.strengths.map((s) => <li key={s}>{s}</li>)}</ul>
               </div>
             )}
             {r.gaps.length > 0 && (
               <div>
-                <p className="font-bold text-warning">{t('exam.gaps')}</p>
+                <p className="eyebrow !text-flag">{t('exam.gaps')}</p>
                 <ul className="list-disc ps-5 text-sm">{r.gaps.map((s) => <li key={s}>{s}</li>)}</ul>
               </div>
             )}
           </div>
         </Card>
       ) : (
-        <Card className="flex flex-col items-center gap-3 p-6 text-center" data-testid="exam-done">
-          <Bousla mood="cheering" size={110} />
-          <h1 className="font-display text-3xl font-extrabold">{t('exam.doneTitle')}</h1>
+        <Card className="mx-auto flex max-w-[680px] flex-col items-center gap-3 p-6 text-center sm:p-8" data-testid="exam-done">
+          <Arzino mood="celebrate" size={180} pop />
+          <h1 className="font-display text-3xl font-black md:text-[34px]">{t('exam.doneTitle')}</h1>
           <p className="text-muted-foreground">{t('exam.doneBody')}</p>
         </Card>
       )}
@@ -185,23 +199,23 @@ function Transcript({ turns, live }: { turns: ExamTurn[]; live?: string }) {
   }, [turns.length]);
   return (
     <Card className="p-4">
-      <h2 className="mb-3 font-display text-lg font-bold">{t('exam.transcript')}</h2>
+      <h2 className="mb-3 font-display text-xl font-black">{t('exam.transcript')}</h2>
       <ol className="max-h-80 space-y-2 overflow-y-auto pe-1" data-testid="exam-transcript">
         {turns.map((turn) => (
           <li key={turn.idx} className={cn('flex gap-2', turn.role === 'STUDENT' && 'flex-row-reverse')}>
-            <span className="mt-1 text-lg" aria-hidden>
-              {turn.role === 'AI' ? turn.emoji || '🧭' : '🗣️'}
+            <span className="mt-1 flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-lg" aria-hidden>
+              {turn.role === 'AI' ? turn.emoji || '🌲' : '🗣️'}
             </span>
-            <p className={cn('max-w-[85%] rounded-[16px] px-3 py-2 text-sm', turn.role === 'AI' ? 'bg-violet-soft' : 'bg-mint-soft')}>
-              <span className="block text-[11px] font-extrabold uppercase opacity-60">{turn.role === 'AI' ? t('exam.bousla') : t('exam.you')}</span>
+            <p className={cn('max-w-[85%] rounded-[18px] border-2 px-3 py-2 text-sm', turn.role === 'AI' ? 'rounded-ss-md border-cedar/25 bg-cedar-soft' : 'rounded-se-md border-med/25 bg-med-soft')}>
+              <span className="block text-[11px] font-black uppercase tracking-wider opacity-60">{turn.role === 'AI' ? t('exam.arzino') : t('exam.you')}</span>
               {turn.text}
             </p>
           </li>
         ))}
         {live && (
           <li className="flex flex-row-reverse gap-2 opacity-70">
-            <span className="mt-1 text-lg">🎙️</span>
-            <p className="max-w-[85%] rounded-[16px] border-2 border-dashed border-mint px-3 py-2 text-sm italic">{live}</p>
+            <span className="mt-1 flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-lg">🎙️</span>
+            <p className="max-w-[85%] rounded-[18px] border-2 border-dashed border-med px-3 py-2 text-sm italic">{live}</p>
           </li>
         )}
       </ol>
@@ -238,7 +252,7 @@ function Interview({ attempt: initial, activated: initiallyActivated, onChange }
     if (activated && room.status === 'joined' && room.publishes && !enabled) void enable(true);
   }, [activated, room.status, room.publishes, enabled, enable]);
 
-  // Bousla speaks each new question, then we listen for the answer.
+  // Arzino speaks each new question, then we listen for the answer.
   const { speak } = tts;
   const { start: listen, supported: canListen } = stt;
   useEffect(() => {
@@ -303,44 +317,85 @@ function Interview({ attempt: initial, activated: initiallyActivated, onChange }
     onChange();
   };
 
-  const mood: BouslaMood = thinking ? 'thinking' : stt.listening ? 'curious' : BOUSLA_FOR[lastAi?.mood ?? 'calm'] ?? 'happy';
+  const mood: ArzinoMood = thinking ? 'thinking' : stt.listening ? 'starry-eyed' : ARZINO_FOR[lastAi?.mood ?? 'calm'] ?? 'teaching';
   const qn = Math.min(attempt.questionIdx + 1, attempt.questionCount);
+  const timer = left !== null && (
+    <span className={cn('rounded-full px-3 py-1.5 font-mono text-sm font-black', left < 60 ? 'animate-pulse bg-flag text-white' : 'bg-med text-white')} data-testid="exam-timer">
+      ⏱ {t('exam.timeLeft', { time: mmss(left) })}
+    </span>
+  );
 
   return (
-    <div className="space-y-3" data-testid="exam-room">
-      <div className="flex flex-wrap items-center gap-2">
+    <div className="space-y-4" data-testid="exam-room">
+      <div className="flex flex-wrap items-center gap-3">
         <div className="min-w-0 flex-1">
-          <h1 className="truncate font-display text-xl font-extrabold">{attempt.exam.title}</h1>
-          <p className="text-xs font-bold text-muted-foreground" data-testid="question-progress">{t('exam.question', { n: qn, total: attempt.questionCount })}</p>
+          <h1 className="truncate font-display text-2xl font-black">{attempt.exam.title}</h1>
+          <div className="mt-1 flex items-center gap-2">
+            <div className="flex gap-1" aria-hidden>
+              {Array.from({ length: attempt.questionCount }, (_, i) => (
+                <span key={i} className={cn('h-2.5 w-6 rounded-full', i < qn - 1 ? 'bg-cedar' : i === qn - 1 ? 'bg-med' : 'bg-lock')} />
+              ))}
+            </div>
+            <p className="text-xs font-black uppercase tracking-wider text-muted-foreground" data-testid="question-progress">
+              {t('exam.question', { n: qn, total: attempt.questionCount })}
+            </p>
+          </div>
         </div>
-        {left !== null && (
-          <span className={cn('rounded-full px-3 py-1 font-mono text-sm font-extrabold', left < 60 ? 'bg-coral-soft text-coral' : 'bg-sky-soft text-sky')} data-testid="exam-timer">
-            ⏱ {t('exam.timeLeft', { time: mmss(left) })}
-          </span>
-        )}
+        {timer}
         {rec.recording && (
-          <span className="flex items-center gap-1.5 rounded-full bg-coral-soft px-2.5 py-1 text-xs font-extrabold text-coral">
-            <span className="size-2 animate-pulse rounded-full bg-coral" /> {t('study.recording')}
+          <span className="flex items-center gap-1.5 rounded-full bg-flag-soft px-3 py-1.5 text-xs font-black uppercase tracking-wider text-flag-d dark:text-danger">
+            <span className="size-2 animate-pulse rounded-full bg-flag" /> {t('study.recording')}
           </span>
         )}
       </div>
       {listener ? (
-        <p className="flex items-center gap-2 rounded-[12px] bg-mint-soft px-3 py-2 text-sm font-bold text-success" data-testid="teacher-listening">
+        <p className="flex items-center gap-2 rounded-[14px] border-2 border-cedar/30 bg-cedar-soft px-3 py-2 text-sm font-bold text-cedar-ink dark:text-success" data-testid="teacher-listening">
           <Headphones className="size-4" /> {t('exam.listeningNow', { name: listener.name })}
         </p>
       ) : (
         observed && (
-          <p className="flex items-center gap-2 rounded-[12px] bg-violet-soft px-3 py-2 text-sm font-bold text-violet" data-testid="observed">
+          <p className="flex items-center gap-2 rounded-[14px] border-2 border-med/30 bg-med-soft px-3 py-2 text-sm font-bold text-med-ink dark:text-white" data-testid="observed">
             <Eye className="size-4" /> {t('exam.observed')}
           </p>
         )
       )}
 
-      <div className="grid items-start gap-3 md:grid-cols-[1fr_1.1fr]">
-        <CampusCanvas room={room} map="exam" interactive={false} className="aspect-[18/13] w-full" selfSpeaking={voice.speaking} />
+      <div className="grid items-start gap-4 md:grid-cols-[1fr_1.1fr]">
+        <CampusCanvas room={room} map="exam" interactive={false} className="aspect-[18/13] w-full" selfSpeaking={voice.speaking}>
+          {(fs) =>
+            fs.full && (
+              <>
+                <div className="pointer-events-none absolute inset-x-3 top-3 flex flex-wrap items-center gap-2 pe-14">
+                  <span className="rounded-full border-2 border-border bg-card/95 px-3 py-1.5 font-display text-sm font-black shadow-[0_3px_0_0_var(--border)]">{t('exam.question', { n: qn, total: attempt.questionCount })}</span>
+                  {left !== null && <span className={cn('rounded-full px-3 py-1.5 font-mono text-sm font-black text-white', left < 60 ? 'bg-flag' : 'bg-med')}>⏱ {mmss(left)}</span>}
+                </div>
+                <div className="absolute inset-x-3 bottom-3 mx-auto flex max-w-2xl items-end gap-3 rounded-[24px] border-2 border-border bg-card/95 p-3 shadow-[0_4px_0_0_var(--border)] backdrop-blur">
+                  <Arzino mood={mood} size={96} />
+                  <div className="min-w-0 flex-1 space-y-2">
+                    {thinking ? <p className="font-display text-lg font-black text-muted-foreground">{t('exam.thinking')}</p> : <p className="font-display text-lg font-black leading-snug">{lastAi?.text}</p>}
+                    {activated && stt.supported && (
+                      <div className="flex flex-wrap items-center gap-2">
+                        {stt.listening ? (
+                          <Button variant="kidMint" onClick={submit} disabled={thinking || !stt.transcript}>
+                            <Square /> {t('exam.done')}
+                          </Button>
+                        ) : (
+                          <Button variant="kid" onClick={() => stt.start()} disabled={thinking}>
+                            <Mic /> {t('exam.answer')}
+                          </Button>
+                        )}
+                        {stt.transcript && <span className="line-clamp-1 min-w-0 flex-1 text-sm italic text-muted-foreground">{stt.transcript}</span>}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )
+          }
+        </CampusCanvas>
         <Card className="relative flex flex-col items-center gap-3 p-4 text-center">
           <div className="relative">
-            <Bousla mood={mood} size={120} />
+            <Arzino mood={mood} size={170} />
             <AnimatePresence mode="popLayout">
               {lastAi?.emoji && !thinking && (
                 <motion.span
@@ -349,22 +404,23 @@ function Interview({ attempt: initial, activated: initiallyActivated, onChange }
                   animate={{ scale: 1, rotate: 0, opacity: 1 }}
                   exit={{ scale: 0, opacity: 0 }}
                   transition={{ type: 'spring', stiffness: 400, damping: 14 }}
-                  className="absolute -end-6 -top-2 text-5xl drop-shadow"
-                  data-testid="bousla-emoji"
+                  className="absolute -end-6 -top-2 flex size-16 items-center justify-center rounded-full border-2 border-border bg-card text-4xl shadow-[0_4px_0_0_var(--border)]"
+                  data-testid="arzino-emoji"
                 >
                   {lastAi.emoji}
                 </motion.span>
               )}
             </AnimatePresence>
           </div>
-          <div className="w-full rounded-[18px] bg-violet-soft p-3 text-start" aria-live="polite">
-            {thinking ? <Thinking label={t('exam.thinking')} /> : <p className="font-display text-lg font-bold leading-snug" data-testid="bousla-says">{lastAi?.text}</p>}
+          <div className="relative w-full rounded-[20px] border-2 border-cedar/30 bg-cedar-soft p-4 text-start" aria-live="polite">
+            <span className="absolute -top-2.5 start-1/2 size-4 -translate-x-1/2 rotate-45 border-s-2 border-t-2 border-cedar/30 bg-cedar-soft rtl:translate-x-1/2" aria-hidden />
+            {thinking ? <Thinking label={t('exam.thinking')} className="py-2" /> : <p className="font-display text-xl font-black leading-snug" data-testid="arzino-says">{lastAi?.text}</p>}
           </div>
-          <div className="flex gap-2">
-            <Button variant="ghost" size="sm" onClick={() => lastAi && void tts.speak(lastAi.text)} disabled={!lastAi || thinking}>
+          <div className="flex flex-wrap justify-center gap-2">
+            <Button variant="kidGhost" size="sm" onClick={() => lastAi && void tts.speak(lastAi.text)} disabled={!lastAi || thinking}>
               <Volume2 /> {t('exam.hearAgain')}
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => tts.setMuted(!tts.muted)} aria-pressed={tts.muted}>
+            <Button variant="kidGhost" size="sm" onClick={() => tts.setMuted(!tts.muted)} aria-pressed={tts.muted}>
               {tts.muted ? <VolumeX /> : <Volume2 />} {tts.muted ? t('exam.unmute') : t('exam.mute')}
             </Button>
           </div>
@@ -376,11 +432,11 @@ function Interview({ attempt: initial, activated: initiallyActivated, onChange }
           <Mic /> {t('exam.start')}
         </Button>
       ) : (
-        <Card className="space-y-3 p-4">
+        <Card className="space-y-3 border-med p-4 shadow-[0_4px_0_0_var(--med-d)]">
           {!stt.supported && <p className="text-sm text-muted-foreground">{t('exam.sttUnsupported')}</p>}
           {stt.supported && !typing ? (
             <div className="space-y-2">
-              <p className="min-h-12 rounded-[14px] border-2 border-dashed border-mint p-3 text-sm" data-testid="live-answer">
+              <p className={cn('min-h-14 rounded-[16px] border-2 border-dashed p-3 text-base font-semibold', stt.listening ? 'border-med bg-med-soft' : 'border-border')} data-testid="live-answer">
                 {stt.transcript || <span className="text-muted-foreground">{stt.listening ? t('exam.listening') : t('exam.yourAnswer')}</span>}
               </p>
               <div className="flex flex-wrap gap-2">
@@ -398,7 +454,7 @@ function Interview({ attempt: initial, activated: initiallyActivated, onChange }
                     <Send /> {t('exam.send')}
                   </Button>
                 )}
-                <Button variant="ghost" onClick={() => { stt.stop(); setTyping(true); }} data-testid="type-instead">
+                <Button variant="kidGhost" onClick={() => { stt.stop(); setTyping(true); }} data-testid="type-instead">
                   <Keyboard /> {t('exam.typeInstead')}
                 </Button>
               </div>
@@ -411,7 +467,7 @@ function Interview({ attempt: initial, activated: initiallyActivated, onChange }
                   <Send /> {t('exam.send')}
                 </Button>
                 {stt.supported && (
-                  <Button variant="ghost" onClick={() => setTyping(false)}>
+                  <Button variant="kidGhost" onClick={() => setTyping(false)}>
                     <Mic /> {t('exam.answer')}
                   </Button>
                 )}
@@ -432,19 +488,22 @@ function Interview({ attempt: initial, activated: initiallyActivated, onChange }
       <Transcript turns={attempt.turns} live={stt.listening ? stt.transcript : undefined} />
 
       <div className="flex justify-end">
-        <Button variant="ghost" onClick={() => setConfirm(true)} data-testid="finish-interview">
+        <Button variant="kidGhost" onClick={() => setConfirm(true)} data-testid="finish-interview">
           {t('exam.finish')}
         </Button>
       </div>
       <Dialog open={confirm} onOpenChange={setConfirm}>
         <DialogContent>
+          <div className="flex justify-center">
+            <Arzino mood="shocked" size={110} />
+          </div>
           <DialogTitle>{t('exam.finishTitle')}</DialogTitle>
           <DialogDescription>{t('exam.finishBody')}</DialogDescription>
           <div className="mt-4 flex justify-end gap-2">
-            <Button variant="ghost" onClick={() => setConfirm(false)}>
+            <Button variant="kidGhost" onClick={() => setConfirm(false)}>
               {t('exam.keepGoing')}
             </Button>
-            <Button onClick={finish} data-testid="confirm-finish">
+            <Button variant="kid" onClick={finish} data-testid="confirm-finish">
               {t('exam.finish')}
             </Button>
           </div>

@@ -3,6 +3,7 @@
 import { Send } from 'lucide-react';
 import { useFormatter, useNow, useTranslations } from 'next-intl';
 import { useEffect, useRef, useState } from 'react';
+import { Arzino } from '@/components/arzino';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -72,7 +73,7 @@ export function MessagesView({ initialWith }: { initialWith?: string }) {
             <li key={c.id}>
               <button
                 onClick={() => setWithId(c.id)}
-                className={cn('flex w-full items-center gap-3 rounded-[14px] p-3 text-start', active?.id === c.id ? 'bg-violet-soft' : 'hover:bg-muted')}
+                className={cn('flex w-full items-center gap-3 rounded-[14px] border-2 p-3 text-start transition-colors', active?.id === c.id ? 'border-med bg-med-soft' : 'border-transparent hover:bg-muted')}
                 data-testid={`contact-${c.id}`}
               >
                 <Avatar name={c.name} src={c.avatarUrl} />
@@ -80,21 +81,30 @@ export function MessagesView({ initialWith }: { initialWith?: string }) {
                   <p className="truncate font-bold">{c.name}</p>
                   <p className="truncate text-xs text-muted-foreground">{c.about.map((a) => a.studentName.split(' ')[0]).join(', ')}</p>
                 </div>
-                {c.unread > 0 && <span className="rounded-full bg-coral px-2 text-xs font-extrabold text-white">{c.unread}</span>}
+                {c.unread > 0 && <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-flag px-1.5 text-xs font-black text-white">{c.unread}</span>}
               </button>
             </li>
           ))}
         </ul>
       </Card>
-      <Card className="flex h-[60vh] flex-col">
-        <div className="flex items-center gap-3 border-b border-border p-4">
+      <Card className="flex h-[60vh] min-h-[420px] flex-col overflow-hidden">
+        <div className="flex items-center gap-3 border-b-2 border-border p-4">
           {active && <Avatar name={active.name} src={active.avatarUrl} />}
-          <p className="font-extrabold">{active?.name}</p>
+          <div className="min-w-0">
+            <p className="truncate font-display text-lg leading-tight">{active?.name}</p>
+            {active && <p className="truncate text-xs font-bold text-muted-foreground">{active.about.map((a) => a.studentName).join(', ')}</p>}
+          </div>
         </div>
-        <div className="flex-1 space-y-2 overflow-y-auto p-4" data-testid="message-thread">
+        <div className="flex-1 space-y-2 overflow-y-auto bg-muted/50 p-4" data-testid="message-thread">
+          {thread && thread.length === 0 && (
+            <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
+              <Arzino mood="warm" size={110} />
+              <p className="font-bold text-muted-foreground">{t('typeMessage')}</p>
+            </div>
+          )}
           {thread?.map((m) => (
             <div key={m.id} className={cn('flex', m.mine ? 'justify-end' : 'justify-start')}>
-              <div className={cn('max-w-[80%] rounded-[18px] px-4 py-2', m.mine ? 'rounded-ee-sm bg-primary text-white' : 'rounded-es-sm bg-muted')}>
+              <div className={cn('max-w-[80%] rounded-[18px] border-2 px-4 py-2', m.mine ? 'rounded-ee-sm border-cedar-d bg-cedar text-white' : 'rounded-es-sm border-border bg-card')}>
                 <p className="whitespace-pre-wrap">{m.body}</p>
                 <p className={cn('mt-1 text-[11px]', m.mine ? 'text-white/70' : 'text-muted-foreground')}>{format.relativeTime(new Date(m.createdAt), new Date(Math.max(now.getTime(), Date.now())))}</p>
               </div>
@@ -102,9 +112,9 @@ export function MessagesView({ initialWith }: { initialWith?: string }) {
           ))}
           <div ref={endRef} />
         </div>
-        <form onSubmit={send} className="flex gap-2 border-t border-border p-3">
+        <form onSubmit={send} className="flex gap-2 border-t-2 border-border p-3">
           <Input value={body} onChange={(e) => setBody(e.target.value)} placeholder={t('typeMessage')} aria-label={t('typeMessage')} data-testid="message-input" />
-          <Button type="submit" size="icon" loading={sending} aria-label={t('send')}>
+          <Button type="submit" variant="kid" size="icon" loading={sending} disabled={!body.trim()} aria-label={t('send')}>
             <Send className="rtl-flip" />
           </Button>
         </form>

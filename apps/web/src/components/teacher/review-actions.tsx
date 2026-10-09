@@ -40,16 +40,16 @@ export function ReviewActions({ s, onDone }: { s: Submission; onDone: (updated: 
 
   return (
     <div className="space-y-4" data-testid="review-actions">
-      {override && <p className="rounded-[12px] bg-muted px-3 py-2 text-sm text-muted-foreground">{t('overrideNote')}</p>}
+      {override && <p className="rounded-[12px] bg-card px-3 py-2 text-sm font-semibold text-muted-foreground">{t('overrideNote')}</p>}
       <div>
         <div className="mb-1 flex items-end justify-between">
           <Label className="mb-0">{t('yourScore')}</Label>
-          <span className={cn('text-3xl font-extrabold tabular-nums', scoreTone(score))} data-testid="teacher-score-value">
+          <span className={cn('font-display text-[40px] font-black leading-none tabular-nums', scoreTone(score))} data-testid="teacher-score-value">
             {score}
           </span>
         </div>
         <Slider value={[score]} min={0} max={100} step={1} onValueChange={([v]) => setScore(v)} aria-label={t('yourScore')} data-testid="teacher-score" />
-        <p className="mt-1 text-xs text-muted-foreground">{passes ? t('passHint', { name: first }) : t('retryHint', { name: first })}</p>
+        <p className="mt-1 text-xs font-semibold text-muted-foreground">{passes ? t('passHint', { name: first }) : t('retryHint', { name: first })}</p>
       </div>
       <div>
         <Label htmlFor="teacher-comment">
@@ -66,15 +66,15 @@ export function ReviewActions({ s, onDone }: { s: Submission; onDone: (updated: 
         />
       </div>
       {error && (
-        <p className="rounded-[12px] bg-coral-soft px-3 py-2 text-sm font-bold text-danger" role="alert">
+        <p className="rounded-[12px] bg-flag-soft px-3 py-2 text-sm font-bold text-flag-d dark:text-danger" role="alert">
           {error}
         </p>
       )}
       <div className="grid gap-2 sm:grid-cols-2">
-        <Button variant="outline" onClick={() => send('retry')} disabled={passes || !!busy} loading={busy === 'retry'} data-testid="teacher-retry">
+        <Button variant="kidGhost" onClick={() => send('retry')} disabled={passes || !!busy} loading={busy === 'retry'} data-testid="teacher-retry">
           <RotateCcw /> {t('askRetry')}
         </Button>
-        <Button variant="mint" onClick={() => send('ok')} disabled={!passes || !!busy} loading={busy === 'ok'} data-testid="teacher-approve">
+        <Button variant="kid" onClick={() => send('ok')} disabled={!passes || !!busy} loading={busy === 'ok'} data-testid="teacher-approve">
           <CheckCircle2 /> {t('validate')}
         </Button>
       </div>

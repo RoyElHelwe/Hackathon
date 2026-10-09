@@ -1,20 +1,20 @@
 'use client';
 
-import { ArrowLeft, ArrowRight, Check, Clock, HelpCircle, ShieldCheck, Users } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Clock, HelpCircle, Send, ShieldCheck, Users } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useTranslations } from 'next-intl';
 import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
-import { Bousla, BouslaSays } from '@/components/bousla';
+import { Arzino, ArzinoSays } from '@/components/arzino';
 import { ErrorState, PageSkeleton, Thinking } from '@/components/app/states';
 import { VisualSpecView } from '@/components/kid/visual-spec';
+import { FocusTop, LessonHeader } from '@/components/student/focus-top';
 import { PhotoPicker } from '@/components/student/photo-picker';
 import { TopicGlyph } from '@/components/app/subject-icon';
 import { subjectStyle } from '@/components/student/subject-style';
 import { VoiceInput } from '@/components/student/voice';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Input, Label, Textarea } from '@/components/ui/input';
 import { api, ApiError, uploadFile } from '@/lib/api';
 import { cn } from '@/lib/cn';
@@ -143,77 +143,81 @@ export default function MissionPage() {
   const st = subjectStyle(mission.topic?.subject?.key, mission.topic?.subject?.color, mission.topic?.subject?.icon);
   const steps = l(mission.steps) ?? [];
   const fields = mission.proofSpec.fields ?? [];
+  const allDone = step === 2 && steps.length > 0 && checked.length >= steps.length;
+  const stepLabel = (
+    <span data-testid="step-label">
+      {step + 1}/4 · {t(STEPS[step])}
+    </span>
+  );
+  const next = () => {
+    if (step < 3) go(step + 1);
+    else submit();
+  };
+  const nextLabel = [t('startMission'), t('gotIt'), t('imReady'), t('submit')][step];
 
   return (
-    <div className="space-y-5 pb-6">
-      {/* progress */}
-      <div className="flex items-center gap-2" aria-label="Progress">
-        {STEPS.map((k, i) => (
-          <button
-            key={k}
-            onClick={() => i <= step && go(i)}
-            className={cn('h-2.5 flex-1 rounded-full transition-colors', i <= step ? st.bg : 'bg-muted')}
-            aria-label={t(k)}
-            aria-current={i === step}
-          />
-        ))}
-      </div>
-      <p className="text-sm font-bold uppercase tracking-wider text-muted-foreground" data-testid="step-label">
-        {step + 1}/4 · {t(STEPS[step])}
-      </p>
+    <div className="pb-44">
+      <FocusTop href="/student/map" progress={(step + 1) / 4} color={st.hex} />
 
       <AnimatePresence mode="wait">
-        <motion.div key={step} initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} transition={{ duration: 0.25 }}>
+        <motion.div key={step} initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} transition={{ duration: 0.22 }} className="mt-3 space-y-5">
           {step === 0 && (
-            <div className="space-y-5">
-              <div className={cn('relative flex h-56 items-end overflow-hidden rounded-[28px] p-5', 'bg-gradient-to-br from-sky via-violet to-[#8B6CFF]')}>
-                <div className="absolute inset-0 flex items-center justify-center text-[130px] opacity-90" aria-hidden>
-                  <TopicGlyph topicKey={mission.topic?.key} icon={mission.topic?.icon} />
-                </div>
-                <div className="absolute end-3 top-3">
-                  <Bousla mood="curious" size={70} />
-                </div>
-                <div className="relative flex flex-wrap gap-2">
-                  <Badge className="bg-white/90 text-ink">⚡ {ts('xp', { xp: mission.xpReward })}</Badge>
-                  <Badge className="bg-white/90 text-ink">
-                    <Clock /> {t('minutes', { n: mission.estimatedMin })}
+            <>
+              <LessonHeader
+                art={<Arzino mood="reading" size={124} pop />}
+                eyebrow={stepLabel}
+                eyebrowClass={st.text}
+                title={l(mission.title)}
+                titleTestId="mission-title"
+              />
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="sky" className="px-3 py-1 text-sm">
+                  ⚡ {ts('xp', { xp: mission.xpReward })}
+                </Badge>
+                <Badge variant="muted" className="px-3 py-1 text-sm">
+                  <Clock /> {t('minutes', { n: mission.estimatedMin })}
+                </Badge>
+                <Badge variant="outline" className="px-3 py-1 text-sm">
+                  {tc(`difficulty.${mission.difficulty}`)}
+                </Badge>
+                {mission.audience === 'FAMILY' && (
+                  <Badge variant="sunny" className="px-3 py-1 text-sm">
+                    <Users /> {ts('family')}
                   </Badge>
-                  <Badge className="bg-white/90 text-ink">{tc(`difficulty.${mission.difficulty}`)}</Badge>
-                  {mission.audience === 'FAMILY' && (
-                    <Badge className="bg-white/90 text-ink">
-                      <Users /> {ts('family')}
-                    </Badge>
-                  )}
-                </div>
+                )}
               </div>
-              <h1 className="font-display text-3xl font-extrabold leading-tight" data-testid="mission-title">
-                {l(mission.title)}
-              </h1>
-              <p className="text-lg leading-relaxed">{l(mission.story)}</p>
-              <Button variant="kid" size="pill" className="w-full" onClick={() => go(1)} data-testid="mission-next">
-                {t('startMission')} <ArrowRight className="rtl-flip" />
-              </Button>
-            </div>
+              <div className="overflow-hidden rounded-[24px] border-2 border-border shadow-[0_4px_0_var(--border)]">
+                <div className="relative flex h-44 items-center justify-center overflow-hidden text-[110px] sm:h-52" style={{ background: st.hex }} aria-hidden>
+                  <span className="absolute -start-6 -top-8 text-[160px] opacity-15">
+                    <TopicGlyph topicKey={mission.topic?.key} icon={mission.topic?.icon} />
+                  </span>
+                  <motion.span animate={{ y: [0, -8, 0], rotate: [0, -3, 3, 0] }} transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }} className="drop-shadow-[0_6px_0_rgba(0,0,0,0.15)]">
+                    <TopicGlyph topicKey={mission.topic?.key} icon={mission.topic?.icon} />
+                  </motion.span>
+                  <span className="absolute bottom-3 start-4 rounded-[12px] bg-black/20 px-3 py-1 text-[12px] font-black uppercase tracking-[0.09em] text-white">{t('storyEyebrow')}</span>
+                </div>
+                <p className="bg-card p-5 text-[18px] font-semibold leading-relaxed">{l(mission.story)}</p>
+              </div>
+            </>
           )}
 
           {step === 1 && (
-            <div className="space-y-5">
-              <h2 className="font-display text-2xl font-extrabold">{t('stepLesson')} ⏱️</h2>
-              <Card className="p-5">
-                <VisualSpecView spec={mission.miniLesson.visualSpec} className="mx-auto max-w-sm" />
-              </Card>
-              <BouslaSays mood="happy" size={64}>
-                <span className="font-normal">{l(mission.miniLesson.text)}</span>
-              </BouslaSays>
-              <Button variant="kid" size="pill" className="w-full" onClick={() => go(2)} data-testid="mission-next">
-                {t('gotIt')} <Check />
-              </Button>
-            </div>
+            <>
+              <LessonHeader art={<Arzino mood="teaching" size={124} pop />} eyebrow={stepLabel} eyebrowClass={st.text} title={t('stepLesson')} sub={t('lessonEyebrow')} />
+              {mission.miniLesson.visualSpec?.shapes?.length ? (
+                <div className="chunky rounded-[24px] p-5">
+                  <VisualSpecView spec={mission.miniLesson.visualSpec} className="mx-auto max-w-sm" />
+                </div>
+              ) : null}
+              <div className="relative rounded-[24px] border-2 p-5 text-[18px] font-semibold leading-relaxed" style={{ borderColor: st.hex, background: `color-mix(in srgb, ${st.hex} 9%, var(--card))` }}>
+                {l(mission.miniLesson.text)}
+              </div>
+            </>
           )}
 
           {step === 2 && (
-            <div className="space-y-5">
-              <h2 className="font-display text-2xl font-extrabold">{t('steps')}</h2>
+            <>
+              <LessonHeader art={<Arzino mood="determined" size={124} pop />} eyebrow={stepLabel} eyebrowClass={st.text} title={t('steps')} sub={t('tickSteps')} />
               <ol className="space-y-3">
                 {steps.map((s, i) => {
                   const done = checked.includes(i);
@@ -221,49 +225,52 @@ export default function MissionPage() {
                     <li key={i}>
                       <button
                         onClick={() => setChecked((c) => (done ? c.filter((x) => x !== i) : [...c, i]))}
-                        className={cn('flex w-full items-start gap-3 rounded-[18px] border-2 p-4 text-start transition-colors', done ? 'border-mint bg-mint-soft' : 'border-border bg-card')}
+                        className={cn(
+                          'flex w-full items-start gap-3 rounded-[18px] border-2 p-4 text-start transition-[background,border-color,transform] active:translate-y-[3px]',
+                          done ? 'border-cedar/60 bg-cedar-soft shadow-[0_4px_0_var(--cedar)]' : 'border-border bg-card shadow-[0_4px_0_var(--border)] hover:bg-muted',
+                        )}
                         aria-pressed={done}
                       >
-                        <span className={cn('mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full font-display font-extrabold', done ? 'bg-mint text-ink' : 'bg-muted')}>
-                          {done ? <Check className="size-5" /> : i + 1}
+                        <span className={cn('mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-[10px] border-2 font-display font-black', done ? 'border-cedar bg-cedar text-white' : 'border-border text-muted-foreground')}>
+                          {done ? <Check className="size-5" strokeWidth={3.5} /> : i + 1}
                         </span>
-                        <span className={cn('text-base font-semibold', done && 'line-through opacity-70')}>{s}</span>
+                        <span className={cn('text-[17px] font-bold', done && 'text-cedar-ink dark:text-cedar')}>{s}</span>
                       </button>
                     </li>
                   );
                 })}
               </ol>
               <div className="flex flex-wrap gap-2">
-                <span className="inline-flex items-center gap-2 rounded-[14px] bg-mint-soft px-3 py-2 text-sm font-bold text-success" data-testid="safety-chip">
-                  <ShieldCheck className="size-5" /> {t('safety')}: <span className="font-semibold text-foreground">{l(mission.safetyNotes)}</span>
+                <span className="inline-flex items-start gap-2 rounded-[16px] border-2 border-cedar/40 bg-cedar-soft px-3 py-2 text-sm font-black text-cedar-ink dark:text-cedar" data-testid="safety-chip">
+                  <ShieldCheck className="mt-px size-5 shrink-0" />
+                  <span>
+                    {t('safety')}: <span className="font-bold text-foreground">{l(mission.safetyNotes)}</span>
+                  </span>
                 </span>
-                <span className="inline-flex items-center gap-2 rounded-[14px] bg-muted px-3 py-2 text-sm font-bold">
+                <span className="inline-flex items-center gap-2 rounded-[16px] border-2 border-border bg-muted px-3 py-2 text-sm font-black">
                   <Clock className="size-4" /> {t('minutes', { n: mission.estimatedMin })}
                 </span>
               </div>
-              <Button variant="kid" size="pill" className="w-full" onClick={() => go(3)} data-testid="mission-next">
-                {t('imReady')} <ArrowRight className="rtl-flip" />
-              </Button>
-            </div>
+            </>
           )}
 
           {step === 3 && sub && (
-            <div className="space-y-5">
-              <h2 className="font-display text-2xl font-extrabold">{t('stepProof')} 📸</h2>
-              <section>
-                <Label>{t('photos')}</Label>
-                <p className="mb-2 text-sm text-muted-foreground">{mission.proofSpec.photoHint ? l(mission.proofSpec.photoHint) : t('photosHint', { n: Math.max(1, mission.proofSpec.photos) })}</p>
+            <>
+              <LessonHeader art={<Arzino mood="writing" size={124} pop />} eyebrow={stepLabel} eyebrowClass={st.text} title={t('stepProof')} sub={t('proofEyebrow')} />
+              <section className="chunky rounded-[20px] p-4">
+                <Label className="eyebrow">📸 {t('photos')}</Label>
+                <p className="mb-3 mt-1 text-sm font-bold text-muted-foreground">{mission.proofSpec.photoHint ? l(mission.proofSpec.photoHint) : t('photosHint', { n: Math.max(1, mission.proofSpec.photos) })}</p>
                 <PhotoPicker value={draft.photos} onChange={(photos) => setDraft((d) => ({ ...d, photos }))} />
               </section>
 
               {fields.length > 0 && (
-                <section>
-                  <Label>{t('numbers')}</Label>
-                  <div className="grid grid-cols-2 gap-3">
+                <section className="chunky rounded-[20px] p-4">
+                  <Label className="eyebrow">🔢 {t('numbers')}</Label>
+                  <div className="mt-3 grid grid-cols-2 gap-3">
                     {fields.map((f) => (
                       // a field with a unit is a measurement (number keyboard); others are words like "yes/no" or "12 > 9" (full keyboard, full row)
                       <div key={f.key} className={f.unit ? undefined : 'col-span-2'}>
-                        <label className="mb-1 block text-sm font-semibold text-muted-foreground" htmlFor={`f-${f.key}`}>
+                        <label className="mb-1 block text-sm font-extrabold text-muted-foreground" htmlFor={`f-${f.key}`}>
                           {l(f.label)} {f.unit && <span>({f.unit})</span>}
                         </label>
                         <Input
@@ -272,7 +279,7 @@ export default function MissionPage() {
                           dir={f.unit ? 'ltr' : 'auto'}
                           value={draft.answers[f.key] ?? ''}
                           onChange={(e) => setDraft((d) => ({ ...d, answers: { ...d.answers, [f.key]: e.target.value } }))}
-                          className="text-lg font-bold"
+                          className="h-12 text-lg font-black"
                           data-testid={`field-${f.key}`}
                         />
                       </div>
@@ -281,8 +288,10 @@ export default function MissionPage() {
                 </section>
               )}
 
-              <section className="space-y-3">
-                <Label htmlFor="explanation">{t('explanation')}</Label>
+              <section className="chunky space-y-3 rounded-[20px] p-4">
+                <Label htmlFor="explanation" className="eyebrow">
+                  🗣️ {t('explanation')}
+                </Label>
                 <VoiceInput
                   onTranscript={(text) => setDraft((d) => ({ ...d, explanation: text }))}
                   onAudio={async (blob) => {
@@ -294,7 +303,7 @@ export default function MissionPage() {
                     }
                   }}
                 />
-                {draft.audioId && <p className="text-sm font-semibold text-success">{t('audioSaved')}</p>}
+                {draft.audioId && <p className="text-sm font-black text-cedar-ink dark:text-cedar">{t('audioSaved')}</p>}
                 <Textarea
                   id="explanation"
                   value={draft.explanation}
@@ -304,58 +313,93 @@ export default function MissionPage() {
                   data-testid="explanation"
                 />
               </section>
-
-              <Button variant="kidMint" size="pill" className="w-full" onClick={submit} loading={submitting} data-testid="submit-proof">
-                {t('submit')} 🧭
-              </Button>
-            </div>
+            </>
           )}
         </motion.div>
       </AnimatePresence>
 
       {err && (
-        <p className="rounded-[14px] bg-coral-soft p-3 text-center font-semibold text-danger" role="alert">
+        <p className="mt-5 rounded-[16px] border-2 border-flag/40 bg-flag-soft p-3 text-center font-bold text-flag-d dark:text-danger" role="alert">
           {err}
         </p>
       )}
 
       {/* I'm stuck → hints 1..3 → ask a friend */}
       {step >= 2 && (
-        <div className="space-y-3">
+        <div className="mt-6 space-y-3">
           {showHints &&
             hints.map((h) => (
-              <motion.div key={h.level} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-                <BouslaSays mood="thinking" size={56}>
-                  <span className="block text-xs font-extrabold uppercase text-primary">{t('hint', { level: h.level })}</span>
-                  <span className="font-normal" data-testid="hint-text">
+              <motion.div key={h.level} initial={{ opacity: 0, y: 10, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }}>
+                <ArzinoSays mood="thinking" size={76}>
+                  <span className="eyebrow block !text-med-ink dark:!text-med">💡 {t('hint', { level: h.level })}</span>
+                  <span className="font-semibold" data-testid="hint-text">
                     {h.text}
                   </span>
-                </BouslaSays>
+                </ArzinoSays>
               </motion.div>
             ))}
           {hintBusy && <Thinking />}
           {hints.length >= 3 && showHints ? (
-            <Card className="border-2 border-sunny bg-sunny-soft p-4">
-              <p className="font-display text-lg font-extrabold">🙋 {t('askFriend')}</p>
-              <p className="text-sm">{t('askFriendBody')}</p>
-            </Card>
+            <div className="chunky flex items-center gap-3 rounded-[20px] p-4">
+              <Arzino mood="warm" size={76} />
+              <div>
+                <p className="font-display text-lg font-black">🙋 {t('askFriend')}</p>
+                <p className="text-sm font-semibold text-muted-foreground">{t('askFriendBody')}</p>
+              </div>
+            </div>
           ) : (
             <Button variant="kidGhost" className="w-full" onClick={askHint} loading={hintBusy} data-testid="im-stuck">
-              <HelpCircle /> {hints.length ? t('nextHint') : t('stuck')} <span className="text-sm text-muted-foreground">· {t('hintsLeft', { n: 3 - hints.length })}</span>
+              <HelpCircle /> {hints.length ? t('nextHint') : t('stuck')} <span className="text-xs normal-case tracking-normal text-muted-foreground">· {t('hintsLeft', { n: 3 - hints.length })}</span>
             </Button>
           )}
         </div>
       )}
 
-      {step > 0 && (
-        <button onClick={() => go(step - 1)} className="inline-flex items-center gap-2 font-bold text-muted-foreground">
-          <ArrowLeft className="rtl-flip size-5" /> {tc('back')}
-        </button>
-      )}
+      {/* Bottom action bar; on the checklist it turns into a cedar "all done" feedback bar */}
+      <motion.div
+        className={cn('fixed inset-x-0 bottom-0 z-40 border-t-2 pb-[env(safe-area-inset-bottom)] transition-colors', allDone ? 'border-transparent bg-cedar-soft' : 'border-border bg-background')}
+        initial={{ y: 100 }}
+        animate={{ y: 0 }}
+        transition={{ type: 'spring', stiffness: 260, damping: 26 }}
+      >
+        <div className="mx-auto flex max-w-[720px] items-center gap-3 px-4 py-4 sm:px-6">
+          {step > 0 && (
+            <Button variant="kidGhost" size="icon" className="h-14 w-14 shrink-0" onClick={() => go(step - 1)} aria-label={tc('back')}>
+              <ArrowLeft className="rtl-flip" />
+            </Button>
+          )}
+          <AnimatePresence>
+            {allDone && (
+              <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="hidden min-w-0 flex-1 items-center gap-3 sm:flex">
+                <Arzino mood="correct" size={72} />
+                <div className="min-w-0">
+                  <p className="font-display text-xl font-black text-cedar-ink dark:text-cedar">{t('allStepsDone')}</p>
+                  <p className="text-sm font-bold text-muted-foreground">{t('allStepsDoneSub')}</p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+          {!allDone && <div className="hidden flex-1 sm:block" />}
+          <Button
+            variant={step === 3 ? 'kidMint' : 'kid'}
+            size="lg"
+            className="h-14 min-w-0 flex-1 sm:w-auto sm:min-w-[220px] sm:flex-none"
+            onClick={next}
+            loading={step === 3 && submitting}
+            data-testid={step === 3 ? 'submit-proof' : 'mission-next'}
+          >
+            <span className="truncate">{nextLabel}</span>
+            {step === 3 ? <Send className="rtl-flip" /> : step === 1 ? <Check /> : <ArrowRight className="rtl-flip" />}
+          </Button>
+        </div>
+      </motion.div>
 
       {submitting && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 backdrop-blur" role="status">
-          <Thinking label={t('submitting')} />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur" role="status">
+          <div className="flex flex-col items-center gap-3 text-center">
+            <Arzino mood="thinking" size={220} />
+            <p className="font-display text-2xl font-black">{t('submitting')}</p>
+          </div>
         </div>
       )}
     </div>

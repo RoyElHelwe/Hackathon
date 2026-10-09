@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { Arzino } from '@/components/arzino';
 import { PageHeader } from '@/components/app/adult-shell';
 import { ErrorState, PageSkeleton, Thinking } from '@/components/app/states';
 import { CampusCanvas } from '@/components/campus/campus-canvas';
@@ -20,6 +21,7 @@ import { api, ApiError } from '@/lib/api';
 import type { AttemptView } from '@/lib/campus/types';
 import { useRoom, useSocketEvent } from '@/lib/campus/use-room';
 import { useVoice } from '@/lib/campus/use-voice';
+import { cn } from '@/lib/cn';
 import { useApi, useInvalidate, useMe } from '@/lib/hooks';
 
 export default function AttemptPage() {
@@ -37,19 +39,24 @@ export default function AttemptPage() {
 
   return (
     <div className="space-y-5">
-      <Button asChild variant="ghost" size="sm">
+      <Button asChild variant="kidGhost" size="sm">
         <Link href={`/teacher/exams/${a.examId}`}>
           <ArrowLeft className="rtl-flip" /> {t('live.back')}
         </Link>
       </Button>
-      <PageHeader
-        title={a.studentName ?? ''}
-        subtitle={
-          <span className="flex flex-wrap items-center gap-2">
-            {a.exam.title} <AttemptStatusBadge status={a.status} />
-          </span>
-        }
-      />
+      <div className="flex items-center gap-4">
+        <Arzino mood={a.status === 'IN_PROGRESS' ? 'teaching' : a.status === 'GRADING' ? 'writing' : 'clipboard'} size={88} className="hidden sm:inline-flex" />
+        <div className="min-w-0 flex-1">
+          <PageHeader
+            title={a.studentName ?? ''}
+            subtitle={
+              <span className="flex flex-wrap items-center gap-2">
+                {a.exam.title} <AttemptStatusBadge status={a.status} />
+              </span>
+            }
+          />
+        </div>
+      </div>
       {a.status === 'IN_PROGRESS' ? <LiveView attempt={a} /> : <Review attempt={a} onSaved={() => invalidate(path, `/exams/${a.examId}`)} />}
     </div>
   );
@@ -76,26 +83,45 @@ function LiveView({ attempt }: { attempt: AttemptView }) {
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_1.2fr]">
       <div className="space-y-3">
-        <p className="rounded-[12px] bg-violet-soft p-3 text-sm font-semibold" data-testid="spectating">
+        <p className="rounded-[14px] border-2 border-med/30 bg-med-soft p-3 text-sm font-bold text-med-ink dark:text-white" data-testid="spectating">
           👀 {t('watching')}
         </p>
-        <CampusCanvas room={room} map="exam" interactive={false} className="aspect-[18/13] w-full" />
+        <CampusCanvas room={room} map="exam" interactive={false} className="aspect-[18/13] w-full">
+          {(fs) =>
+            fs.full && (
+              <div className="pointer-events-none absolute inset-x-3 top-3 flex flex-wrap items-center gap-2 pe-14">
+                <span className="rounded-full border-2 border-border bg-card/95 px-3 py-1.5 font-display text-sm font-black shadow-[0_3px_0_0_var(--border)]">👀 {attempt.studentName}</span>
+                {left !== null && <span className="rounded-full bg-med px-3 py-1.5 font-mono text-sm font-black text-white">⏱ {mmss(left)}</span>}
+                {studentSpeaking && <span className="rounded-full bg-cedar px-3 py-1.5 text-sm font-black text-white">🎙️ {t('speakingNow')}</span>}
+              </div>
+            )
+          }
+        </CampusCanvas>
         <div className="flex flex-wrap items-center gap-2">
           {!voice.enabled ? (
-            <Button onClick={() => voice.enable(false)} data-testid="listen-live">
+            <Button variant="kidMint" onClick={() => voice.enable(false)} data-testid="listen-live">
               <Headphones /> {t('joinAudio')}
             </Button>
           ) : (
-            <span className="flex items-center gap-2 text-sm font-bold text-success">
+            <span className="flex items-center gap-2 rounded-full bg-cedar px-3 py-1.5 text-sm font-black text-white">
               <Headphones className="size-4" /> {t('audioOn')}
             </span>
           )}
-          {studentSpeaking && <span className="text-sm font-bold text-mint">🎙️ {t('speakingNow')}</span>}
-          {left !== null && <span className="ms-auto rounded-full bg-sky-soft px-3 py-1 font-mono text-sm font-bold text-sky">⏱ {mmss(left)}</span>}
+          {studentSpeaking && <span className="text-sm font-black text-cedar">🎙️ {t('speakingNow')}</span>}
+          {left !== null && <span className="ms-auto rounded-full bg-med px-3 py-1.5 font-mono text-sm font-black text-white">⏱ {mmss(left)}</span>}
         </div>
         <p className="text-xs text-muted-foreground">{t('hidden')}</p>
       </div>
-      <Card className="max-h-[70vh] overflow-y-auto p-4">{attempt.turns.length ? <Turns turns={attempt.turns} live={live || undefined} /> : <p className="text-muted-foreground">{t('noTurns')}</p>}</Card>
+      <Card className="max-h-[70vh] overflow-y-auto p-4">
+        {attempt.turns.length ? (
+          <Turns turns={attempt.turns} live={live || undefined} />
+        ) : (
+          <div className="flex flex-col items-center gap-2 py-8 text-center">
+            <Arzino mood="bored-waiting" size={110} />
+            <p className="font-semibold text-muted-foreground">{t('noTurns')}</p>
+          </div>
+        )}
+      </Card>
     </div>
   );
 }
@@ -134,17 +160,17 @@ function Review({ attempt, onSaved }: { attempt: AttemptView; onSaved: () => voi
     <div className="grid gap-4 lg:grid-cols-[1.1fr_1fr]">
       <div className="space-y-4">
         <Card className="space-y-3 p-5" data-testid="exam-review">
-          <div className="flex flex-wrap items-end gap-6">
-            <div>
-              <p className="text-xs font-bold text-muted-foreground">{t('aiScore')}</p>
-              <p className="text-4xl font-extrabold">{r?.aiScore ?? '–'}</p>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="min-w-28 rounded-[16px] border-2 border-med bg-med-soft px-4 py-2 shadow-[0_4px_0_0_var(--med-d)]">
+              <p className="eyebrow">{t('aiScore')}</p>
+              <p className="font-display text-4xl font-black text-med-ink dark:text-white">{r?.aiScore ?? '–'}</p>
             </div>
-            <div>
-              <p className="text-xs font-bold text-muted-foreground">{t('finalScore')}</p>
-              <p className="text-4xl font-extrabold text-primary">{r?.score ?? '–'}</p>
+            <div className="min-w-28 rounded-[16px] border-2 border-cedar bg-cedar-soft px-4 py-2 shadow-[0_4px_0_0_var(--cedar-d)]">
+              <p className="eyebrow">{t('finalScore')}</p>
+              <p className="font-display text-4xl font-black text-cedar-ink dark:text-white">{r?.score ?? '–'}</p>
             </div>
             {attempt.status === 'RELEASED' && (
-              <span className="flex items-center gap-1 text-sm font-bold text-success">
+              <span className="flex items-center gap-1 rounded-full bg-cedar px-3 py-1.5 text-sm font-black text-white">
                 <CheckCircle2 className="size-4" /> {t('releasedAt')}
               </span>
             )}
@@ -161,7 +187,7 @@ function Review({ attempt, onSaved }: { attempt: AttemptView; onSaved: () => voi
             <Textarea id="comment" value={comment} onChange={(e) => setComment(e.target.value)} rows={2} maxLength={1000} />
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button onClick={() => save(true)} loading={busy === 'release'} data-testid="approve-release">
+            <Button variant="kid" onClick={() => save(true)} loading={busy === 'release'} data-testid="approve-release">
               <CheckCircle2 /> {t('approve')}
             </Button>
             <Button variant="outline" onClick={() => save(false)} loading={busy === 'save'}>
@@ -172,28 +198,30 @@ function Review({ attempt, onSaved }: { attempt: AttemptView; onSaved: () => voi
         </Card>
         {report && (
           <Card className="space-y-3 p-5">
-            <h3 className="text-lg font-extrabold">{t('report')}</h3>
+            <h3 className="flex items-center gap-2 font-display text-xl font-black">
+              <Arzino mood="clipboard" size={48} animate={false} /> {t('report')}
+            </h3>
             <p className="text-sm">
               <b>{t('notes')}:</b> {report.teacherNotes}
             </p>
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
-                <p className="font-bold text-success">{t('strengths')}</p>
+                <p className="eyebrow !text-success">{t('strengths')}</p>
                 <ul className="list-disc ps-5 text-sm">{report.strengths.map((s) => <li key={s}>{s}</li>)}</ul>
               </div>
               <div>
-                <p className="font-bold text-warning">{t('gaps')}</p>
+                <p className="eyebrow !text-flag">{t('gaps')}</p>
                 <ul className="list-disc ps-5 text-sm">{report.gaps.map((s) => <li key={s}>{s}</li>)}</ul>
               </div>
             </div>
             <div>
-              <p className="font-bold">{t('perQuestion')}</p>
-              <ul className="space-y-1 text-sm">
+              <p className="eyebrow">{t('perQuestion')}</p>
+              <ul className="mt-1 space-y-1.5 text-sm">
                 {report.perQuestion.map((p) => {
                   const question = attempt.questions?.find((x) => x.id === p.questionId);
                   return (
                     <li key={p.questionId} className="flex gap-2">
-                      <span className="w-14 shrink-0 font-bold">{p.score}/10</span>
+                      <span className={cn('h-fit w-14 shrink-0 rounded-full px-2 py-0.5 text-center text-xs font-black', p.score >= 7 ? 'bg-cedar-soft text-cedar-ink dark:text-success' : p.score >= 5 ? 'bg-med-soft text-med-ink dark:text-white' : 'bg-flag-soft text-flag-d dark:text-danger')}>{p.score}/10</span>
                       <span>
                         <span className="text-muted-foreground">{question?.text ?? p.questionId}</span> — {p.comment}
                       </span>

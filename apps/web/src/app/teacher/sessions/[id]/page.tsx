@@ -4,6 +4,7 @@ import { ArrowLeft } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { Arzino } from '@/components/arzino';
 import { PageHeader } from '@/components/app/adult-shell';
 import { ErrorState, PageSkeleton } from '@/components/app/states';
 import { SessionReplay } from '@/components/campus/session-replay';
@@ -23,12 +24,17 @@ export default function TeacherSessionReplayPage() {
   const dur = s.startedAt ? Math.round(((s.endedAt ? new Date(s.endedAt) : new Date()).getTime() - new Date(s.startedAt).getTime()) / 1000) : 0;
   return (
     <div className="max-w-3xl space-y-4">
-      <Button asChild variant="ghost" size="sm">
+      <Button asChild variant="kidGhost" size="sm">
         <Link href="/teacher/sessions">
           <ArrowLeft className="rtl-flip" /> {t('teacher.navSessions')}
         </Link>
       </Button>
-      <PageHeader title={s.participants.map((p) => p.name).join(' & ')} subtitle={`${s.className}${s.topic ? ` · ${s.topic}` : ''} · ${t('study.duration', { time: mmss(dur) })} · ${t(`sessions.status.${s.status}`)}`} />
+      <div className="flex items-center gap-4">
+        <Arzino mood="clipboard" size={88} className="hidden sm:inline-flex" />
+        <div className="min-w-0 flex-1">
+          <PageHeader title={s.participants.map((p) => p.name).join(' & ')} subtitle={`${s.className}${s.topic ? ` · ${s.topic}` : ''} · ${t('study.duration', { time: mmss(dur) })} · ${t(`sessions.status.${s.status}`)}`} />
+        </div>
+      </div>
       <SessionReplay kind="STUDY" refId={s.id} events={s.events} names={names} />
     </div>
   );

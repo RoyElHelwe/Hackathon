@@ -31,6 +31,7 @@ import { errMessage } from '@/components/teacher/helpers';
 import { ReconnectBanner } from '@/components/teacher/reconnect-banner';
 import { toast } from '@/components/teacher/toast';
 import type { ContentReportItem, CourseLesson, CourseSummary, LessonMaterial, LessonStatus, LessonSyncResult } from '@/components/teacher/types';
+import { Arzino } from '@/components/arzino';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -150,10 +151,12 @@ export default function CoursePage({ params }: { params: Promise<{ id: string }>
 
   return (
     <div>
-      <Link href="/teacher" className="mb-3 inline-flex items-center gap-1.5 text-sm font-bold text-muted-foreground hover:text-foreground">
+      <Link href="/teacher" className="mb-4 inline-flex items-center gap-1.5 font-display text-xs font-black uppercase tracking-[0.09em] text-muted-foreground hover:text-foreground">
         <ArrowLeft className="rtl-flip size-4" /> {t('back')}
       </Link>
       <PageHeader
+        mood="reading"
+        eyebrow={t('eyebrow')}
         title={title}
         subtitle={
           <span className="flex flex-wrap items-center gap-2">
@@ -163,7 +166,7 @@ export default function CoursePage({ params }: { params: Promise<{ id: string }>
               <Link
                 key={s.id}
                 href={`/teacher/classes/${s.id}`}
-                className="rounded-full border border-border bg-card px-2.5 py-0.5 text-xs font-bold hover:border-primary/50"
+                className="rounded-full border-2 border-border bg-card px-2.5 py-0.5 text-xs font-extrabold text-foreground hover:border-med/60"
                 data-testid="course-section-chip"
               >
                 {s.name}
@@ -181,7 +184,7 @@ export default function CoursePage({ params }: { params: Promise<{ id: string }>
       />
       {c.sections.some((s) => s.syncError === 'RECONNECT') && <ReconnectBanner />}
 
-      <h2 className="mb-3 mt-2 text-lg font-extrabold">{t('lessonsTitle')}</h2>
+      <h2 className="mb-4 mt-2 font-display text-[22px] font-black">{t('lessonsTitle')}</h2>
       {lessons.isLoading ? (
         <div className="space-y-3">
           {[0, 1, 2].map((i) => (
@@ -191,8 +194,8 @@ export default function CoursePage({ params }: { params: Promise<{ id: string }>
       ) : lessons.error ? (
         <ErrorState message={lessons.error.message} onRetry={() => lessons.refetch()} />
       ) : !lessons.data?.length ? (
-        <div className="rounded-[20px] border border-dashed border-border bg-card">
-          <EmptyState mood="curious" title={t('emptyTitle')} body={t('emptyBody')} className="py-14" />
+        <div className="rounded-[20px] border-2 border-dashed border-med/40 bg-med-soft/40">
+          <EmptyState mood="bored-waiting" title={t('emptyTitle')} body={t('emptyBody')} className="py-14" />
         </div>
       ) : (
         <ol className="space-y-3" data-testid="lesson-list">
@@ -212,7 +215,7 @@ export default function CoursePage({ params }: { params: Promise<{ id: string }>
                 {t('cancel')}
               </Button>
             </DialogClose>
-            <Button type="button" onClick={() => confirming && gamify(confirming)} data-testid="regenerate-confirm">
+            <Button type="button" variant="kidMint" onClick={() => confirming && gamify(confirming)} data-testid="regenerate-confirm">
               <Wand2 /> {t('regenerateCta')}
             </Button>
           </div>
@@ -247,14 +250,18 @@ function LessonRow({
   return (
     <li data-testid="lesson-row">
       <Card className="flex gap-4 p-4 md:p-5">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-[12px] bg-violet-soft text-sm font-extrabold tabular-nums text-primary dark:text-white">
-          {index}
-        </span>
+        {gamifying ? (
+          <Arzino mood="reading" size={52} className="-my-1 shrink-0" />
+        ) : (
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-[14px] bg-med font-display text-lg font-black tabular-nums text-white shadow-[0_3px_0_var(--med-d)]">
+            {index}
+          </span>
+        )}
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div className="min-w-0">
-              <h3 className="font-extrabold leading-snug">{lesson.title || t('untitled')}</h3>
-              <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
+              <h3 className="font-display text-lg font-black leading-snug">{lesson.title || t('untitled')}</h3>
+              <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs font-semibold text-muted-foreground">
                 <span>{lesson.kind === 'ASSIGNMENT' ? t('kindAssignment') : t('kindMaterial')}</span>
                 <span aria-hidden>·</span>
                 <span>{t('postedOn', { date: posted })}</span>
@@ -271,7 +278,7 @@ function LessonRow({
               {canEdit && (
                 <Button
                   size="sm"
-                  variant={lesson.status === 'READY' ? 'outline' : 'default'}
+                  variant={lesson.status === 'READY' ? 'outline' : 'kidMint'}
                   onClick={() => onGamify(lesson)}
                   disabled={gamifying || starting}
                   loading={starting}
@@ -282,18 +289,18 @@ function LessonRow({
               )}
             </div>
           </div>
-          {lesson.description && <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{lesson.description}</p>}
+          {lesson.description && <p className="mt-2 line-clamp-2 text-sm font-semibold text-muted-foreground">{lesson.description}</p>}
           {lesson.status === 'FAILED' && (
-            <p className="mt-2 rounded-[12px] bg-coral-soft px-3 py-2 text-sm font-semibold text-danger" role="alert" data-testid="gamify-error">
+            <p className="mt-2 rounded-[12px] border-2 border-flag/30 bg-flag-soft px-3 py-2 text-sm font-bold text-flag-d dark:text-danger" role="alert" data-testid="gamify-error">
               {t(`gamifyError.${errorKey}`)}
             </p>
           )}
           {lesson.topic && lesson.status !== 'GAMIFYING' && (
-            <div className="mt-3 flex flex-wrap items-center gap-2 rounded-[14px] bg-violet-soft px-3 py-2 text-sm" data-testid="lesson-skill">
-              <Sparkles className="size-4 shrink-0 text-primary" aria-hidden />
-              <span className="font-bold">{t('skill', { name: l(lesson.topic.name) })}</span>
+            <div className="mt-3 flex flex-wrap items-center gap-2 rounded-[14px] border-2 border-cedar/30 bg-cedar-soft px-3 py-2 text-sm" data-testid="lesson-skill">
+              <Sparkles className="size-4 shrink-0 text-cedar" aria-hidden />
+              <span className="font-extrabold text-cedar-ink dark:text-white">{t('skill', { name: l(lesson.topic.name) })}</span>
               {(lesson.draftCount > 0 || lesson.approvedCount > 0) && (
-                <Link href={`/teacher/missions?courseId=${courseId}`} className="ms-auto font-bold text-primary hover:underline" data-testid="lesson-missions-link">
+                <Link href={`/teacher/missions?courseId=${courseId}`} className="ms-auto font-display text-xs font-black uppercase tracking-[0.06em] text-med-d hover:underline dark:text-med" data-testid="lesson-missions-link">
                   {lesson.draftCount > 0 ? t('missionsToReview', { n: lesson.draftCount }) : t('missionsLive', { n: lesson.approvedCount })}
                 </Link>
               )}
@@ -310,10 +317,10 @@ function LessonRow({
                   href={m.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex max-w-[16rem] items-center gap-1.5 rounded-full border border-border bg-muted/60 px-2.5 py-1 text-xs font-bold hover:border-primary/50"
+                  className="inline-flex max-w-[16rem] items-center gap-1.5 rounded-full border-2 border-border bg-card px-2.5 py-1 text-xs font-bold hover:border-med/60"
                   title={m.title}
                 >
-                  <Icon className="size-3.5 shrink-0 text-primary" aria-hidden />
+                  <Icon className="size-3.5 shrink-0 text-med" aria-hidden />
                   <span className="sr-only">{t(`attachment.${kind}`)}: </span>
                   <span className="truncate">{m.title}</span>
                 </a>
@@ -324,7 +331,7 @@ function LessonRow({
                 href={url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="ms-auto inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline"
+                className="ms-auto inline-flex items-center gap-1 text-xs font-extrabold text-med-d hover:underline dark:text-med"
                 data-testid="open-in-classroom"
               >
                 {t('openInClassroom')} <ExternalLink className="size-3.5 rtl-flip" />
@@ -337,7 +344,7 @@ function LessonRow({
   );
 }
 
-/** Per attachment: what Bousla actually read on the last gamify run (watched the full video, read the document, title only…). */
+/** Per attachment: what Arzino actually read on the last gamify run (watched the full video, read the document, title only…). */
 function ContentReport({ items }: { items: ContentReportItem[] }) {
   const t = useTranslations('teacher.courses.contentReport');
   const reason = (item: ContentReportItem) => (item.codes?.length ? item.codes.map((c) => t(`code.${c}`)).join('; ') : (item.note ?? ''));

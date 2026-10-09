@@ -3,6 +3,7 @@
 import { Download, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
+import { Arzino } from '@/components/arzino';
 import { Button } from '@/components/ui/button';
 
 interface BeforeInstallPromptEvent extends Event {
@@ -47,20 +48,21 @@ export function InstallCard() {
     }
   };
   return (
-    <div className="relative flex items-center gap-4 rounded-[20px] bg-gradient-to-br from-sky to-violet p-4 text-white" data-testid="install-card">
-      <div className="flex size-12 shrink-0 items-center justify-center rounded-[14px] bg-white/20">
-        <Download className="size-6" />
-      </div>
+    <div className="relative flex items-center gap-3 rounded-[20px] bg-med p-4 pe-9 text-white shadow-[0_5px_0_var(--med-d)]" data-testid="install-card">
+      <Arzino mood="surprise" size={72} />
       <div className="min-w-0 flex-1">
-        <p className="font-display text-lg font-extrabold">{t('installTitle')}</p>
-        <p className="text-sm text-white/85">{ios ? t('iosInstall') : t('installBody')}</p>
+        <p className="font-display text-lg font-black">
+          <Download className="me-1 inline size-4" />
+          {t('installTitle')}
+        </p>
+        <p className="text-sm font-semibold text-white/90">{ios ? t('iosInstall') : t('installBody')}</p>
       </div>
       {evt && (
-        <Button variant="kidSunny" size="sm" onClick={() => evt.prompt().then(dismiss)}>
+        <Button variant="kidGhost" size="sm" onClick={() => evt.prompt().then(dismiss)}>
           {t('install')}
         </Button>
       )}
-      <button onClick={dismiss} className="absolute end-2 top-2 rounded-full p-1 text-white/70 hover:bg-white/10" aria-label="Dismiss">
+      <button onClick={dismiss} className="absolute end-2 top-2 rounded-full p-1 text-white/80 hover:bg-white/15" aria-label="Dismiss">
         <X className="size-4" />
       </button>
     </div>

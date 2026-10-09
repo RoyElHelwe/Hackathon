@@ -4,28 +4,28 @@ import * as React from 'react';
 import { cn } from '@/lib/cn';
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 whitespace-nowrap font-bold transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-5 [&_svg]:shrink-0 cursor-pointer',
+  'inline-flex items-center justify-center gap-2 whitespace-nowrap font-extrabold transition-[colors,filter] disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-5 [&_svg]:shrink-0 cursor-pointer',
   {
     variants: {
       variant: {
-        default: 'bg-primary text-primary-foreground hover:bg-violet-600',
-        secondary: 'bg-muted text-foreground hover:bg-violet-soft',
-        outline: 'border-2 border-border bg-card hover:bg-muted',
+        default: 'kid-press bg-primary text-primary-foreground hover:brightness-105 [--press:var(--cedar-d)]',
+        secondary: 'bg-muted text-foreground hover:bg-cedar-soft',
+        outline: 'border-2 border-border bg-card shadow-[0_3px_0_var(--border)] hover:bg-muted active:translate-y-[3px] active:shadow-none',
         ghost: 'hover:bg-muted',
-        destructive: 'bg-danger text-white hover:opacity-90',
-        mint: 'bg-mint text-ink hover:brightness-95',
-        // Chunky student button with a 4px "press" shadow
-        kid: 'kid-press bg-primary text-primary-foreground font-display text-lg tracking-wide hover:brightness-105',
-        kidMint: 'kid-press bg-mint text-ink font-display text-lg [--press:#1a9e7b] hover:brightness-105',
-        kidSunny: 'kid-press bg-sunny text-ink font-display text-lg [--press:#d99f12] hover:brightness-105',
-        kidCoral: 'kid-press bg-coral text-white font-display text-lg [--press:#d65a3b] hover:brightness-105',
-        kidGhost: 'kid-press bg-card text-foreground border-2 border-border font-display text-lg [--press:var(--border)]',
+        destructive: 'kid-press bg-flag text-white hover:brightness-105 [--press:var(--flag-d)]',
+        mint: 'kid-press bg-med text-white hover:brightness-105 [--press:var(--med-d)]',
+        // Chunky student buttons: uppercase, tracked, 5px darker bottom edge that sinks on tap
+        kid: 'kid-press bg-cedar text-white font-display uppercase tracking-[0.08em] hover:brightness-105 [--press:var(--cedar-d)]',
+        kidMint: 'kid-press bg-med text-white font-display uppercase tracking-[0.08em] hover:brightness-105 [--press:var(--med-d)]',
+        kidSunny: 'kid-press bg-flame text-white font-display uppercase tracking-[0.08em] hover:brightness-105 [--press:var(--flame-d)]',
+        kidCoral: 'kid-press bg-flag text-white font-display uppercase tracking-[0.08em] hover:brightness-105 [--press:var(--flag-d)]',
+        kidGhost: 'kid-press bg-card text-med-ink dark:text-white border-2 border-border font-display uppercase tracking-[0.08em] [--press:var(--border)] hover:bg-muted',
       },
       size: {
-        default: 'h-12 rounded-[16px] px-5 text-base',
+        default: 'h-12 rounded-[16px] px-5 text-[15px]',
         sm: 'h-10 rounded-[12px] px-3 text-sm',
-        lg: 'h-14 rounded-[16px] px-7 text-lg',
-        pill: 'h-14 rounded-full px-8 text-lg',
+        lg: 'h-14 rounded-[16px] px-7 text-base',
+        pill: 'h-14 rounded-[16px] px-8 text-base',
         icon: 'h-12 w-12 rounded-[16px]',
       },
     },

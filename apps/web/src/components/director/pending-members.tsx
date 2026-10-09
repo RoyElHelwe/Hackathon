@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { useFormatter, useNow, useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { ErrorState } from '@/components/app/states';
+import { Arzino } from '@/components/arzino';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -44,9 +45,12 @@ export function PendingMembers({ schoolId, onToast }: { schoolId: string; onToas
 
   return (
     <Card data-testid="pending-members">
-      <CardHeader className="flex-row items-center gap-2">
-        <CardTitle>{t('pending')}</CardTitle>
-        {!!data?.length && <Badge variant="coral">{data.length}</Badge>}
+      <CardHeader className="flex-row items-center gap-3">
+        <Arzino mood={data?.length ? 'clipboard' : 'correct'} size={64} animate={false} className="-my-3" />
+        <CardTitle className="text-xl">{t('pending')}</CardTitle>
+        {!!data?.length && (
+          <span className="flex h-7 min-w-7 items-center justify-center rounded-full bg-flag px-2 text-sm font-black text-white tabular-nums">{data.length}</span>
+        )}
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -54,7 +58,7 @@ export function PendingMembers({ schoolId, onToast }: { schoolId: string; onToas
         ) : error ? (
           <ErrorState message={error instanceof ApiError ? error.message : undefined} onRetry={() => refetch()} className="py-4" />
         ) : !data?.length ? (
-          <p className="rounded-[14px] bg-muted/60 px-4 py-5 text-center font-semibold text-muted-foreground" data-testid="no-pending">
+          <p className="rounded-[16px] bg-muted px-4 py-5 text-center font-bold text-muted-foreground" data-testid="no-pending">
             {t('noPending')}
           </p>
         ) : (
@@ -79,24 +83,24 @@ function PendingRow({ m, busy, onApprove, onReject }: { m: Member; busy: boolean
   const format = useFormatter();
   const now = useNow({ updateInterval: 60_000 });
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-[16px] border-2 border-sunny/60 bg-sunny-soft/50 p-3" data-testid="pending-member">
+    <div className="flex flex-wrap items-center gap-3 rounded-[18px] border-2 border-border bg-card p-3 shadow-[0_3px_0_var(--border)]" data-testid="pending-member">
       <Avatar name={m.user.name} src={m.user.avatarUrl} className="size-11" />
       <div className="min-w-0 flex-1">
-        <p className="flex flex-wrap items-center gap-2 font-extrabold">
-          {m.user.name} <Badge variant="default">{tr(m.role)}</Badge>
+        <p className="flex flex-wrap items-center gap-2 font-black">
+          {m.user.name} <Badge variant="sky">{tr(m.role)}</Badge>
         </p>
         <p className="truncate text-sm text-muted-foreground" dir="ltr">
           {m.user.email}
         </p>
-        <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+        <p className="mt-0.5 flex items-center gap-1 text-xs font-bold text-muted-foreground">
           <Clock className="size-3.5" /> {t('requested', { date: format.relativeTime(new Date(m.createdAt), now) })}
         </p>
       </div>
-      <div className="flex gap-2">
-        <Button variant="outline" size="sm" onClick={onReject} disabled={busy} data-testid="reject-member">
+      <div className="flex w-full gap-2 sm:w-auto">
+        <Button variant="kidCoral" size="sm" className="flex-1 sm:flex-none" onClick={onReject} disabled={busy} data-testid="reject-member">
           <X /> {t('reject')}
         </Button>
-        <Button variant="mint" size="sm" onClick={onApprove} disabled={busy} data-testid="approve-member">
+        <Button variant="kid" size="sm" className="flex-1 sm:flex-none" onClick={onApprove} disabled={busy} data-testid="approve-member">
           <Check /> {t('approve')}
         </Button>
       </div>

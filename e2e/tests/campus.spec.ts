@@ -91,7 +91,7 @@ test.describe('Tajriba Campus', () => {
     await card.getByTestId('enter-exam-room').click();
     await lea.page.getByTestId('start-interview').click();
     await expect(lea.page.getByTestId('exam-room')).toBeVisible();
-    await expect(lea.page.getByTestId('bousla-says')).toContainText(/Bousla/);
+    await expect(lea.page.getByTestId('arzino-says')).toContainText(/Arzino/);
     await expect(lea.page.getByTestId('exam-timer')).toBeVisible();
 
     // Ms. Rana opens the room live as a spectator.
@@ -108,7 +108,7 @@ test.describe('Tajriba Campus', () => {
     await lea.page.getByTestId('typed-answer').fill('It is a way to find the area: half of the base times the height of the triangle, for example a garden bed.');
     await lea.page.getByTestId('send-answer').click();
     await expect(lea.page.getByTestId('question-progress')).toContainText('2');
-    await expect(lea.page.getByTestId('bousla-emoji').last()).toBeVisible();
+    await expect(lea.page.getByTestId('arzino-emoji').last()).toBeVisible();
     await expect(rana.page.getByTestId('teacher-transcript')).toContainText('garden bed');
 
     // The Exam Hall: one glass room per student; jumping into Lea's room = hearing it + seeing her transcript.
@@ -132,7 +132,7 @@ test.describe('Tajriba Campus', () => {
 
     await lea.page.getByTestId('typed-answer').fill("I don't know");
     await lea.page.getByTestId('send-answer').click();
-    await expect(lea.page.getByTestId('bousla-emoji').last()).toHaveText('💪');
+    await expect(lea.page.getByTestId('arzino-emoji').last()).toHaveText('💪');
 
     await lea.page.getByTestId('finish-interview').click();
     await lea.page.getByTestId('confirm-finish').click();

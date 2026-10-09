@@ -10,6 +10,7 @@ import { HistoryList } from '@/components/teacher/history-list';
 import { ParentsCard } from '@/components/teacher/parents-card';
 import { SkillTiles } from '@/components/teacher/skill-tiles';
 import type { ClassStudent, TeacherDashboard } from '@/components/teacher/types';
+import { Arzino } from '@/components/arzino';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar } from '@/components/ui/misc';
@@ -51,15 +52,15 @@ export default function TeacherStudentPage({ params, searchParams }: { params: P
 
   return (
     <div>
-      <Link href={`/teacher/classes/${cls.id}`} className="mb-3 inline-flex items-center gap-1.5 text-sm font-bold text-muted-foreground hover:text-foreground">
+      <Link href={`/teacher/classes/${cls.id}`} className="mb-4 inline-flex items-center gap-1.5 font-display text-xs font-black uppercase tracking-[0.09em] text-muted-foreground hover:text-foreground">
         <ArrowLeft className="rtl-flip size-4" /> {cls.name}
       </Link>
 
       <Card className="mb-6 overflow-hidden">
         <div className="flex flex-wrap items-center gap-5 p-5 md:p-6">
-          <Avatar name={student.name} src={student.avatarUrl} className="size-20 text-2xl" />
+          <Avatar name={student.name} src={student.avatarUrl} className="size-20 border-4 border-card text-2xl shadow-[0_0_0_2px_var(--border)]" />
           <div className="min-w-0 flex-1">
-            <h1 className="text-2xl font-extrabold tracking-tight md:text-3xl" data-testid="student-name">
+            <h1 className="font-display text-[30px] font-black leading-tight tracking-tight md:text-[34px]" data-testid="student-name">
               {student.name}
             </h1>
             <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -69,16 +70,17 @@ export default function TeacherStudentPage({ params, searchParams }: { params: P
             </div>
           </div>
           <div className="grid grid-cols-3 gap-3">
-            <Metric icon={<Trophy className="size-4 text-primary" />} label={t('level')} value={student.level} />
-            <Metric icon={<Sparkles className="size-4 text-warning" />} label="XP" value={student.xp} />
-            <Metric icon={<Star className="size-4 text-success" />} label={t('mastered')} value={student.mastered} />
+            <Metric icon={<Trophy className="size-4 text-cedar" />} label={t('level')} value={student.level} />
+            <Metric icon={<Sparkles className="size-4 text-med" />} label="XP" value={student.xp} />
+            <Metric icon={<Star className="size-4 text-flame" />} label={t('mastered')} value={student.mastered} />
           </div>
         </div>
         {stuck.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2 border-t border-coral/30 bg-coral-soft px-5 py-3 text-sm md:px-6" data-testid="student-stuck">
-            <AlertTriangle className="size-4 text-danger" />
+          <div className="flex flex-wrap items-center gap-3 border-t-2 border-flag/30 bg-flag-soft px-5 py-3 text-sm md:px-6" data-testid="student-stuck">
+            <Arzino mood="flop-cry" size={56} className="-my-2" />
+            <AlertTriangle className="size-4 text-flag" />
             {stuck.map((s) => (
-              <span key={s.topicId} className="font-semibold">
+              <span key={s.topicId} className="font-extrabold">
                 {t('stuckOn', { topic: l(s.topicName) })} ({s.reasons.map((r) => t(`reason.${r}`)).join(', ')})
               </span>
             ))}
@@ -90,7 +92,7 @@ export default function TeacherStudentPage({ params, searchParams }: { params: P
         <div className="min-w-0 space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>{t('skillMap')}</CardTitle>
+              <CardTitle className="text-xl">{t('skillMap')}</CardTitle>
               <CardDescription>{t('skillMapBody')}</CardDescription>
             </CardHeader>
             <CardContent>
@@ -99,7 +101,7 @@ export default function TeacherStudentPage({ params, searchParams }: { params: P
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle>{t('history')}</CardTitle>
+              <CardTitle className="text-xl">{t('history')}</CardTitle>
             </CardHeader>
             <CardContent>
               <HistoryList studentId={id} />
@@ -108,7 +110,7 @@ export default function TeacherStudentPage({ params, searchParams }: { params: P
         </div>
         <Card className="self-start">
           <CardHeader>
-            <CardTitle>{t('family')}</CardTitle>
+            <CardTitle className="text-xl">{t('family')}</CardTitle>
             <CardDescription>{t('familyBody')}</CardDescription>
           </CardHeader>
           <CardContent>
@@ -122,11 +124,11 @@ export default function TeacherStudentPage({ params, searchParams }: { params: P
 
 function Metric({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) {
   return (
-    <div className="min-w-20 rounded-[16px] bg-muted px-3 py-2 text-center">
-      <p className="flex items-center justify-center gap-1 text-xs font-bold text-muted-foreground">
+    <div className="min-w-24 rounded-[16px] border-2 border-border px-3 py-2 text-center">
+      <p className="font-display text-[28px] font-black leading-tight tabular-nums">{value}</p>
+      <p className="flex items-center justify-center gap-1 text-xs font-extrabold text-muted-foreground">
         {icon} {label}
       </p>
-      <p className="text-xl font-extrabold tabular-nums">{value}</p>
     </div>
   );
 }

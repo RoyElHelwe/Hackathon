@@ -34,12 +34,12 @@ export function SkillTiles({ studentId }: { studentId: string }) {
             type="button"
             onClick={() => setPicked(s.key)}
             className={cn(
-              'inline-flex h-9 items-center gap-2 rounded-full border-2 px-3 text-sm font-bold transition-colors',
-              picked === s.key ? 'border-primary bg-violet-soft' : 'border-border bg-card hover:border-primary/40',
+              'inline-flex h-10 items-center gap-2 rounded-[14px] border-2 px-3.5 text-sm font-extrabold transition-colors',
+              picked === s.key ? 'border-med bg-med-soft shadow-[0_3px_0_var(--med)]' : 'border-border bg-card shadow-[0_3px_0_var(--border)] hover:bg-muted',
             )}
             aria-pressed={picked === s.key}
           >
-            <span className={cn('size-2.5 rounded-full', SUBJECT_DOT[s.color] ?? 'bg-violet')} /> {l(s.name)}
+            <span className={cn('size-2.5 rounded-full', SUBJECT_DOT[s.color] ?? 'bg-cedar')} /> {l(s.name)}
           </button>
         ))}
       </div>
@@ -58,18 +58,18 @@ export function SkillTiles({ studentId }: { studentId: string }) {
             .map((n) => {
               const Icon = topicIcon(n.icon);
               return (
-                <li key={n.id} className={cn('flex flex-col gap-2 rounded-[18px] p-3', MASTERY_TILE[n.state])} data-state={n.state} data-testid="skill-tile">
+                <li key={n.id} className={cn('flex flex-col gap-2 rounded-[18px] border-2 p-3', MASTERY_TILE[n.state])} data-state={n.state} data-testid="skill-tile">
                   <div className="flex items-center justify-between">
-                    <span className="flex size-8 items-center justify-center rounded-full bg-card/70 text-foreground">
+                    <span className="flex size-9 items-center justify-center rounded-full bg-card text-foreground shadow-[0_2px_0_var(--border)]">
                       {n.state === 'LOCKED' ? <Lock className="size-4" /> : <Icon className="size-4" />}
                     </span>
                     {n.state === 'MASTERED' && (
-                      <span className="flex items-center gap-1 text-sm font-extrabold">
+                      <span className="flex items-center gap-1 font-display text-base font-black">
                         <Star className="size-3.5 fill-current" /> {n.bestScore}
                       </span>
                     )}
                   </div>
-                  <p className="text-sm font-extrabold leading-tight">{l(n.name)}</p>
+                  <p className="font-extrabold leading-tight">{l(n.name)}</p>
                   <p className="text-xs font-semibold opacity-80">{tm(n.state)}</p>
                 </li>
               );

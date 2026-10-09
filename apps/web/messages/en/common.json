@@ -1,5 +1,5 @@
 {
-  "thinking": "Bousla is thinking…",
+  "thinking": "Arzino is thinking…",
   "error": "Oops, something went wrong. Let's try again.",
   "retry": "Try again",
   "notifications": "Notifications",
@@ -21,7 +21,7 @@
   "settings": "Settings",
   "logout": "Sign out",
   "offlineTitle": "You're offline",
-  "offlineBody": "Bousla is napping until the internet comes back. Your work is safe.",
+  "offlineBody": "Arzino is napping until the internet comes back. Your work is safe.",
   "notFound": "This page wandered off the map.",
   "backHome": "Back home",
   "save": "Save",
@@ -46,7 +46,7 @@
   "status": {
     "IN_PROGRESS": "In progress",
     "SUBMITTED": "Submitted",
-    "AI_CHECKED": "Checked by Bousla",
+    "AI_CHECKED": "Checked by Arzino",
     "FOLLOW_UP_ANSWERED": "Follow-up answered",
     "PEER_REVIEW": "Peer review",
     "FAMILY_CONFIRM": "Waiting for family",
@@ -82,5 +82,10 @@
   },
   "noContacts": "No conversations yet.",
   "typeMessage": "Write a message…",
-  "send": "Send"
+  "send": "Send",
+  "notFoundBody": "Even Arzino can't find it. Let's get you back on the path.",
+  "offlineTag": "Offline",
+  "settingsSubtitle": "Make Tajriba yours.",
+  "themeHint": "Light, dark, or follow your device",
+  "languageHint": "Arzino speaks both"
 }

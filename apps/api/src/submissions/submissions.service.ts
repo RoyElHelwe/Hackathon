@@ -270,7 +270,7 @@ export class SubmissionsService {
     const s = await this.load(id);
     await this.assertOwner(a, s);
     const ai = s.aiCheck as { score: number; followUpQuestion: string; flags: string[] } | null;
-    if (!ai) throw new BadRequestException({ message: 'Bousla has not checked your work yet.' });
+    if (!ai) throw new BadRequestException({ message: 'Arzino has not checked your work yet.' });
     transition(s.status, { type: 'FOLLOW_UP' }, { aiScore: ai.score });
     const locale = a.user.locale || 'en';
     const fu = await this.ai.run(checkFollowUp, {

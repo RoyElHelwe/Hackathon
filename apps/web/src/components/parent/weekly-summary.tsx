@@ -1,15 +1,17 @@
 'use client';
 
 import { useQueryClient } from '@tanstack/react-query';
-import { Clock, Heart, RefreshCw, Sparkles, Sprout } from 'lucide-react';
+import { Check, Clock, Heart, RefreshCw, Sprout } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useFormatter, useLocale, useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { ErrorState, Thinking } from '@/components/app/states';
-import { Bousla } from '@/components/bousla';
+import { Arzino } from '@/components/arzino';
+import { EYEBROW } from '@/components/director/tone';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { api, ApiError } from '@/lib/api';
+import { cn } from '@/lib/cn';
 import { useApi } from '@/lib/hooks';
 import type { WeeklySummary as Summary } from './types';
 
@@ -39,14 +41,19 @@ export function WeeklySummary({ studentId }: { studentId: string }) {
 
   return (
     <Card className="overflow-hidden" data-testid="weekly-summary">
-      <div className="flex items-center gap-3 bg-gradient-to-br from-violet-soft via-card to-mint-soft p-5 pb-4">
-        <Bousla mood={regenerating || isLoading ? 'thinking' : 'happy'} size={52} animate={false} />
+      <div className="flex items-center gap-3 p-5 pb-3 sm:gap-4">
+        <Arzino mood="warm" size={96} className="-my-3 shrink-0" />
         <div className="min-w-0 flex-1">
-          <h2 className="font-display text-xl font-extrabold leading-tight">{t('title')}</h2>
-          <p className="text-sm text-muted-foreground">{data ? <WeekOf iso={data.weekStart} /> : t('subtitle')}</p>
+          {data && (
+            <p className={cn(EYEBROW, 'text-flame-d dark:text-warning')}>
+              <WeekOf iso={data.weekStart} />
+            </p>
+          )}
+          <h2 className="mt-0.5 text-2xl font-black leading-tight">{t('title')}</h2>
+          <p className="text-sm font-semibold text-muted-foreground">{t('subtitle')}</p>
         </div>
         {data && (
-          <Button variant="ghost" size="sm" onClick={regenerate} loading={regenerating} aria-label={t('regenerate')} data-testid="regenerate-summary">
+          <Button variant="kidGhost" size="sm" onClick={regenerate} loading={regenerating} aria-label={t('regenerate')} data-testid="regenerate-summary">
             {!regenerating && <RefreshCw />}
             <span className="hidden sm:inline">{t('regenerate')}</span>
           </Button>
@@ -62,7 +69,7 @@ export function WeeklySummary({ studentId }: { studentId: string }) {
           <SummaryBody summary={data} />
         ) : null}
         {regenError && (
-          <p className="mt-3 rounded-[12px] bg-coral-soft px-3 py-2 text-sm font-semibold text-danger" role="alert">
+          <p className="mt-3 rounded-[12px] bg-flag-soft px-3 py-2 text-sm font-bold text-flag-d dark:text-danger" role="alert">
             {regenError}
           </p>
         )}
@@ -85,7 +92,7 @@ function SummaryBody({ summary }: { summary: Summary }) {
   return (
     <div className="space-y-4">
       <section>
-        <h3 className="mb-2 text-xs font-extrabold uppercase tracking-wider text-muted-foreground">{t('highlights')}</h3>
+        <h3 className={cn(EYEBROW, 'mb-2 text-cedar-ink dark:text-success')}>{t('highlights')}</h3>
         <ul className="space-y-2.5" dir={dir} lang={summary.locale}>
           {c.highlights.map((h, i) => (
             <motion.li
@@ -93,11 +100,11 @@ function SummaryBody({ summary }: { summary: Summary }) {
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.08 }}
-              className="flex items-start gap-3 text-[17px] leading-relaxed"
+              className="flex items-start gap-3 rounded-[14px] bg-cedar-soft px-3 py-2.5 text-[17px] font-semibold leading-relaxed"
               data-testid="summary-highlight"
             >
-              <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-mint-soft text-success">
-                <Sparkles className="size-4" />
+              <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-cedar text-white shadow-[0_2px_0_var(--cedar-d)]">
+                <Check className="size-4" strokeWidth={3} />
               </span>
               <span>{h}</span>
             </motion.li>
@@ -105,36 +112,42 @@ function SummaryBody({ summary }: { summary: Summary }) {
         </ul>
       </section>
 
-      <section className="rounded-[16px] bg-sky-soft/70 p-4">
-        <h3 className="mb-1.5 flex items-center gap-2 font-extrabold">
-          <Sprout className="size-5 text-sky" /> {t('struggles')}
+      <section className="rounded-[16px] border-2 border-med/25 bg-med-soft p-4">
+        <h3 className="mb-1.5 flex items-center gap-2 font-black text-med-ink dark:text-ring">
+          <Sprout className="size-5" /> {t('struggles')}
         </h3>
         {c.struggles.length ? (
-          <ul className="list-disc space-y-1 ps-5 leading-relaxed" dir={dir} lang={summary.locale} data-testid="summary-struggles">
+          <ul className="list-disc space-y-1 ps-5 font-semibold leading-relaxed marker:text-med" dir={dir} lang={summary.locale} data-testid="summary-struggles">
             {c.struggles.map((s, i) => (
               <li key={i}>{s}</li>
             ))}
           </ul>
         ) : (
-          <p className="text-muted-foreground">{t('noStruggles')}</p>
+          <p className="font-semibold text-muted-foreground">{t('noStruggles')}</p>
         )}
       </section>
 
-      <section className="rounded-[16px] border-2 border-sunny/60 bg-sunny-soft p-4" data-testid="how-to-help">
-        <h3 className="mb-1.5 flex items-center gap-2 font-extrabold">
-          <Clock className="size-5 text-warning" /> {t('howToHelp')}
+      <section
+        className="relative rounded-[18px] border-2 border-flame/50 bg-flame-soft p-4 pe-4 shadow-[0_4px_0_color-mix(in_oklab,var(--flame)_45%,transparent)]"
+        data-testid="how-to-help"
+      >
+        <h3 className="mb-1.5 flex items-center gap-2 font-black text-flame-d dark:text-warning">
+          <span className="flex size-8 items-center justify-center rounded-full bg-flame text-white shadow-[0_2px_0_var(--flame-d)]">
+            <Clock className="size-4" strokeWidth={3} />
+          </span>
+          {t('howToHelp')}
         </h3>
-        <p className="text-[17px] leading-relaxed" dir={dir} lang={summary.locale}>
+        <p className="text-[17px] font-semibold leading-relaxed" dir={dir} lang={summary.locale}>
           {c.howToHelp}
         </p>
       </section>
 
       {c.suggestedFamilyMission && (
-        <section className="rounded-[16px] bg-violet-soft p-4" data-testid="suggested-family-mission">
-          <h3 className="mb-1.5 flex items-center gap-2 font-extrabold">
-            <Heart className="size-5 text-coral" /> {t('familyMission')}
+        <section className="rounded-[16px] border-2 border-dashed border-border p-4" data-testid="suggested-family-mission">
+          <h3 className="mb-1.5 flex items-center gap-2 font-black">
+            <Heart className="size-5 fill-flag text-flag" /> {t('familyMission')}
           </h3>
-          <p className="leading-relaxed" dir={dir} lang={summary.locale}>
+          <p className="font-semibold leading-relaxed" dir={dir} lang={summary.locale}>
             {c.suggestedFamilyMission}
           </p>
         </section>

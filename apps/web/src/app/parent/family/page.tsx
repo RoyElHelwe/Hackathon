@@ -1,8 +1,8 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { PageHeader } from '@/components/app/adult-shell';
 import { EmptyState, ErrorState, PageSkeleton } from '@/components/app/states';
+import { PageHero } from '@/components/director/page-hero';
 import { FamilyMissionCard } from '@/components/parent/family-mission-card';
 import type { FamilyMission } from '@/components/parent/types';
 import { ApiError } from '@/lib/api';
@@ -18,13 +18,13 @@ export default function FamilyMissionsPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <PageHeader title={t('title')} subtitle={t('subtitle')} />
+      <PageHero mood="streak-buddy" accent="flame" eyebrow={t('eyebrow')} title={t('title')} subtitle={t('subtitle')} />
       {isLoading ? (
         <PageSkeleton />
       ) : error ? (
         <ErrorState message={error instanceof ApiError ? error.message : undefined} onRetry={() => refetch()} />
       ) : !list.length ? (
-        <EmptyState title={t('empty')} body={t('emptyBody')} />
+        <EmptyState mood="bored-waiting" title={t('empty')} body={t('emptyBody')} />
       ) : (
         <div className="space-y-5">
           {list.map((m) => (

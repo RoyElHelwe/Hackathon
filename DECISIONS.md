@@ -48,7 +48,7 @@ Non-obvious choices made while building Tajriba. CLAUDE.md is the spec; this fil
 
 ## UI
 - Student mode uses chunky "press" buttons, Baloo Bhaijaan 2 headings and motion; adult mode reuses the tokens with calmer layouts. Dark mode is a class on `<html>` saved in localStorage.
-- Bousla is an SVG component with 5 moods; PWA icons are generated from it (`node scripts/make-icons.cjs`).
+- (Superseded by the Arzino redesign below.) PWA icons are generated with `node scripts/make-icons.cjs`.
 - Sounds are synthesized with Web Audio (no assets) and are off by default.
 
 ## Tajriba Campus (2D peer study rooms + AI voice-interview exams)
@@ -67,3 +67,11 @@ Non-obvious choices made while building Tajriba. CLAUDE.md is the spec; this fil
 - **Spectating is transparent**: the student sees "Your teacher is watching".
 - Exams are built from **course lessons** (Classroom posts) of the class's course; the seed creates the 8B lessons exactly as lesson sync would (same fingerprint + source ids) so a later sync keeps them.
 - Map art is drawn with Phaser primitives (the dev_pulse "Modern Office" tileset forbids redistribution).
+
+## Final redesign: Arzino (2026-10-09)
+- **Mascot renamed Bousla → Arzino (أرزينو)**, a little Lebanese cedar with a book stack and pencil. Chose "Arzino" over "ArziQ": it reads friendly for 12–15 year olds and is easy to say in Arabic. The AI persona in every prompt and every UI string was renamed; the campus furniture kind `bousla` → `arzino`.
+- **Art comes from the Arzi design pack** (`Arzi-Designs/`, git-ignored). What we use was copied into the repo: stickers trimmed and converted to webp (`apps/web/public/arzino/*.webp`, ≤ 560 px, ~2 MB total), PWA icons regenerated from the `cheer` pose, docs + overview sheets in `docs/arzino-design/`. The `Arzino` component picks a sticker per mood (aliases `happy`/`cheering`/`curious` keep old call sites working) and adds a light idle animation per pose family.
+- **Palette moved to Lebanon's colors on white** (cedar, flag red, Mediterranean blue, flame for streaks only). Legacy token names (`violet`, `mint`, `sunny`, `coral`, `sky`) stay as CSS aliases of the new colors so every screen re-themed at once; new code uses `cedar`/`flag`/`med`/`flame`/`lock`.
+- **Type**: Nunito 600–900 everywhere, Noto Kufi Arabic for Arabic (replaces Baloo Bhaijaan 2 + Tajawal) to match the design's rounded, heavy Duolingo-like look.
+- "42 School" wording removed from the product; peer review is described in our own words.
+- The redesign brief every screen follows is `docs/arzino-design/REDESIGN-BRIEF.md`.

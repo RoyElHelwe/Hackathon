@@ -20,7 +20,8 @@ export function useSetLocale() {
   return { set, pending };
 }
 
-export function LanguageSwitch({ className }: { className?: string }) {
+/** Chunky language toggle. `compact` shows only the globe icon on phones. */
+export function LanguageSwitch({ className, compact }: { className?: string; compact?: boolean }) {
   const locale = useLocale();
   const { set, pending } = useSetLocale();
   const next = locale === 'ar' ? 'en' : 'ar';
@@ -29,12 +30,16 @@ export function LanguageSwitch({ className }: { className?: string }) {
       type="button"
       onClick={() => set(next)}
       disabled={pending}
-      className={cn('inline-flex h-10 items-center gap-2 rounded-full border-2 border-border bg-card px-3 text-sm font-bold hover:bg-muted', className)}
+      className={cn(
+        'inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-[12px] border-2 border-border bg-card px-3 text-sm font-extrabold shadow-[0_3px_0_var(--border)] transition-[transform,box-shadow] hover:bg-muted active:translate-y-[3px] active:shadow-none disabled:opacity-60',
+        compact && 'max-sm:w-10 max-sm:px-0',
+        className,
+      )}
       aria-label={`Switch language to ${LOCALE_NAMES[next]}`}
       data-testid="language-switch"
     >
-      <Languages className="size-4" />
-      {LOCALE_NAMES[next]}
+      <Languages className="size-4 text-med" />
+      <span className={cn(compact && 'max-sm:sr-only')}>{LOCALE_NAMES[next]}</span>
     </button>
   );
 }

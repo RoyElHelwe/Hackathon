@@ -32,7 +32,7 @@ export function TopicPicker({ dashboard, subjectKey, topicId, onSubject, onTopic
   return (
     <div className="space-y-4">
       <div>
-        <p className="mb-2 text-sm font-bold">{t('subject')}</p>
+        <p className="eyebrow mb-2">{t('subject')}</p>
         <div className="flex flex-wrap gap-2">
           {withTopics.map((s) => (
             <button
@@ -40,20 +40,20 @@ export function TopicPicker({ dashboard, subjectKey, topicId, onSubject, onTopic
               type="button"
               onClick={() => onSubject(s.key)}
               className={cn(
-                'inline-flex h-10 items-center gap-2 rounded-full border-2 px-4 text-sm font-bold transition-colors',
-                subjectKey === s.key ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card hover:border-primary/40',
+                'inline-flex h-11 items-center gap-2 rounded-[14px] border-2 px-4 text-sm font-extrabold transition-colors',
+                subjectKey === s.key ? 'border-med-d bg-med text-white shadow-[0_3px_0_var(--med-d)]' : 'border-border bg-card shadow-[0_3px_0_var(--border)] hover:bg-muted',
               )}
               aria-pressed={subjectKey === s.key}
               data-testid={`subject-chip-${s.key}`}
             >
-              <span className={cn('size-2.5 rounded-full', SUBJECT_DOT[s.color] ?? 'bg-violet', subjectKey === s.key && 'ring-2 ring-white/70')} />
+              <span className={cn('size-2.5 rounded-full', SUBJECT_DOT[s.color] ?? 'bg-cedar', subjectKey === s.key && 'ring-2 ring-white/70')} />
               {l(s.name)}
             </button>
           ))}
         </div>
       </div>
       <div>
-        <p className="mb-2 text-sm font-bold">{t('topic')}</p>
+        <p className="eyebrow mb-2">{t('topic')}</p>
         {topics.length ? (
           <div className="flex flex-wrap gap-2">
             {topics.map((tp) => {
@@ -65,20 +65,20 @@ export function TopicPicker({ dashboard, subjectKey, topicId, onSubject, onTopic
                   type="button"
                   onClick={() => onTopic(tp.id)}
                   className={cn(
-                    'flex min-h-14 flex-col items-start justify-center rounded-[16px] border-2 px-4 py-2 text-start transition-colors',
-                    active ? 'border-primary bg-violet-soft' : 'border-border bg-card hover:border-primary/40',
+                    'flex min-h-16 flex-col items-start justify-center rounded-[16px] border-2 px-4 py-2 text-start transition-colors',
+                    active ? 'border-med bg-med-soft shadow-[0_4px_0_var(--med)]' : 'border-border bg-card shadow-[0_4px_0_var(--border)] hover:bg-muted',
                   )}
                   aria-pressed={active}
                   data-testid={`topic-chip-${tp.key}`}
                 >
                   <span className="flex items-center gap-1.5 text-sm font-extrabold">
-                    {active && <Check className="size-4 text-primary" />}
+                    {active && <Check className="size-4 text-med" strokeWidth={3} />}
                     {l(tp.name)}
                   </span>
-                  <span className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span className="flex items-center gap-2 text-xs font-bold text-muted-foreground">
                     {t('masteredOf', { n: mastered(tp), total })}
                     {st > 0 && (
-                      <span className="inline-flex items-center gap-1 font-bold text-danger">
+                      <span className="inline-flex items-center gap-1 font-black text-flag-d dark:text-danger">
                         <AlertTriangle className="size-3" /> {t('stuckN', { n: st })}
                       </span>
                     )}

@@ -125,7 +125,7 @@ export async function seedCampus(
     const turns: Prisma.ExamTurnCreateManyInput[] = [];
     let idx = 0;
     let t = startedAt.getTime();
-    turns.push({ attemptId: att.id, idx: idx++, role: 'AI', text: `Hi! I'm Bousla 👋 Ready? Here's the first one: ${doneBank.questions[0].text}`, emoji: '👋', mood: 'calm', questionId: 'q1', at: new Date(t) });
+    turns.push({ attemptId: att.id, idx: idx++, role: 'AI', text: `Hi! I'm Arzino 👋 Ready? Here's the first one: ${doneBank.questions[0].text}`, emoji: '👋', mood: 'calm', questionId: 'q1', at: new Date(t) });
     const reportTurns: { role: 'AI' | 'STUDENT'; text: string; questionId: string; score: number | null }[] = [];
     doneBank.questions.forEach((q, qi) => {
       const answer = answers[handle][qi];

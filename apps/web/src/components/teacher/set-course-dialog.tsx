@@ -72,7 +72,7 @@ export function SetCourseDialog({
           ) : subjects.error ? (
             <p className="text-sm font-bold text-danger">{subjects.error.message}</p>
           ) : !list.length ? (
-            <p className="rounded-[14px] bg-sunny-soft px-4 py-3 text-sm font-bold text-warning">{t('noSubjects')}</p>
+            <p className="rounded-[14px] bg-flame-soft px-4 py-3 text-sm font-bold text-warning">{t('noSubjects')}</p>
           ) : (
             <>
               <div>
@@ -106,7 +106,7 @@ export function SetCourseDialog({
             </>
           )}
           {err && (
-            <p className="rounded-[14px] bg-coral-soft px-4 py-3 text-sm font-bold text-danger" role="alert">
+            <p className="rounded-[14px] bg-flag-soft px-4 py-3 text-sm font-bold text-danger" role="alert">
               {err}
             </p>
           )}

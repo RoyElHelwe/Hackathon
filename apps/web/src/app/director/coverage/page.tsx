@@ -1,10 +1,10 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { PageHeader } from '@/components/app/adult-shell';
 import { EmptyState, ErrorState, PageSkeleton } from '@/components/app/states';
 import { SubjectIcon } from '@/components/app/subject-icon';
 import { CoverageLegend, CoverageMatrix } from '@/components/director/coverage-matrix';
+import { PageHero } from '@/components/director/page-hero';
 import { useDirectorDashboard } from '@/components/director/use-school';
 import { SUBJECT_SOFT } from '@/components/teacher/helpers';
 import { Card } from '@/components/ui/card';
@@ -24,10 +24,10 @@ export default function CoveragePage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title={t('title')} subtitle={t('subtitle')} />
+      <PageHero mood="clipboard" eyebrow={data.school.name} title={t('title')} subtitle={t('subtitle')} className="mb-1" />
       {courses.length === 0 ? (
         <Card>
-          <EmptyState title={t('noCourses')} body={t('noCoursesBody')} />
+          <EmptyState mood="bored-waiting" title={t('noCourses')} body={t('noCoursesBody')} />
         </Card>
       ) : (
         <div className="space-y-5" data-testid="coverage-matrix">
@@ -35,20 +35,20 @@ export default function CoveragePage() {
           {courses.map((c) => (
             <Card key={c.courseId} className="space-y-3 p-4 sm:p-5">
               <div className="flex flex-wrap items-center gap-3">
-                <span className={cn('flex size-9 items-center justify-center rounded-[12px]', SUBJECT_SOFT[c.subject.color] ?? 'bg-violet-soft')}>
-                  <SubjectIcon icon={c.subject.icon} className="size-5" />
+                <span className={cn('flex size-11 items-center justify-center rounded-[14px]', SUBJECT_SOFT[c.subject.color] ?? 'bg-cedar-soft')}>
+                  <SubjectIcon icon={c.subject.icon} className="size-6" />
                 </span>
                 <div className="min-w-0">
-                  <h2 className="text-lg font-extrabold leading-tight">
+                  <h2 className="text-xl font-black leading-tight">
                     {t('courseTitle', { grade: c.gradeLevel, subject: l(c.subject.name) })}
                   </h2>
-                  <p className="text-sm text-muted-foreground">{t('courseMeta', { sections: c.sections.length, skills: c.topics.length })}</p>
+                  <p className="text-sm font-semibold text-muted-foreground">{t('courseMeta', { sections: c.sections.length, skills: c.topics.length })}</p>
                 </div>
               </div>
               {c.topics.length ? (
                 <CoverageMatrix course={c} />
               ) : (
-                <p className="rounded-[14px] border-2 border-dashed border-border p-4 text-center text-sm font-semibold text-muted-foreground" data-testid="coverage-empty">
+                <p className="rounded-[16px] border-2 border-dashed border-border p-4 text-center text-sm font-bold text-muted-foreground" data-testid="coverage-empty">
                   {t('empty')}
                 </p>
               )}

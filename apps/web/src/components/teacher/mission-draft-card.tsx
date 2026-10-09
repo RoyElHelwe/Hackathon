@@ -5,6 +5,7 @@ import { Camera, CheckCircle2, Clock, ExternalLink, FileText, HardHat, Rocket, S
 import { useLocale, useTranslations } from 'next-intl';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { VisualSpecView } from '@/components/kid/visual-spec';
+import { Arzino } from '@/components/arzino';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -112,10 +113,11 @@ export function MissionDraftCard({ mission: m, index, className, classroomLinked
   const safe = m.safetyCheck?.safe === true;
 
   return (
-    <Card className={cn('overflow-hidden transition-colors', published && 'border-mint')} data-testid="mission-draft-card" data-status={m.status}>
+    <Card className={cn('overflow-hidden transition-colors', published && 'border-cedar shadow-[0_4px_0_0_var(--cedar)]')} data-testid="mission-draft-card" data-status={m.status}>
       {published && (
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 bg-mint-soft px-5 py-3 text-sm font-bold text-success" data-testid="published-badge">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 bg-cedar px-5 py-2 text-sm font-extrabold text-white" data-testid="published-badge">
           <span className="flex items-center gap-2">
+            <Arzino mood="celebrate" size={48} animate={false} className="-my-1" />
             <CheckCircle2 className="size-5" /> {t('publishedTo', { className })}
           </span>
           {classroom?.posted && (
@@ -123,14 +125,14 @@ export function MissionDraftCard({ mission: m, index, className, classroomLinked
               <ExternalLink className="size-4" /> {t('postedToClassroom')}
             </span>
           )}
-          {classroom && !classroom.posted && classroom.error && <span className="font-semibold text-warning">{classroom.error}</span>}
+          {classroom && !classroom.posted && classroom.error && <span className="rounded-full bg-white/90 px-2 py-0.5 font-bold text-flame-d">{classroom.error}</span>}
         </div>
       )}
       <div className="grid gap-6 p-5 md:p-6 lg:grid-cols-[1fr_300px]">
         {/* Left: the mission itself */}
         <div className="min-w-0 space-y-4">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="outline">{t('missionN', { n: index + 1 })}</Badge>
+            <Badge variant="sky">{t('missionN', { n: index + 1 })}</Badge>
             {m.topic && <Badge variant="default">{l(m.topic.name)}</Badge>}
             {m.audience === 'FAMILY' && (
               <Badge variant="sunny">
@@ -147,7 +149,7 @@ export function MissionDraftCard({ mission: m, index, className, classroomLinked
             value={title}
             label={t('fieldTitle')}
             disabled={!isDraft}
-            className="text-xl font-extrabold leading-snug"
+            className="font-display text-[24px] font-black leading-snug"
             onSave={(v) => patch({ title: { ...m.title, [editKey(m.title)]: v } })}
             testId="draft-title"
           />
@@ -156,7 +158,7 @@ export function MissionDraftCard({ mission: m, index, className, classroomLinked
             multiline
             label={t('fieldStory')}
             disabled={!isDraft}
-            className="text-[15px] leading-relaxed text-muted-foreground"
+            className="text-[15px] font-semibold leading-relaxed text-muted-foreground"
             onSave={(v) => patch({ story: { ...m.story, [editKey(m.story)]: v } })}
             testId="draft-story"
           />
@@ -176,17 +178,17 @@ export function MissionDraftCard({ mission: m, index, className, classroomLinked
               ))}
             </Select>
             <MinutesField value={m.estimatedMin} disabled={!isDraft} onSave={(n) => patch({ estimatedMin: n })} label={t('fieldMinutes')} />
-            <Badge variant="sunny" className="h-9 px-3 text-sm">
+            <Badge variant="sky" className="h-9 px-3 text-sm">
               +{m.xpReward} XP
             </Badge>
           </div>
           <section>
-            <h4 className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">{t('steps')}</h4>
+            <h4 className="eyebrow mb-2">{t('steps')}</h4>
             <EditableSteps steps={steps} disabled={!isDraft} onSave={(s) => patch({ steps: s })} />
           </section>
           <section className="grid gap-4 sm:grid-cols-2">
             <div>
-              <h4 className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">{t('proof')}</h4>
+              <h4 className="eyebrow mb-2">{t('proof')}</h4>
               <div className="flex flex-wrap gap-1.5">
                 {m.proofSpec.photos > 0 && (
                   <Badge variant="outline">
@@ -207,16 +209,16 @@ export function MissionDraftCard({ mission: m, index, className, classroomLinked
               </div>
             </div>
             <div>
-              <h4 className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">{t('rubric')}</h4>
+              <h4 className="eyebrow mb-2">{t('rubric')}</h4>
               <ul className="space-y-1.5">
                 {m.rubric.map((r) => (
                   <li key={r.criterion} className="text-sm" title={r.description}>
                     <div className="flex justify-between gap-2">
-                      <span className="font-semibold">{r.criterion}</span>
-                      <span className="tabular-nums text-muted-foreground">{r.weight}%</span>
+                      <span className="font-bold">{r.criterion}</span>
+                      <span className="font-black tabular-nums text-med-d dark:text-med">{r.weight}%</span>
                     </div>
-                    <div className="mt-0.5 h-1.5 overflow-hidden rounded-full bg-muted">
-                      <div className="h-full rounded-full bg-primary/70" style={{ width: `${r.weight}%` }} />
+                    <div className="mt-1 h-2 overflow-hidden rounded-full bg-lock">
+                      <div className="h-full rounded-full bg-med" style={{ width: `${r.weight}%` }} />
                     </div>
                   </li>
                 ))}
@@ -227,14 +229,14 @@ export function MissionDraftCard({ mission: m, index, className, classroomLinked
 
         {/* Right: lesson preview, safety, actions */}
         <aside className="flex flex-col gap-4">
-          <div className="rounded-[18px] bg-muted/60 p-4">
-            <h4 className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">{t('miniLesson')}</h4>
+          <div className="rounded-[18px] border-2 border-med/25 bg-med-soft/60 p-4">
+            <h4 className="eyebrow mb-2">{t('miniLesson')}</h4>
             <VisualSpecView spec={m.miniLesson.visualSpec} className="mx-auto max-w-[200px]" />
-            <p className="mt-2 text-sm leading-relaxed">{l(m.miniLesson.text)}</p>
+            <p className="mt-2 text-sm font-semibold leading-relaxed">{l(m.miniLesson.text)}</p>
           </div>
           {l(m.safetyNotes) && (
-            <p className="flex gap-2 rounded-[14px] border border-border p-3 text-sm">
-              <HardHat className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+            <p className="flex gap-2 rounded-[14px] border-2 border-flame/30 bg-flame-soft/60 p-3 text-sm">
+              <HardHat className="mt-0.5 size-4 shrink-0 text-flame-d" />
               <span>
                 <span className="font-bold">{t('safetyNotes')}: </span>
                 {l(m.safetyNotes)}
@@ -244,10 +246,10 @@ export function MissionDraftCard({ mission: m, index, className, classroomLinked
           {isDraft && <SafetyBadge check={m.safetyCheck} checking={checking} busy={busy} onUseSafer={useSafer} onRecheck={runSafety} />}
           {isDraft && (
             <div className="mt-auto flex flex-col gap-2">
-              <Button size="lg" onClick={() => setPublishOpen(true)} disabled={!safe || checking || busy} data-testid="approve-publish">
+              <Button size="lg" variant="kid" onClick={() => setPublishOpen(true)} disabled={!safe || checking || busy} data-testid="approve-publish">
                 <Rocket /> {t('approve')}
               </Button>
-              {!safe && !checking && m.safetyCheck && <p className="text-center text-xs text-muted-foreground">{t('fixFirst')}</p>}
+              {!safe && !checking && m.safetyCheck && <p className="text-center text-xs font-semibold text-muted-foreground">{t('fixFirst')}</p>}
               <Button variant="ghost" size="sm" onClick={discard} disabled={busy} className="text-muted-foreground" data-testid="discard-draft">
                 <Trash2 /> {t('discard')}
               </Button>

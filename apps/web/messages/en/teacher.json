@@ -29,7 +29,16 @@
     "neverSynced": "Not synced yet",
     "emptyTitle": "No classes yet",
     "emptyBody": "Connect Google Classroom and import your classes. Your students are linked automatically — no codes to hand out.",
-    "emptyCta": "Connect Google Classroom"
+    "emptyCta": "Connect Google Classroom",
+    "greetMorning": "Good morning",
+    "greetAfternoon": "Good afternoon",
+    "greetEvening": "Good evening",
+    "heroStudioTitle": "Create a real-life mission",
+    "heroStudioBody": "Pick a topic. Arzino drafts three, you approve.",
+    "waitingEyebrow": "Waiting for you",
+    "waitingTitle": "{n, plural, one {# submission to review} other {# submissions to review}}",
+    "waitingNone": "All caught up",
+    "reviewNow": "Review now"
   },
   "onboarding": {
     "title": "Set up your classes",
@@ -59,7 +68,8 @@
     "importedLine": "Imported {count, plural, one {# student} other {# students}} into {name}",
     "successBody": "Your students can sign in with Google right away — their classes are already waiting for them.",
     "openClass": "Open {name}",
-    "allClasses": "All my classes"
+    "allClasses": "All my classes",
+    "panelEyebrow": "Teacher setup"
   },
   "class": {
     "back": "All classes",
@@ -77,7 +87,7 @@
     "heatmapBody": "Every student × every topic. Numbers are best scores on mastered topics.",
     "stuckTitle": "Stuck alerts",
     "stuckBody": "Students who may need a hand, spotted automatically.",
-    "groupHint": "Bring them together for a short session — Bousla drafts the plan.",
+    "groupHint": "Bring them together for a short session — Arzino drafts the plan.",
     "activityTitle": "Recent activity",
     "noActivity": "No activity yet. Publish a mission to get things going!",
     "studentsTitle": "Students ({n})",
@@ -90,7 +100,10 @@
     "invited": "Not signed in yet",
     "archived": "Archived",
     "level": "Level {n}",
-    "noParent": "No family linked"
+    "noParent": "No family linked",
+    "eyebrow": "Class overview",
+    "stuckEyebrow": "May need a hand",
+    "stuckHeadline": "{n, plural, one {# student is stuck} other {# students are stuck}}"
   },
   "heatmap": {
     "student": "Student",
@@ -102,7 +115,10 @@
     "noStudents": "No students yet.",
     "noSkills": "No skills yet",
     "noSkillsBody": "Open the course and gamify a lesson — its skill shows up here for every section.",
-    "openCourse": "Open the course"
+    "openCourse": "Open the course",
+    "bandHigh": "70%+",
+    "bandMid": "50–69%",
+    "bandLow": "Below 50%"
   },
   "stuck": {
     "line": "{name} may be stuck on {topic}",
@@ -112,13 +128,13 @@
       "IDLE": "No progress for 2 days"
     },
     "noneTitle": "Nobody is stuck right now",
-    "noneBody": "Bousla keeps an eye out and will tell you."
+    "noneBody": "Arzino keeps an eye out and will tell you."
   },
   "group": {
     "cta": "Plan a group session",
     "title": "Group session plan",
     "subtitle": "A 15-minute plan for students stuck on the same topic.",
-    "thinking": "Bousla is planning your session…",
+    "thinking": "Arzino is planning your session…",
     "error": "We couldn't draft a plan right now.",
     "empty": "Nobody needs a group session right now.",
     "groupTitle": "{topic}",
@@ -145,7 +161,7 @@
   },
   "studio": {
     "title": "Mission studio",
-    "subtitle": "Pick a topic, let Bousla draft three real-life missions, then edit and approve. Nothing reaches students without you.",
+    "subtitle": "Pick a topic, let Arzino draft three real-life missions, then edit and approve. Nothing reaches students without you.",
     "class": "Class",
     "audience": "Who is it for?",
     "audienceStudent": "Student",
@@ -158,12 +174,12 @@
     "interests": "Students' interests",
     "optional": "optional",
     "interestsPlaceholder": "e.g. football, cooking, Tripoli's old souks",
-    "bouslaPick": "Pick a topic and I'll draft three missions set in your students' real lives.",
-    "bouslaReady": "Ready! Three {topic} missions for {className}, coming right up.",
+    "arzinoPick": "Pick a topic and I'll draft three missions set in your students' real lives.",
+    "arzinoReady": "Ready! Three {topic} missions for {className}, coming right up.",
     "generate": "Generate 3 missions",
     "privateNote": "Drafts stay private until you approve them.",
-    "thinking": "Bousla is writing three missions…",
-    "generateError": "Bousla couldn't draft missions right now. Please try again.",
+    "thinking": "Arzino is writing three missions…",
+    "generateError": "Arzino couldn't draft missions right now. Please try again.",
     "draftsTitle": "{n, plural, one {# fresh draft} other {# fresh drafts}}",
     "draftsBody": "Click any text to edit it. Every change is re-checked for safety.",
     "missionN": "Mission {n}",
@@ -212,13 +228,14 @@
     "noClasses": "No classes yet",
     "noClassesBody": "Import a class from Google Classroom to start creating missions.",
     "courseTitle": "Missions · {course}",
-    "courseSubtitle": "Drafts Bousla wrote from your gamified lessons. Approve one to publish it to every section of the course.",
+    "courseSubtitle": "Drafts Arzino wrote from your gamified lessons. Approve one to publish it to every section of the course.",
     "backToCourse": "Back to lessons",
     "allSections": "all {n, plural, one {# section} other {# sections}} of {course}",
     "courseDraftsTitle": "{n, plural, =0 {No drafts to review} one {# draft to review} other {# drafts to review}}",
     "courseNoDraftsBody": "Press “Gamify with AI” on a lesson and its missions will wait here for you.",
     "courseLibraryTitle": "All missions of {course}",
-    "skillGroup": "Skill: {name}"
+    "skillGroup": "Skill: {name}",
+    "eyebrow": "Real-life missions"
   },
   "safety": {
     "checking": "Running safety check…",
@@ -268,7 +285,7 @@
     "numbers": "Numbers",
     "explanation": "Student's explanation",
     "noExplanation": "No written explanation.",
-    "followUp": "Bousla's follow-up",
+    "followUp": "Arzino's follow-up",
     "noAnswer": "Not answered yet.",
     "understood": "Understood",
     "notYetUnderstood": "Not quite yet",
@@ -287,7 +304,8 @@
     "validate": "Validate",
     "validatedToast": "Validated! {name} gets the XP.",
     "retryToast": "Sent back to {name} with your tips.",
-    "error": "We couldn't save your review. Please try again."
+    "error": "We couldn't save your review. Please try again.",
+    "eyebrow": "Check before students see it"
   },
   "flags": {
     "possible_copy": {
@@ -370,7 +388,8 @@
     "stuckTitle": "All stuck alerts",
     "noStuck": "Nobody is stuck right now 🎉",
     "noClasses": "No classes yet",
-    "noClassesBody": "Import a class from Google Classroom to see insights."
+    "noClassesBody": "Import a class from Google Classroom to see insights.",
+    "eyebrow": "All your classes"
   },
   "courses": {
     "title": "Grade {grade} · {subject}",
@@ -419,7 +438,7 @@
     "statusNotGamified": "Not gamified",
     "statusReady": "Ready",
     "statusFailed": "Failed",
-    "statusGamifying": "Bousla is reading the lesson…",
+    "statusGamifying": "Arzino is reading the lesson…",
     "changedInClassroom": "Changed in Classroom",
     "openInClassroom": "Open in Classroom",
     "attachment": {
@@ -436,12 +455,12 @@
     "gamifyCta": "Gamify with AI",
     "regenerateCta": "Regenerate",
     "retryCta": "Try again",
-    "gamifyStarted": "Bousla is reading “{title}”. This takes about a minute.",
+    "gamifyStarted": "Arzino is reading “{title}”. This takes about a minute.",
     "gamifyDone": "“{title}” is ready. Review its missions.",
-    "gamifyFailed": "Bousla couldn’t gamify “{title}”.",
+    "gamifyFailed": "Arzino couldn’t gamify “{title}”.",
     "gamifyStartError": "We couldn’t start. Please try again.",
     "gamifyError": {
-      "AI_UNAVAILABLE": "Bousla couldn’t read this lesson right now. Please try again in a minute.",
+      "AI_UNAVAILABLE": "Arzino couldn’t read this lesson right now. Please try again in a minute.",
       "INTERRUPTED": "This was interrupted. Please try again.",
       "FAILED": "Something went wrong while reading this lesson. Please try again."
     },
@@ -451,7 +470,7 @@
     "openMissions": "Open missions",
     "changedRegenerate": "Updated in Classroom — regenerate?",
     "regenerateTitle": "Regenerate missions for “{title}”?",
-    "regenerateBody": "{n, plural, one {Bousla will write new drafts. Your # unapproved draft will be replaced.} other {Bousla will write new drafts. Your # unapproved drafts will be replaced.}} Published missions stay as they are.",
+    "regenerateBody": "{n, plural, one {Arzino will write new drafts. Your # unapproved draft will be replaced.} other {Arzino will write new drafts. Your # unapproved drafts will be replaced.}} Published missions stay as they are.",
     "cancel": "Cancel",
     "contentReport": {
       "full": "Watched full video",
@@ -460,7 +479,7 @@
       "title": "Title only",
       "failed": "Couldn’t read: {note}",
       "first2h": "first 2 hours",
-      "label": "What Bousla read",
+      "label": "What Arzino read",
       "code": {
         "private": "video is private or unavailable — make it Unlisted or Public",
         "too_large": "video is larger than 1.5 GB",
@@ -473,6 +492,7 @@
         "ai_failed": "the AI couldn’t watch it right now — try again later",
         "reconnect": "Google access needs to be reconnected"
       }
-    }
+    },
+    "eyebrow": "Course lessons"
   }
 }

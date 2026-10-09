@@ -10,13 +10,13 @@ export function ExamTurns({ turns, live }: { turns: ExamTurn[]; live?: string })
   return (
     <ol className="space-y-2" data-testid="teacher-transcript">
       {turns.map((turn) => (
-        <li key={turn.idx} className={cn('rounded-[14px] p-3 text-sm', turn.role === 'AI' ? 'bg-violet-soft' : 'border border-border bg-card')}>
-          <div className="mb-1 flex items-center gap-2 text-xs font-extrabold uppercase opacity-70">
-            {turn.role === 'AI' ? `${turn.emoji ?? '🧭'} ${t('exam.bousla')}` : `🗣️ ${t('teacher.live.student')}`}
+        <li key={turn.idx} className={cn('rounded-[16px] border-2 p-3 text-sm', turn.role === 'AI' ? 'border-cedar/25 bg-cedar-soft' : 'border-med/25 bg-med-soft')}>
+          <div className="mb-1 flex items-center gap-2 text-xs font-black uppercase tracking-wider opacity-75">
+            {turn.role === 'AI' ? `${turn.emoji ?? '🌲'} ${t('exam.arzino')}` : `🗣️ ${t('teacher.live.student')}`}
             {turn.questionId && <span>· {turn.questionId}</span>}
             {turn.role === 'STUDENT' && turn.mood && <span>· {turn.mood}</span>}
             {turn.eval && (
-              <span className={cn('ms-auto rounded-full px-2 py-0.5 text-[11px] normal-case', turn.eval.score >= 7 ? 'bg-mint-soft text-success' : turn.eval.score >= 4 ? 'bg-sunny-soft text-warning' : 'bg-coral-soft text-danger')}>
+              <span className={cn('ms-auto rounded-full px-2 py-0.5 text-[11px] normal-case text-white', turn.eval.score >= 7 ? 'bg-cedar' : turn.eval.score >= 5 ? 'bg-med' : 'bg-flag')}>
                 {t('teacher.live.turnScore', { score: turn.eval.score })}
               </span>
             )}
@@ -26,7 +26,7 @@ export function ExamTurns({ turns, live }: { turns: ExamTurn[]; live?: string })
         </li>
       ))}
       {live && (
-        <li className="rounded-[14px] border-2 border-dashed border-mint p-3 text-sm italic" data-testid="live-transcript">
+        <li className="rounded-[16px] border-2 border-dashed border-med p-3 text-sm italic" data-testid="live-transcript">
           🎙️ {live}
         </li>
       )}
