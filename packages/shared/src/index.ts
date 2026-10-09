@@ -12,3 +12,4 @@ export * from './timetable';
 export * from './roster';
 export * from './privacy';
 export * from './assistant';
+export * from './vr';

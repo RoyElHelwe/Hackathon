@@ -26,7 +26,12 @@
     "exam_door": {
       "title": "Exam Wing",
       "body": "Your private interview rooms with Arzino live here."
-    }
+    },
+    "pick": "Who do you want to study with?",
+    "noMates": "No classmates yet.",
+    "openRoom": "Back to your study room",
+    "noExam": "No exam room is open for you right now.",
+    "nextExam": "Next: {title} — {date}."
   },
   "classmates": {
     "title": "Study with a classmate",
@@ -41,7 +46,8 @@
     "accept": "Join",
     "decline": "Not now",
     "waiting": "Waiting for {name} to join…",
-    "open": "Open room"
+    "open": "Open room",
+    "help": "{name} needs your help with {topic} 🆘"
   },
   "sessions": {
     "title": "Your study sessions",
@@ -94,7 +100,7 @@
     "mic": "Microphone",
     "end": "End session",
     "endTitle": "End this study session?",
-    "endBody": "It ends for both of you. You get XP if you studied at least 5 minutes.",
+    "endBody": "It ends for both of you. You get XP if you studied together for at least 5 minutes.",
     "cancel": "Keep studying",
     "here": "{name} is here",
     "away": "{name} hasn't joined yet",
@@ -121,7 +127,20 @@
     "noRecordings": "No recordings yet.",
     "timeline": "What happened",
     "duration": "Duration: {time}",
-    "activityNotice": "Your teacher sees what happens in this session (who joined, reactions, how long). Voices are not recorded."
+    "activityNotice": "Your teacher sees what happens in this session (who joined, reactions, how long). Voices are not recorded.",
+    "together": "Together {time}",
+    "togetherGoal": "Study together 5 min to earn XP",
+    "togetherDone": "XP unlocked ✓",
+    "mission": {
+      "working": "Working on: {title}",
+      "back": "Back to my mission"
+    },
+    "board": {
+      "label": "Ideas board:",
+      "mission": "Mission",
+      "cards": "Cards"
+    },
+    "joinVr": "Join in VR"
   },
   "events": {
     "INVITED": "sent an invite",
@@ -183,7 +202,8 @@
     "you": "You",
     "arzino": "Arzino",
     "back": "Back to campus",
-    "listeningNow": "{name} is listening now 🎧"
+    "listeningNow": "{name} is listening now 🎧",
+    "inVr": "Take it in VR"
   },
   "teacher": {
     "navExams": "Exams",
@@ -327,5 +347,20 @@
   "fullscreen": {
     "enter": "Full screen",
     "exit": "Exit full screen"
-  }
+  },
+  "npc": {
+    "next": "Your next mission",
+    "go": "Let's go!",
+    "done": "You finished every mission for now — amazing! Invite a classmate to study?"
+  },
+  "player": {
+    "level": "Level {n}",
+    "teacher": "Teacher",
+    "invite": "Invite to study",
+    "wave": "Wave",
+    "close": "Close",
+    "near": "Say hi to {name}"
+  },
+  "liveTable": "{a} & {b} 📚",
+  "enterVr": "Walk it in VR"
 }

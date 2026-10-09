@@ -3,6 +3,7 @@
 import { ArrowLeft, ArrowRight, Check, Clock, HelpCircle, Send, ShieldCheck, Users } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useTranslations } from 'next-intl';
+import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { Arzino, ArzinoSays } from '@/components/arzino';
@@ -19,6 +20,7 @@ import { Input, Label, Textarea } from '@/components/ui/input';
 import { api, ApiError, uploadFile } from '@/lib/api';
 import { cn } from '@/lib/cn';
 import { useApi, useInvalidate, useL } from '@/lib/hooks';
+import type { Classmate } from '@/lib/campus/types';
 import type { Mission, Submission } from '@/lib/types';
 
 const STEPS = ['stepStory', 'stepLesson', 'stepMission', 'stepProof'] as const;
@@ -212,6 +214,12 @@ export default function MissionPage() {
               <div className="relative rounded-[24px] border-2 p-5 text-[18px] font-semibold leading-relaxed" style={{ borderColor: st.hex, background: `color-mix(in srgb, ${st.hex} 9%, var(--card))` }}>
                 {l(mission.miniLesson.text)}
               </div>
+              {mission.topic?.key === 'geo.similar' && (
+                // the similar-triangles lesson, hands-on: move the sun and measure shadows (works on a laptop too)
+                <Button asChild variant="kidSunny" className="w-full" data-testid="try-vr">
+                  <Link href={`/vr?scene=shadow-lab&mission=${mission.id}`}>🥽 {t('tryVr')}</Link>
+                </Button>
+              )}
             </>
           )}
 
@@ -340,12 +348,15 @@ export default function MissionPage() {
             ))}
           {hintBusy && <Thinking />}
           {hints.length >= 3 && showHints ? (
-            <div className="chunky flex items-center gap-3 rounded-[20px] p-4">
-              <Arzino mood="warm" size={76} />
-              <div>
-                <p className="font-display text-lg font-black">🙋 {t('askFriend')}</p>
-                <p className="text-sm font-semibold text-muted-foreground">{t('askFriendBody')}</p>
+            <div className="chunky space-y-3 rounded-[20px] p-4">
+              <div className="flex items-center gap-3">
+                <Arzino mood="warm" size={76} />
+                <div>
+                  <p className="font-display text-lg font-black">🙋 {t('askFriend')}</p>
+                  <p className="text-sm font-semibold text-muted-foreground">{t('askFriendBody')}</p>
+                </div>
               </div>
+              {mission.classId && <AskFriend missionId={mission.id} topicId={mission.topicId} />}
             </div>
           ) : (
             <Button variant="kidGhost" className="w-full" onClick={askHint} loading={hintBusy} data-testid="im-stuck">
@@ -402,6 +413,54 @@ export default function MissionPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * "Ask a friend": classmates who mastered this topic come first. Asking opens a study room with this mission on the
+ * Ideas board, so the friend can help right away.
+ */
+function AskFriend({ missionId, topicId }: { missionId: string; topicId: string }) {
+  const t = useTranslations('mission');
+  const router = useRouter();
+  const mates = useApi<Classmate[]>(`/study-sessions/classmates?topicId=${encodeURIComponent(topicId)}`);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  const ask = async (partnerId: string) => {
+    setBusy(partnerId);
+    setErr(null);
+    try {
+      const s = await api<{ id: string }>('/study-sessions', { body: { partnerId, missionId } });
+      router.push(`/student/study/${s.id}`);
+    } catch (e) {
+      if (e instanceof ApiError && e.data.code === 'ALREADY_IN_SESSION' && e.data.sessionId) return router.push(`/student/study/${e.data.sessionId}`);
+      setErr(e instanceof ApiError ? e.message : t('askFriendError'));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  if (mates.isLoading) return <Thinking />;
+  const list = (mates.data ?? []).slice(0, 4);
+  if (!list.length) return <p className="mt-2 text-sm font-semibold">{t('askFriendNone')}</p>;
+  return (
+    <div className="mt-3 space-y-2">
+      {!list.some((m) => m.mastered) && <p className="text-sm font-semibold">{t('askFriendNobody')}</p>}
+      {err && <p className="text-sm font-semibold text-danger">{err}</p>}
+      <ul className="space-y-2">
+        {list.map((m) => (
+          <li key={m.userId} className="flex items-center gap-2 rounded-[14px] bg-card p-2">
+            <span className={cn('size-2.5 shrink-0 rounded-full', m.online ? 'bg-mint' : 'bg-muted-foreground/40')} aria-hidden />
+            <span className="min-w-0 flex-1 truncate font-bold">{m.name}</span>
+            {m.mastered && <Badge variant="mint">{t('askFriendMastered')}</Badge>}
+            <Button size="sm" variant="kid" loading={busy === m.userId} disabled={!!busy} onClick={() => ask(m.userId)} data-testid={`ask-friend-${m.name.split(' ')[0].toLowerCase()}`}>
+              <Users /> {t('askFriendAsk')}
+            </Button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

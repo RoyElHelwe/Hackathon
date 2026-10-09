@@ -9,17 +9,19 @@ import {
 } from '@nestjs/websockets';
 import {
   avatarColor,
+  boardMsg,
   clampToMap,
   emoteMsg,
   joinRoomMsg,
   listenMsg,
+  levelForXp,
   moveMsg,
+  pickSpawn,
   PlayerState,
   PRESENCE_GRACE_MS,
   reactionMsg,
   RoomSnapshot,
   signalMsg,
-  spawnFor,
   speakingMsg,
   transcriptMsg,
 } from '@tajriba/shared';
@@ -38,6 +40,8 @@ interface SocketData {
   rooms: Map<string, RoomGrant>;
   /** last emote/reaction time (throttle) */
   lastFx?: number;
+  /** last board flip time (throttles the event log) */
+  lastBoard?: number;
 }
 
 type Ack = { ok: true; [k: string]: unknown } | { ok: false; error: string };
@@ -111,7 +115,8 @@ export class CampusGateway implements OnGatewayInit, OnGatewayDisconnect {
     const previous = data.rooms.get(msg.room);
     if (previous && previous.key !== grant.key) this.detach(client, previous, 'leave');
 
-    const spawn = spawnFor(grant.mapDef, grant.spawnIndex);
+    const others = this.bus.presence.players(grant.key).filter((p) => p.userId !== data.ident.userId && !p.spectator);
+    const spawn = pickSpawn(grant.mapDef, grant.spawnIndex, others);
     const initial: PlayerState = {
       userId: data.ident.userId,
       name: firstName(data.ident.name),
@@ -122,12 +127,14 @@ export class CampusGateway implements OnGatewayInit, OnGatewayDisconnect {
       dir: 'down',
       moving: false,
       spectator: grant.spectator,
+      ...(data.ident.role === 'STUDENT' ? { level: await this.levelOf(data.ident.userId) } : {}),
     };
     const { isNew, state } = this.bus.presence.join(grant.key, initial, client.id);
     data.rooms.set(msg.room, grant);
     await client.join(grant.key);
 
     if (isNew) client.to(grant.key).emit('player:joined', { room: msg.room, player: state });
+    this.syncTogether(grant);
     if (grant.refId && (grant.kind === 'study' || grant.kind === 'exam')) {
       const type = grant.spectator ? 'SPECTATOR_JOINED' : isNew ? 'JOIN' : 'REJOIN';
       void this.sessionLog.log(grant.kind === 'study' ? 'STUDY' : 'EXAM', grant.refId, data.ident.userId, type);
@@ -139,7 +146,7 @@ export class CampusGateway implements OnGatewayInit, OnGatewayDisconnect {
       self: state,
       players: this.bus.presence.players(grant.key).filter((p) => p.userId !== data.ident.userId),
     };
-    return { ok: true, snapshot, publishes: grant.publishes };
+    return { ok: true, snapshot, publishes: grant.publishes, ...(grant.kind === 'study' ? { boardIndex: this.bus.boards.get(grant.key) ?? 0 } : {}) };
   }
 
   @SubscribeMessage('room:leave')
@@ -223,6 +230,22 @@ export class CampusGateway implements OnGatewayInit, OnGatewayDisconnect {
     return { ok: true };
   }
 
+  /** Study room: a partner flipped the discussion card on the Ideas board — both see the same card. */
+  @SubscribeMessage('board')
+  board(@ConnectedSocket() client: Socket, @MessageBody() body: unknown) {
+    const msg = this.parse(boardMsg, body);
+    const ctx = msg && this.inRoom(client, msg.room);
+    if (!msg || !ctx || ctx.grant.kind !== 'study' || ctx.state.spectator) return;
+    this.bus.boards.set(ctx.grant.key, msg.index);
+    client.to(ctx.grant.key).emit('board:card', { room: msg.room, index: msg.index });
+    const data = client.data as SocketData;
+    const now = Date.now();
+    if (ctx.grant.refId && (!data.lastBoard || now - data.lastBoard >= FX_MIN_GAP_MS)) {
+      data.lastBoard = now;
+      void this.sessionLog.log('STUDY', ctx.grant.refId, ctx.state.userId, 'CARD', { index: msg.index });
+    }
+  }
+
   /** The student's live speech-to-text, shown to spectating teachers. */
   @SubscribeMessage('exam:transcript')
   transcript(@ConnectedSocket() client: Socket, @MessageBody() body: unknown) {
@@ -257,6 +280,8 @@ export class CampusGateway implements OnGatewayInit, OnGatewayDisconnect {
     const userId = data.ident.userId;
     void client.leave(grant.key);
     const last = this.bus.presence.leaveSocket(grant.key, userId, client.id);
+    // together time stops as soon as a partner has no live socket (no grace period for XP)
+    this.syncTogether(grant);
     if (!last) return;
     const gone = () => {
       this.bus.toRoom(grant.key, 'player:left', { room: grant.name, userId });
@@ -272,6 +297,42 @@ export class CampusGateway implements OnGatewayInit, OnGatewayDisconnect {
     } else {
       this.bus.presence.scheduleRemoval(grant.key, userId, this.graceMs, gone);
     }
+  }
+
+  /** Overall level shown on the avatar (0 when the lookup fails — the badge is just hidden). */
+  private async levelOf(userId: string): Promise<number> {
+    try {
+      const r = await this.prisma.xpEvent.aggregate({ where: { studentId: userId }, _sum: { amount: true } });
+      return levelForXp(r._sum.amount ?? 0);
+    } catch {
+      return 0;
+    }
+  }
+
+  /**
+   * Study rooms: starts or stops the "together" clock when both partners are (or stop being) connected, stores the
+   * ended segment and tells the room, so both see the same together time.
+   */
+  private syncTogether(grant: RoomGrant) {
+    if (grant.kind !== 'study' || !grant.refId) return;
+    const together = this.bus.presence.connected(grant.key).filter((p) => !p.spectator).length >= 2;
+    const wasTogether = this.bus.together.sinceOf(grant.key) !== null;
+    if (wasTogether === together) return;
+    const endedMs = this.bus.together.update(grant.key, together);
+    const sessionId = grant.refId;
+    // tracked: ending the session waits for this write, so a segment that just ended still counts for XP
+    const write = (async () => {
+      try {
+        const s = endedMs
+          ? await this.prisma.studySession.update({ where: { id: sessionId }, data: { togetherMs: { increment: endedMs } }, select: { togetherMs: true } })
+          : await this.prisma.studySession.findUnique({ where: { id: sessionId }, select: { togetherMs: true } });
+        const since = this.bus.together.sinceOf(grant.key);
+        this.bus.toRoom(grant.key, 'study:together', { sessionId, togetherMs: s?.togetherMs ?? 0, since: since ? new Date(since).toISOString() : null });
+      } catch (e) {
+        this.logger.warn(`together time update failed: ${e instanceof Error ? e.message : e}`);
+      }
+    })();
+    this.bus.together.track(grant.key, write);
   }
 
   /** Only study and exam rooms have a refId (hall and courtyard are not logged). */

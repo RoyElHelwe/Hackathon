@@ -1,34 +1,84 @@
 'use client';
 
-import type { Zone } from '@tajriba/shared';
-import { DoorOpen, GraduationCap, Mic, Users, WifiOff } from 'lucide-react';
+import type { PlayerState, Zone } from '@tajriba/shared';
+import { DoorOpen, GraduationCap, Hand, Mic, Users, WifiOff, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useFormatter, useTranslations } from 'next-intl';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Arzino } from '@/components/arzino';
 import { CampusCanvas } from '@/components/campus/campus-canvas';
 import { EmoteBar } from '@/components/campus/emote-bar';
+import type { SceneApi } from '@/components/campus/scene';
 import { EmptyState, ErrorState } from '@/components/app/states';
+import { missionHref } from '@/components/student/mission-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Avatar, Skeleton } from '@/components/ui/misc';
-import { api, ApiError } from '@/lib/api';
-import type { Classmate, MyExam, StudySessionListItem } from '@/lib/campus/types';
+import { canEnterExam, useCampusData, type CampusData } from '@/lib/campus/use-campus';
 import { useRoom } from '@/lib/campus/use-room';
 import { cn } from '@/lib/cn';
-import { useApi, useInvalidate } from '@/lib/hooks';
+import { useL } from '@/lib/hooks';
+import { useNextMission } from '@/lib/next-mission';
+
+const PANEL_ZONES = new Set<Zone['kind']>(['study_door', 'exam_door', 'npc']);
+const first = (name: string) => name.trim().split(/\s+/)[0] ?? '';
 
 export default function CampusPage() {
   const t = useTranslations('campus');
   const room = useRoom('campus');
+  const data = useCampusData();
   const [zone, setZone] = useState<Zone | null>(null);
   const [full, setFull] = useState(false);
-  const onZone = useCallback((z: Zone | null) => setZone(z && (z.kind === 'study_door' || z.kind === 'exam_door') ? z : null), []);
+  const [tapped, setTapped] = useState<string | null>(null);
+  const [near, setNear] = useState<string | null>(null);
+  const [scene, setScene] = useState<SceneApi | null>(null);
+  const onZone = useCallback((z: Zone | null) => setZone(z && PANEL_ZONES.has(z.kind) ? z : null), []);
+  // the room hook echoes my own emotes and reactions locally (the server only relays to the others)
   const emote = room.emote;
   const online = room.players.filter((p) => !p.spectator).length;
+
+  // Study Hall tables light up while classmates study together; Exam Wing desks glow when my room is open.
+  const tableLabels = (data.liveRooms.data ?? []).map((r) => t('liveTable', { a: r.names[0] ?? '', b: r.names[1] ?? '' }));
+  const tablesKey = tableLabels.join('|');
+  const examOpen = data.enterable.length > 0;
+  useEffect(() => {
+    scene?.setLiveTables(tablesKey ? tablesKey.split('|') : []);
+  }, [scene, tablesKey]);
+  useEffect(() => {
+    scene?.setExamGlow(examOpen);
+  }, [scene, examOpen]);
+
+  const playerOf = (id: string | null) => (id ? room.players.find((p) => p.userId === id && !p.spectator) ?? null : null);
+  const tappedPlayer = playerOf(tapped);
+  const nearPlayer = playerOf(near);
+
+  const panel = (fs: { full: boolean; exit: () => void }) => {
+    const bottom = fs.full ? 'bottom-20' : 'bottom-3';
+    if (zone) return <ZonePanel key={zone.id} zone={zone} data={data} className={bottom} onLeave={fs.exit} />;
+    if (tappedPlayer) return <PlayerCard key={tappedPlayer.userId} player={tappedPlayer} data={data} className={bottom} onWave={() => emote('wave')} onClose={() => setTapped(null)} />;
+    if (nearPlayer)
+      return (
+        <motion.div
+          key={`near-${nearPlayer.userId}`}
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 12 }}
+          className={cn('pointer-events-none absolute inset-x-3 flex justify-center', bottom)}
+        >
+          <button
+            type="button"
+            onClick={() => setTapped(nearPlayer.userId)}
+            className="pointer-events-auto flex min-h-12 items-center gap-2 rounded-full border-2 border-cedar bg-card/95 px-4 py-2 font-display text-base font-black shadow-[0_4px_0_0_var(--cedar-d)]"
+            data-testid="near-chip"
+          >
+            <Hand className="size-5 text-cedar" /> {t('player.near', { name: nearPlayer.name })}
+          </button>
+        </motion.div>
+      );
+    return null;
+  };
 
   return (
     <div className="space-y-6">
@@ -42,7 +92,16 @@ export default function CampusPage() {
       </header>
 
       <section className="space-y-3">
-        <CampusCanvas room={room} map="campus" className="h-[58vh] min-h-[340px] lg:h-[70vh]" onZone={onZone} onFullscreen={setFull}>
+        <CampusCanvas
+          room={room}
+          map="campus"
+          className="h-[58vh] min-h-[340px] lg:h-[70vh]"
+          onZone={onZone}
+          onApi={setScene}
+          onPlayerTap={setTapped}
+          onNear={setNear}
+          onFullscreen={setFull}
+        >
           {(fs) => (
             <>
               <div className="pointer-events-none absolute inset-x-3 top-3 flex items-center gap-2 pe-14">
@@ -52,39 +111,7 @@ export default function CampusPage() {
                 </span>
                 {room.status === 'reconnecting' && <WifiOff className="size-5 text-flag" />}
               </div>
-              <AnimatePresence>
-                {zone && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 16, scale: 0.97 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 16 }}
-                    className={cn(
-                      'absolute inset-x-3 mx-auto flex max-w-xl items-center gap-3 rounded-[20px] border-2 bg-card/95 p-3 shadow-[0_4px_0_0_var(--border)] backdrop-blur',
-                      zone.kind === 'exam_door' ? 'border-med' : 'border-cedar',
-                      fs.full ? 'bottom-20' : 'bottom-3',
-                    )}
-                    data-testid="door-panel"
-                  >
-                    <Arzino mood={zone.kind === 'exam_door' ? 'teaching' : 'reading'} size={64} />
-                    <div className="min-w-0 flex-1">
-                      <p className="flex items-center gap-2 font-display text-lg font-black leading-tight">
-                        <DoorOpen className={cn('size-5 shrink-0', zone.kind === 'exam_door' ? 'text-med' : 'text-cedar')} /> {t(`doors.${zone.kind as 'study_door' | 'exam_door'}.title`)}
-                      </p>
-                      <p className="line-clamp-2 text-sm text-muted-foreground">{t(`doors.${zone.kind as 'study_door' | 'exam_door'}.body`)}</p>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant={zone.kind === 'exam_door' ? 'kidMint' : 'kid'}
-                      onClick={() => {
-                        fs.exit();
-                        window.setTimeout(() => document.getElementById(zone.kind === 'exam_door' ? 'exams' : 'study')?.scrollIntoView({ behavior: 'smooth' }), fs.full ? 250 : 0);
-                      }}
-                    >
-                      {zone.kind === 'exam_door' ? <GraduationCap /> : <Users />} <span className="hidden sm:inline">{t(`doors.${zone.kind as 'study_door' | 'exam_door'}.title`)}</span>
-                    </Button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              <AnimatePresence>{panel(fs)}</AnimatePresence>
               {fs.full && (
                 <div className="absolute inset-x-3 bottom-3 flex justify-center">
                   <EmoteBar onEmote={emote} onReaction={room.reaction} compact className="justify-center rounded-[20px] border-2 border-border bg-card/90 p-1.5 shadow-[0_4px_0_0_var(--border)] backdrop-blur" />
@@ -97,11 +124,14 @@ export default function CampusPage() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           {!full && <EmoteBar onEmote={emote} onReaction={room.reaction} compact />}
           <p className="text-xs font-semibold text-muted-foreground">{t('hint')}</p>
+          <Button asChild size="sm" variant="kidGhost" data-testid="campus-vr">
+            <Link href="/vr?scene=campus">🥽 {t('enterVr')}</Link>
+          </Button>
         </div>
       </section>
 
-      <ExamRooms />
-      <StudyPanel />
+      <ExamRooms data={data} />
+      <StudyPanel data={data} />
     </div>
   );
 }
@@ -115,10 +145,176 @@ function SectionTitle({ icon, children, tone }: { icon: React.ReactNode; childre
   );
 }
 
-function ExamRooms() {
+/** The sheet over the map (doors, Arzino, a classmate's card). */
+function MapSheet({ children, className, testId, tone = 'cedar', onClose }: { children: React.ReactNode; className?: string; testId: string; tone?: 'cedar' | 'med'; onClose?: () => void }) {
+  const t = useTranslations('campus');
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16, scale: 0.97 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 16 }}
+      className={cn(
+        'absolute inset-x-3 mx-auto max-h-[70%] max-w-xl overflow-y-auto rounded-[20px] border-2 bg-card/95 p-3 shadow-[0_4px_0_0_var(--border)] backdrop-blur',
+        tone === 'med' ? 'border-med' : 'border-cedar',
+        className,
+      )}
+      data-testid={testId}
+    >
+      {onClose && (
+        <Button variant="ghost" size="icon" className="absolute end-1 top-1 size-9" onClick={onClose} aria-label={t('player.close')}>
+          <X className="size-4" />
+        </Button>
+      )}
+      {children}
+    </motion.div>
+  );
+}
+
+type SheetProps = { data: CampusData; className?: string; onLeave: () => void };
+
+function ZonePanel({ zone, ...rest }: SheetProps & { zone: Zone }) {
+  if (zone.kind === 'npc') return <ArzinoPanel {...rest} />;
+  if (zone.kind === 'exam_door') return <ExamDoor {...rest} />;
+  return <StudyDoor {...rest} />;
+}
+
+/** Study Hall door: invite a classmate right here (online ones first), or go back to my running session. */
+function StudyDoor({ data, className, onLeave }: SheetProps) {
+  const t = useTranslations('campus');
+  const mine = data.mine[0];
+  const mates = (data.mates.data ?? []).slice(0, 4);
+  return (
+    <MapSheet testId="door-panel" className={className}>
+      <div className="flex items-center gap-3">
+        <Arzino mood="reading" size={56} className="shrink-0" />
+        <p className="flex items-center gap-2 font-display text-lg font-black leading-tight">
+          <DoorOpen className="size-5 shrink-0 text-cedar" /> {t('doors.study_door.title')}
+        </p>
+      </div>
+      {mine ? (
+        <Button asChild size="sm" variant="kid" className="mt-2" data-testid="door-open-room" onClick={onLeave}>
+          <Link href={`/student/study/${mine.id}`}>{t('doors.openRoom')}</Link>
+        </Button>
+      ) : (
+        <>
+          <p className="text-sm text-muted-foreground">{t('doors.pick')}</p>
+          {data.error && <p className="mt-1 text-sm font-bold text-flag">{data.error}</p>}
+          {!mates.length ? (
+            <p className="mt-2 text-sm text-muted-foreground">{t('doors.noMates')}</p>
+          ) : (
+            <ul className="mt-2 grid gap-2 sm:grid-cols-2">
+              {mates.map((m) => (
+                <li key={m.userId} className="flex items-center gap-2 rounded-[14px] bg-muted/60 p-2">
+                  <span className={cn('size-2.5 shrink-0 rounded-full', m.online ? 'bg-cedar' : 'bg-lock-d')} aria-label={m.online ? t('classmates.online') : t('classmates.offline')} />
+                  <span className="min-w-0 flex-1 truncate text-sm font-black">{m.name}</span>
+                  <Button size="sm" variant="kid" loading={data.busy === m.userId} disabled={!!data.busy} onClick={() => data.invite(m.userId)} data-testid={`door-invite-${first(m.name).toLowerCase()}`}>
+                    {t('classmates.invite')}
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
+    </MapSheet>
+  );
+}
+
+/** Exam Wing door: straight into my open exam room, or when the next one opens. */
+function ExamDoor({ data, className, onLeave }: SheetProps) {
   const t = useTranslations('campus');
   const format = useFormatter();
-  const exams = useApi<MyExam[]>('/exams/mine', { refetchInterval: 30_000 });
+  const when = (d: string) => format.dateTime(new Date(d), { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  return (
+    <MapSheet testId="door-panel" tone="med" className={className}>
+      <div className="flex items-center gap-3">
+        <Arzino mood="teaching" size={56} className="shrink-0" />
+        <p className="flex items-center gap-2 font-display text-lg font-black leading-tight">
+          <GraduationCap className="size-5 shrink-0 text-med" /> {t('doors.exam_door.title')}
+        </p>
+      </div>
+      {data.enterable.length ? (
+        <ul className="mt-2 space-y-2">
+          {data.enterable.map((e) => (
+            <li key={e.attemptId} className="flex items-center gap-2">
+              <span className="min-w-0 flex-1 truncate text-sm font-black">{e.title}</span>
+              <Button asChild size="sm" variant="kidMint" data-testid="door-enter-exam" onClick={onLeave}>
+                <Link href={`/student/exams/${e.attemptId}`}>{t('exams.enter')}</Link>
+              </Button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-1 text-sm text-muted-foreground" data-testid="door-no-exam">
+          {t('doors.noExam')} {data.upcoming && t('doors.nextExam', { title: data.upcoming.title, date: when(data.upcoming.opensAt) })}
+        </p>
+      )}
+    </MapSheet>
+  );
+}
+
+/** Standing in front of Arzino: it points you to your next mission. */
+function ArzinoPanel({ className, onLeave }: SheetProps) {
+  const t = useTranslations('campus');
+  const l = useL();
+  const { mission, isLoading } = useNextMission();
+  return (
+    <MapSheet testId="arzino-panel" className={cn('flex items-center gap-3', className)}>
+      <Arzino mood={mission ? 'welcome' : 'celebrate'} size={64} className="shrink-0" />
+      <div className="min-w-0 flex-1">
+        {isLoading ? (
+          <Skeleton className="h-10" />
+        ) : mission ? (
+          <>
+            <p className="eyebrow">{t('npc.next')}</p>
+            <p className="truncate font-display text-lg font-black leading-tight">{l(mission.title)}</p>
+            <Button asChild size="sm" variant="kidSunny" className="mt-2" data-testid="arzino-go" onClick={onLeave}>
+              <Link href={missionHref(mission)}>{t('npc.go')}</Link>
+            </Button>
+          </>
+        ) : (
+          <p className="font-display text-base font-black">{t('npc.done')}</p>
+        )}
+      </div>
+    </MapSheet>
+  );
+}
+
+/** A classmate's card: level, say hi, invite to study. */
+function PlayerCard({ player, data, className, onWave, onClose }: { player: PlayerState; data: CampusData; className?: string; onWave: () => void; onClose: () => void }) {
+  const t = useTranslations('campus');
+  const mate = data.mates.data?.find((m) => m.userId === player.userId);
+  const teacher = player.role === 'TEACHER';
+  return (
+    <MapSheet testId="player-card" className={className} onClose={onClose}>
+      <div className="flex items-center gap-3 pe-8">
+        <span className="flex size-12 shrink-0 items-center justify-center rounded-full border-4 border-white font-display text-lg font-black text-white shadow" style={{ background: player.color }}>
+          {player.name.slice(0, 1).toUpperCase()}
+        </span>
+        <div className="min-w-0">
+          <p className="truncate font-display text-lg font-black leading-tight">{player.name}</p>
+          <p className="text-sm font-bold text-muted-foreground">{teacher ? `🎓 ${t('player.teacher')}` : player.level ? t('player.level', { n: player.level }) : mate?.className}</p>
+        </div>
+      </div>
+      {data.error && <p className="mt-1 text-sm font-bold text-flag">{data.error}</p>}
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button size="sm" variant="kidGhost" onClick={onWave} data-testid="player-wave">
+          👋 {t('player.wave')}
+        </Button>
+        {mate && !data.mine.length && (
+          <Button size="sm" variant="kid" loading={data.busy === mate.userId} disabled={!!data.busy} onClick={() => data.invite(mate.userId)} data-testid="player-invite">
+            <Users /> {t('player.invite')}
+          </Button>
+        )}
+      </div>
+    </MapSheet>
+  );
+}
+
+function ExamRooms({ data }: { data: CampusData }) {
+  const t = useTranslations('campus');
+  const format = useFormatter();
+  const { exams } = data;
   const when = (d: string) => format.dateTime(new Date(d), { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 
   return (
@@ -138,7 +334,7 @@ function ExamRooms() {
       ) : (
         <ul className="grid gap-3 sm:grid-cols-2">
           {exams.data.map((e) => {
-            const canEnter = e.examStatus === 'OPEN' && (e.status === 'NOT_STARTED' || e.status === 'IN_PROGRESS');
+            const canEnter = canEnterExam(e);
             const finished = e.status === 'GRADING' || e.status === 'GRADED' || e.status === 'RELEASED';
             return (
               <li key={e.attemptId}>
@@ -188,50 +384,9 @@ function ExamRooms() {
   );
 }
 
-function StudyPanel() {
+function StudyPanel({ data }: { data: CampusData }) {
   const t = useTranslations('campus');
-  const router = useRouter();
-  const invalidate = useInvalidate();
-  const mates = useApi<Classmate[]>('/study-sessions/classmates', { refetchInterval: 15_000 });
-  const sessions = useApi<StudySessionListItem[]>('/study-sessions/mine', { refetchInterval: 15_000 });
-  const [busy, setBusy] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const invite = async (partnerId: string) => {
-    setBusy(partnerId);
-    setError(null);
-    try {
-      const s = await api<{ id: string }>('/study-sessions', { body: { partnerId } });
-      await invalidate('/study-sessions/mine');
-      router.push(`/student/study/${s.id}`);
-    } catch (e) {
-      const code = e instanceof ApiError ? String(e.data.code ?? '') : '';
-      if (code === 'ALREADY_IN_SESSION' && e instanceof ApiError && e.data.sessionId) return router.push(`/student/study/${e.data.sessionId}`);
-      setError(t.has(`errors.${code}`) ? t(`errors.${code}`) : t('errors.generic'));
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const respond = async (id: string, accept: boolean) => {
-    setBusy(id);
-    setError(null);
-    try {
-      await api(`/study-sessions/${id}/${accept ? 'accept' : 'decline'}`, { method: 'POST' });
-      await invalidate('/study-sessions/mine');
-      if (accept) router.push(`/student/study/${id}`);
-    } catch (e) {
-      const code = e instanceof ApiError ? String(e.data.code ?? '') : '';
-      setError(t.has(`errors.${code}`) ? t(`errors.${code}`) : t('errors.generic'));
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const list = sessions.data ?? [];
-  const incoming = list.filter((s) => s.status === 'INVITED' && !s.isHost);
-  const live = list.filter((s) => s.status === 'ACTIVE' || (s.status === 'INVITED' && s.isHost));
-  const past = list.filter((s) => s.status === 'ENDED').slice(0, 5);
+  const { mates, busy, error, incoming, mine, past } = data;
 
   return (
     <section id="study" className="space-y-3 scroll-mt-20">
@@ -246,11 +401,11 @@ function StudyPanel() {
           {incoming.map((s) => (
             <div key={s.id} className="flex items-center gap-3" data-testid="incoming-invite">
               <Avatar name={s.partner?.name ?? '?'} src={s.partner?.avatarUrl ?? undefined} className="size-10" />
-              <p className="min-w-0 flex-1 font-display text-base font-black leading-tight">{t('invites.from', { name: s.partner?.name.split(' ')[0] ?? '' })}</p>
-              <Button size="sm" variant="kid" loading={busy === s.id} onClick={() => respond(s.id, true)} data-testid="accept-invite">
+              <p className="min-w-0 flex-1 font-display text-base font-black leading-tight">{t('invites.from', { name: first(s.partner?.name ?? '') })}</p>
+              <Button size="sm" variant="kid" loading={busy === s.id} onClick={() => data.respond(s.id, true)} data-testid="accept-invite">
                 {t('invites.accept')}
               </Button>
-              <Button size="sm" variant="ghost" onClick={() => respond(s.id, false)}>
+              <Button size="sm" variant="ghost" onClick={() => data.respond(s.id, false)}>
                 {t('invites.decline')}
               </Button>
             </div>
@@ -258,7 +413,7 @@ function StudyPanel() {
         </Card>
       )}
 
-      {live.map((s) => (
+      {mine.map((s) => (
         <Card key={s.id} className="flex items-center gap-3 border-med p-3 shadow-[0_4px_0_0_var(--med-d)]">
           <Arzino mood={s.status === 'INVITED' ? 'bored-waiting' : 'streak-buddy'} size={56} />
           <span className="relative flex size-3 shrink-0">
@@ -266,7 +421,7 @@ function StudyPanel() {
             <span className="relative inline-flex size-3 rounded-full bg-med" />
           </span>
           <p className="min-w-0 flex-1 font-display text-base font-black leading-tight">
-            {s.status === 'INVITED' ? t('invites.waiting', { name: s.partner?.name.split(' ')[0] ?? '' }) : t('study.with', { name: s.partner?.name.split(' ')[0] ?? '' })}
+            {s.status === 'INVITED' ? t('invites.waiting', { name: first(s.partner?.name ?? '') }) : t('study.with', { name: first(s.partner?.name ?? '') })}
           </p>
           <Button asChild size="sm" variant="kidMint">
             <Link href={`/student/study/${s.id}`}>{t('invites.open')}</Link>
@@ -284,7 +439,7 @@ function StudyPanel() {
         <ul className="grid gap-2 sm:grid-cols-2">
           {mates.data.map((m) => (
             <li key={m.userId}>
-              <Card className="chunky-hover flex items-center gap-3 p-3" data-testid={`classmate-${m.name.split(' ')[0].toLowerCase()}`}>
+              <Card className="chunky-hover flex items-center gap-3 p-3" data-testid={`classmate-${first(m.name).toLowerCase()}`}>
                 <div className="relative">
                   <Avatar name={m.name} src={m.avatarUrl ?? undefined} className="size-12" />
                   <span className={cn('absolute -bottom-0.5 -end-0.5 size-4 rounded-full border-[3px] border-card', m.online ? 'bg-cedar' : 'bg-lock-d')} aria-label={m.online ? t('classmates.online') : t('classmates.offline')} />
@@ -293,7 +448,7 @@ function StudyPanel() {
                   <p className="truncate font-display text-base font-black">{m.name}</p>
                   <p className="text-xs font-bold text-muted-foreground">{m.className}</p>
                 </div>
-                <Button size="sm" variant="kid" loading={busy === m.userId} disabled={!!busy || live.length > 0} onClick={() => invite(m.userId)} data-testid="invite-classmate">
+                <Button size="sm" variant="kid" loading={busy === m.userId} disabled={!!busy || mine.length > 0} onClick={() => data.invite(m.userId)} data-testid="invite-classmate">
                   {t('classmates.invite')}
                 </Button>
               </Card>

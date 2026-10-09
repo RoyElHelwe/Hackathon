@@ -1,4 +1,4 @@
-import { CAMPUS_MAP, STUDY_ROOM_MAP, clampToMap, examHallMap, hallRooms, inRect, parseRoom, roomKey, voiceGain, zoneAt, avatarColor } from './campus';
+import { CAMPUS_MAP, STUDY_ROOM_MAP, clampToMap, distance, examHallMap, hallRooms, inRect, parseRoom, pickSpawn, roomKey, voiceGain, zoneAt, avatarColor } from './campus';
 import { attemptEndsAt, createExamBody, effectiveExamStatus, finalExamScore, questionCountFor } from './exam';
 
 describe('exam hall', () => {
@@ -39,6 +39,8 @@ describe('campus map helpers', () => {
     expect(zoneAt(CAMPUS_MAP, 1040, 260)?.kind).toBe('exam_door');
     expect(zoneAt(CAMPUS_MAP, 800, 300)?.kind).toBe('lobby');
     expect(zoneAt(CAMPUS_MAP, 30, 30)).toBeNull();
+    // standing in front of Arzino (below its body) beats the lobby
+    expect(zoneAt(CAMPUS_MAP, 800, 260)?.kind).toBe('npc');
   });
   it('clamps positions into the map (anti-teleport outside walls, NaN safe)', () => {
     expect(clampToMap(STUDY_ROOM_MAP, -500, 99999)).toEqual({ x: 30, y: STUDY_ROOM_MAP.height - 30 });
@@ -61,6 +63,17 @@ describe('campus map helpers', () => {
     expect(mid).toBeGreaterThan(0.25);
   });
   it('gives stable avatar colors', () => expect(avatarColor('lea')).toBe(avatarColor('lea')));
+  it('picks a free spawn so avatars never stack', () => {
+    const [s0, s1] = CAMPUS_MAP.spawns;
+    expect(pickSpawn(CAMPUS_MAP, 0, [])).toEqual(s0);
+    expect(pickSpawn(CAMPUS_MAP, 0, [s0])).toEqual(s1);
+    expect(pickSpawn(CAMPUS_MAP, 1, [{ x: s1.x + 10, y: s1.y }])).toEqual(CAMPUS_MAP.spawns[2]);
+    // everyone taken → nudged away from the preferred spawn, still inside the map
+    const crowd = CAMPUS_MAP.spawns.map((s) => ({ ...s }));
+    const p = pickSpawn(CAMPUS_MAP, 0, crowd);
+    expect(distance(p, s0)).toBeGreaterThan(10);
+    expect(clampToMap(CAMPUS_MAP, p.x, p.y)).toEqual(p);
+  });
 });
 
 describe('exam helpers', () => {

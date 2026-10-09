@@ -85,5 +85,11 @@
   "exit": "خروج",
   "proofEyebrow": "صورة + أرقام + كلماتك",
   "storyEyebrow": "مهمّة من الحياة الحقيقية",
-  "reviewEyebrow": "أنت المعلّم الآن"
+  "reviewEyebrow": "أنت المعلّم الآن",
+  "askFriendAsk": "اسأل",
+  "askFriendMastered": "أتقنه ⭐",
+  "askFriendNobody": "لم يتقن أحد هذا بعد — لكن يمكن لزميل أن يفكر معك.",
+  "askFriendNone": "لا يوجد زملاء بعد.",
+  "askFriendError": "تعذّر إرسال الدعوة. حاول مجددًا.",
+  "tryVr": "جرّبها في الواقع الافتراضي: مختبر الظلال"
 }

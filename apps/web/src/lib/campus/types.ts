@@ -9,6 +9,14 @@ export interface Classmate {
   classId: string;
   className: string;
   online: boolean;
+  /** with ?topicId=: this classmate mastered the topic (can explain it) */
+  mastered?: boolean;
+}
+
+/** A study session running right now in one of my classes (the Study Hall tables light up). */
+export interface LiveStudySession {
+  id: string;
+  names: string[];
 }
 
 export type StudyStatus = 'INVITED' | 'ACTIVE' | 'ENDED' | 'DECLINED' | 'EXPIRED';
@@ -44,6 +52,12 @@ export interface StudySessionDetail {
   startedAt: string | null;
   endedAt: string | null;
   endedReason: string | null;
+  /** time both partners were in the room at once (stored total, without the running segment) */
+  togetherMs: number;
+  /** start of the running together-segment, null when apart */
+  togetherSince: string | null;
+  /** "Ask a friend": the mission the host is stuck on */
+  mission: { id: string; title: string; steps: string[] } | null;
   room: string;
   participants: { userId: string; name: string; avatarUrl: string | null; joinedAt: string | null; leftAt: string | null; online: boolean }[];
   events: SessionEventItem[];

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { CampusMap, CampusMapId, examHallMap, MAPS, parseRoom, roomKey } from '@tajriba/shared';
+import { CampusMap, CampusMapId, examHallMap, MAPS, parseRoom, roomKey, userHash } from '@tajriba/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import type { SocketIdentity } from './socket-auth.service';
 
@@ -30,7 +30,8 @@ export class RoomAccessService {
     if (ref.kind === 'campus') {
       // The school courtyard is for students; the school's teachers may drop in. Parents, directors and admins may not.
       if (who.role !== 'STUDENT' && who.role !== 'TEACHER') return null;
-      return { key: roomKey(ref, who.schoolId), name: room, map: 'campus', mapDef: MAPS.campus, kind: 'campus', refId: null, spectator: false, spawnIndex: 0, publishes: false };
+      // each user prefers their own spawn point; the gateway moves them to a free one if it is taken
+      return { key: roomKey(ref, who.schoolId), name: room, map: 'campus', mapDef: MAPS.campus, kind: 'campus', refId: null, spectator: false, spawnIndex: userHash(who.userId), publishes: false };
     }
 
     if (ref.kind === 'study') {
@@ -39,9 +40,10 @@ export class RoomAccessService {
         include: { participants: { select: { userId: true } }, class: { select: { schoolId: true } } },
       });
       if (!s || s.class.schoolId !== who.schoolId) return null;
-      if (s.status !== 'INVITED' && s.status !== 'ACTIVE') return null;
       const idx = s.participants.findIndex((p) => p.userId === who.userId);
       if (idx < 0 || who.role !== 'STUDENT') return null;
+      // The host may wait in the room for the invite to be accepted; the invited classmate must accept first.
+      if (s.status !== 'ACTIVE' && !(s.status === 'INVITED' && s.hostId === who.userId)) return null;
       return { key: roomKey(ref), name: room, map: 'study', mapDef: MAPS.study, kind: 'study', refId: s.id, spectator: false, spawnIndex: s.hostId === who.userId ? 0 : 1, publishes: true };
     }
 

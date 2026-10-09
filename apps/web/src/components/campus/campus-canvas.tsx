@@ -2,7 +2,7 @@
 
 import { EMOTE_EMOJI, MAPS, type CampusMap, type Zone } from '@tajriba/shared';
 import { Maximize2, Minimize2 } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/cn';
 import type { useRoom } from '@/lib/campus/use-room';
@@ -17,6 +17,24 @@ export interface CampusFullscreen {
   exit: () => void;
 }
 
+/** keys the scene uses for walking; the browser would scroll the page with them */
+const SCROLL_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
+
+/** Follows the `dark` class on <html> (the theme toggle), so the map can be redrawn in the new theme. */
+function useDarkClass() {
+  // read on first render too, so a dark-mode user doesn't boot the map twice
+  const [dark, setDark] = useState(() => typeof document !== 'undefined' && document.documentElement.classList.contains('dark'));
+  useEffect(() => {
+    const el = document.documentElement;
+    const read = () => setDark(el.classList.contains('dark'));
+    read();
+    const mo = new MutationObserver(read);
+    mo.observe(el, { attributes: true, attributeFilter: ['class'] });
+    return () => mo.disconnect();
+  }, []);
+  return dark;
+}
+
 interface Props {
   room: Room;
   /** a fixed map id, or a map built at runtime (the Exam Hall) — keep the object stable (useMemo) */
@@ -28,6 +46,10 @@ interface Props {
   onApi?: (api: SceneApi | null) => void;
   /** told when the canvas enters / leaves full screen (pages move HUD pieces like the emote bar inside) */
   onFullscreen?: (full: boolean) => void;
+  /** tapped another player's avatar */
+  onPlayerTap?: (userId: string) => void;
+  /** closest other player within reach changed */
+  onNear?: (userId: string | null) => void;
   /** size of the canvas in the page (ignored in full screen) */
   className?: string;
   /** HUD overlays drawn over the canvas; they stay visible in full screen */
@@ -44,7 +66,7 @@ const fsElement = () => document.fullscreenElement ?? (document as FsDocument).w
  * room events without React re-renders. A corner button puts the canvas and its HUD in full screen (Fullscreen API,
  * or a fixed overlay where the API is missing, e.g. iPhone Safari).
  */
-export function CampusCanvas({ room, map: mapProp, interactive = true, selfSpeaking, onZone, onApi, onFullscreen, className, children }: Props) {
+export function CampusCanvas({ room, map: mapProp, interactive = true, selfSpeaking, onZone, onApi, onPlayerTap, onNear, onFullscreen, className, children }: Props) {
   const map = typeof mapProp === 'string' ? MAPS[mapProp as keyof typeof MAPS] : mapProp;
   const t = useTranslations('campus.mapLabels');
   const tc = useTranslations('campus');
@@ -62,6 +84,14 @@ export function CampusCanvas({ room, map: mapProp, interactive = true, selfSpeak
   zoneRef.current = onZone;
   const apiCb = useRef(onApi);
   apiCb.current = onApi;
+  const tapRef = useRef(onPlayerTap);
+  tapRef.current = onPlayerTap;
+  const nearRef = useRef(onNear);
+  nearRef.current = onNear;
+  const dark = useDarkClass();
+  const locale = useLocale();
+  /** where I was standing when the scene was last torn down (theme/language switch → redraw in place) */
+  const lastSelf = useRef<{ map: string; x: number; y: number } | null>(null);
 
   // ---------- full screen ----------
   const [mode, setMode] = useState<null | 'native' | 'css'>(null);
@@ -139,7 +169,7 @@ export function CampusCanvas({ room, map: mapProp, interactive = true, selfSpeak
     return () => ro.disconnect();
   }, []);
 
-  // ---------- Phaser: boot once per map ----------
+  // ---------- Phaser: boot once per map, theme and language (labels and colors are drawn at boot) ----------
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -149,7 +179,6 @@ export function CampusCanvas({ room, map: mapProp, interactive = true, selfSpeak
       await Promise.race([document.fonts?.ready, new Promise((r) => setTimeout(r, 800))]);
       if (cancelled || !host.current) return;
       const { createCampusScene } = await import('./scene');
-      const dark = document.documentElement.classList.contains('dark');
       // the 3D Arzinos load in parallel; until then (or if WebGL fails) the flat avatars are shown
       void import('./arzino-3d')
         .then(({ ArzinoLayer }) => (layerHost.current ? ArzinoLayer.create(layerHost.current, dark) : null))
@@ -167,12 +196,18 @@ export function CampusCanvas({ room, map: mapProp, interactive = true, selfSpeak
         layer: () => layer.current,
         onMove: (x, y, dir, moving) => roomRef.current.move(x, y, dir, moving),
         onZone: (z) => zoneRef.current?.(z),
+        onPlayerTap: (id) => tapRef.current?.(id),
+        onNear: (id) => nearRef.current?.(id),
         onReady: (a) => {
           api.current = a;
+          // test hook (dev/e2e only): lets Playwright walk to exact map points
+          if (process.env.NODE_ENV !== 'production') (window as unknown as { __tajribaScene?: SceneApi }).__tajribaScene = a;
           const r = roomRef.current;
           if (r.snapshot) {
-            a.setSelf(r.snapshot.self);
-            for (const p of r.players) a.upsert(p);
+            const was = lastSelf.current?.map === map.id ? lastSelf.current : null;
+            a.setSelf(was ? { ...r.snapshot.self, x: was.x, y: was.y } : r.snapshot.self);
+            // live positions (kept up to date by the room hook), not the join-time list
+            for (const p of r.positions.current.values()) a.upsert(p);
           }
           apiCb.current?.(a);
         },
@@ -191,6 +226,8 @@ export function CampusCanvas({ room, map: mapProp, interactive = true, selfSpeak
     })();
     return () => {
       cancelled = true;
+      const pos = api.current?.selfPos();
+      if (pos) lastSelf.current = { map: map.id, ...pos };
       api.current = null;
       apiCb.current?.(null);
       game.current?.destroy(true);
@@ -198,7 +235,27 @@ export function CampusCanvas({ room, map: mapProp, interactive = true, selfSpeak
       layer.current?.dispose();
       layer.current = null;
     };
-  }, [map, interactive]);
+  }, [map, interactive, dark, locale]);
+
+  // Walking with the arrow keys must not scroll the page while the map is on screen.
+  useEffect(() => {
+    const el = host.current;
+    if (!interactive || !el) return;
+    let visible = false;
+    const io = new IntersectionObserver(([e]) => (visible = e.intersectionRatio >= 0.5), { threshold: [0, 0.5, 1] });
+    io.observe(el);
+    const onKey = (e: KeyboardEvent) => {
+      if (!visible || !SCROLL_KEYS.has(e.key)) return;
+      const target = e.target as HTMLElement | null;
+      if (target && (/^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName) || target.isContentEditable)) return;
+      e.preventDefault();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      io.disconnect();
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [interactive]);
 
   // Room events → scene.
   useEffect(
@@ -208,6 +265,7 @@ export function CampusCanvas({ room, map: mapProp, interactive = true, selfSpeak
         if (!a) return;
         switch (e.type) {
           case 'snapshot':
+            lastSelf.current = null; // the server's position wins after a (re)join
             a.clearOthers();
             a.setSelf(e.snapshot.self);
             for (const p of e.snapshot.players) a.upsert(p);

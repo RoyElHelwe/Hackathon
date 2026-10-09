@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { Server } from 'socket.io';
 import { PresenceRegistry } from './presence';
+import { TogetherClock } from './together';
 
 /**
  * Lets services push realtime events without depending on the gateway (no circular imports).
@@ -10,6 +11,10 @@ import { PresenceRegistry } from './presence';
 export class RealtimeBus {
   private server: Server | null = null;
   readonly presence = new PresenceRegistry();
+  /** how long study partners are in their room together (study XP) */
+  readonly together = new TogetherClock();
+  /** study rooms: index of the discussion card on the Ideas board (both partners see the same one) */
+  readonly boards = new Map<string, number>();
 
   attach(server: Server) {
     this.server = server;

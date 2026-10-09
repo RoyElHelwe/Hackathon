@@ -1,7 +1,7 @@
 'use client';
 
-import { distance, voiceGain } from '@tajriba/shared';
-import { ArrowLeft, Mic, MicOff, PhoneOff, Shuffle } from 'lucide-react';
+import { distance, STUDY_MIN_XP_MS, voiceGain } from '@tajriba/shared';
+import { ArrowLeft, ListChecks, Mic, MicOff, PhoneOff, Shuffle } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
@@ -41,8 +41,13 @@ export default function StudyRoomPage() {
   const recordsVoice = cfg?.recordStudySessions === true;
   const notice = t(recordsVoice ? 'study.recordingNotice' : 'study.activityNotice');
 
-  useSocketEvent<{ sessionId: string; xpBy?: Record<string, number> }>('study:ended', (d) => {
+  useSocketEvent<{ sessionId: string; reason?: string; xpBy?: Record<string, number> }>('study:ended', (d) => {
     if (d.sessionId !== id) return;
+    if (d.reason === 'DECLINED') {
+      // the invite was declined or cancelled: the page shows that status, not "session over"
+      void invalidate(path, '/study-sessions/mine');
+      return;
+    }
     const xp = (me && d.xpBy?.[me.user.id]) || 0; // 0 when the session was too short or the daily cap was reached
     setEnded({ xp });
     if (xp) fireConfetti(true);
@@ -129,6 +134,9 @@ export default function StudyRoomPage() {
           <Button variant="kidGhost" size="lg" onClick={() => setJoined({ mic: false })} data-testid="join-no-mic">
             {t('study.joinNoMic')}
           </Button>
+          <Button asChild variant="kidSunny" size="lg" data-testid="join-vr">
+            <Link href={`/vr?scene=study:${s.id}`}>🥽 {t('study.joinVr')}</Link>
+          </Button>
         </div>
       </Card>
     );
@@ -145,10 +153,22 @@ function StudyRoom({ session, myId, withMic, names }: { session: StudySessionDet
   const { data: cfg } = useApi<{ recordStudySessions?: boolean }>('/auth/config');
   const rec = useRecorder({ kind: 'STUDY', refId: session.id, stream: voice.stream, active: session.status === 'ACTIVE' && cfg?.recordStudySessions === true });
   const scene = useRef<SceneApi | null>(null);
+  const [sceneApi, setSceneApi] = useState<SceneApi | null>(null);
+  // what the Ideas board shows: the mission we're working on ("Ask a friend") or the discussion cards
+  const [boardMode, setBoardMode] = useState<'mission' | 'cards'>(session.mission ? 'mission' : 'cards');
+  const cards = useApi<{ cards: DiscussionCard[] }>(`/study-sessions/${session.id}/cards`, { staleTime: Infinity });
+  const cardList = cards.data?.cards ?? [];
+  const card = cardList.length ? cardList[room.boardIndex % cardList.length] : null;
   const [confirm, setConfirm] = useState(false);
   const [full, setFull] = useState(false);
   const [ending, setEnding] = useState(false);
-  const [elapsed, setElapsed] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
+  // together time: stored total + the running segment (both partners in the room)
+  const [together, setTogether] = useState({ ms: session.togetherMs, since: session.togetherSince });
+  useSocketEvent<{ sessionId: string; togetherMs: number; since: string | null }>('study:together', (d) => {
+    if (d.sessionId === session.id) setTogether({ ms: d.togetherMs, since: d.since });
+  });
+  const togetherMs = together.ms + (together.since ? Math.max(0, now - new Date(together.since).getTime()) : 0);
   const [tip, setTip] = useState<number | null>(null);
   const lastVoice = useRef(Date.now());
   const partner = session.participants.find((p) => p.userId !== myId);
@@ -187,18 +207,17 @@ function StudyRoom({ session, myId, withMic, names }: { session: StudySessionDet
     return () => window.clearInterval(iv);
   }, [setVolume]);
 
-  // Elapsed time + Arzino's tips when it gets quiet.
+  // Clock for the together timer + Arzino's tips when it gets quiet.
   useEffect(() => {
-    const start = session.startedAt ? new Date(session.startedAt).getTime() : Date.now();
     const iv = window.setInterval(() => {
-      setElapsed(Math.round((Date.now() - start) / 1000));
+      setNow(Date.now());
       if (Date.now() - lastVoice.current > 30_000) {
         setTip((n) => ((n ?? -1) + 1) % 4);
         lastVoice.current = Date.now();
       }
     }, 1000);
     return () => window.clearInterval(iv);
-  }, [session.startedAt]);
+  }, []);
   useEffect(() => {
     if (tip === null) return;
     const to = window.setTimeout(() => setTip(null), 9000);
@@ -215,6 +234,17 @@ function StudyRoom({ session, myId, withMic, names }: { session: StudySessionDet
       setConfirm(false);
     }
   };
+
+  // Chalk on the Ideas board, the same for both partners.
+  const boardText =
+    boardMode === 'mission' && session.mission
+      ? [session.mission.title, ...session.mission.steps.slice(0, 3).map((s, i) => `${i + 1}. ${s}`)].join('\n')
+      : card
+        ? `${t(`study.cards.${card.kind}`)}: ${card.prompt}`
+        : null;
+  useEffect(() => {
+    sceneApi?.setBoard(boardText);
+  }, [sceneApi, boardText]);
 
   // the room echoes my own emotes and reactions to the scene
   const localEmote = room.emote;
@@ -237,12 +267,17 @@ function StudyRoom({ session, myId, withMic, names }: { session: StudySessionDet
         </Button>
         <div className="min-w-0 flex-1">
           <h1 className="truncate font-display text-2xl font-black">{t('study.with', { name: partnerFirst })}</h1>
+          {session.mission && (
+            <p className="truncate text-sm font-bold text-cedar-ink dark:text-cedar" data-testid="helping-with">
+              🆘 {t('study.mission.working', { title: session.mission.title })}
+            </p>
+          )}
           <p className={cn('flex items-center gap-1.5 text-sm font-bold', partnerHere ? 'text-success' : 'text-muted-foreground')} data-testid="partner-status">
             <span className={cn('size-2.5 rounded-full', partnerHere ? 'bg-cedar' : 'animate-pulse bg-lock-d')} />
             {partnerHere ? t('study.here', { name: partnerFirst }) : t('study.away', { name: partnerFirst })}
           </p>
         </div>
-        <span className="rounded-full border-2 border-border bg-card px-3 py-1 font-mono text-sm font-black shadow-[0_3px_0_0_var(--border)]">⏱ {mmss(elapsed)}</span>
+        <TogetherChip ms={togetherMs} running={!!together.since} />
         {rec.recording && (
           <span className="flex items-center gap-1.5 rounded-full bg-flag-soft px-3 py-1 text-xs font-black uppercase tracking-wider text-flag-d dark:text-danger" data-testid="recording-chip">
             <span className="size-2 animate-pulse rounded-full bg-flag" /> {t('study.recording')}
@@ -250,7 +285,12 @@ function StudyRoom({ session, myId, withMic, names }: { session: StudySessionDet
         )}
       </div>
 
-      <CampusCanvas room={room} map="study" className="aspect-[10/7] max-h-[72vh] w-full" selfSpeaking={voice.speaking} onApi={(a) => (scene.current = a)} onFullscreen={setFull}>
+      <CampusCanvas room={room} map="study" className="aspect-[10/7] max-h-[72vh] w-full" selfSpeaking={voice.speaking} onApi={(a) => {
+          scene.current = a;
+          setSceneApi(a);
+        }}
+        onFullscreen={setFull}
+      >
         {(fs) => (
           <>
             {room.status !== 'joined' && (
@@ -261,7 +301,7 @@ function StudyRoom({ session, myId, withMic, names }: { session: StudySessionDet
             {fs.full && (
               <div className="pointer-events-none absolute inset-x-3 top-3 flex flex-wrap items-center gap-2 pe-14">
                 <span className="rounded-full border-2 border-border bg-card/95 px-3 py-1.5 font-display text-sm font-black shadow-[0_3px_0_0_var(--border)]">
-                  {t('study.with', { name: partnerFirst })} · ⏱ {mmss(elapsed)}
+                  {t('study.with', { name: partnerFirst })} · {t('study.together', { time: mmss(Math.floor(togetherMs / 1000)) })}
                 </span>
                 {rec.recording && (
                   <span className="flex items-center gap-1.5 rounded-full bg-flag px-3 py-1.5 text-xs font-black uppercase tracking-wider text-white">
@@ -318,7 +358,35 @@ function StudyRoom({ session, myId, withMic, names }: { session: StudySessionDet
         </>
       )}
 
-      <DiscussionCards sessionId={session.id} />
+      {session.mission && (
+        <div className="flex flex-wrap items-center gap-2" role="group" aria-label={t('study.board.label')}>
+          <span className="text-sm font-bold text-muted-foreground">{t('study.board.label')}</span>
+          {(['mission', 'cards'] as const).map((m) => (
+            <Button key={m} size="sm" variant={boardMode === m ? 'kid' : 'kidGhost'} aria-pressed={boardMode === m} onClick={() => setBoardMode(m)} data-testid={`board-${m}`}>
+              {t(`study.board.${m}`)}
+            </Button>
+          ))}
+        </div>
+      )}
+      {boardMode === 'mission' && session.mission ? (
+        <section className="space-y-2 rounded-[20px] border-2 border-cedar bg-cedar-soft p-4 shadow-[0_4px_0_0_var(--cedar-d)]" data-testid="mission-on-board">
+          <p className="flex items-center gap-2 font-display text-lg font-black">
+            <ListChecks className="size-5 text-cedar" /> {session.mission.title}
+          </p>
+          <ol className="list-decimal space-y-1 ps-6 text-sm font-semibold">
+            {session.mission.steps.map((s, i) => (
+              <li key={i}>{s}</li>
+            ))}
+          </ol>
+          {session.hostId === myId && (
+            <Link href={`/student/missions/${session.mission.id}`} className="inline-block text-sm font-bold text-med-ink underline dark:text-med">
+              {t('study.mission.back')}
+            </Link>
+          )}
+        </section>
+      ) : (
+        <DiscussionCards loading={cards.isLoading} card={card} index={room.boardIndex} onNext={() => room.board(room.boardIndex + 1)} />
+      )}
 
       <details className="chunky rounded-[20px] p-4">
         <summary className="cursor-pointer font-display text-lg font-black">{t('study.timeline')}</summary>
@@ -348,12 +416,36 @@ function StudyRoom({ session, myId, withMic, names }: { session: StudySessionDet
   );
 }
 
-function DiscussionCards({ sessionId }: { sessionId: string }) {
+/** "Together 3:12" with a ring filling up to the 5 minutes that earn study XP. */
+function TogetherChip({ ms, running }: { ms: number; running: boolean }) {
   const t = useTranslations('campus');
-  const cards = useApi<{ cards: DiscussionCard[] }>(`/study-sessions/${sessionId}/cards`, { staleTime: Infinity });
-  const [i, setI] = useState(0);
-  const list = cards.data?.cards ?? [];
-  const card = list.length ? list[i % list.length] : null;
+  const done = ms >= STUDY_MIN_XP_MS;
+  const p = Math.min(1, ms / STUDY_MIN_XP_MS);
+  const r = 9;
+  const c = 2 * Math.PI * r;
+  return (
+    <span
+      className={cn(
+        'flex items-center gap-2 rounded-full border-2 px-3 py-1 text-sm font-black shadow-[0_3px_0_0_var(--border)]',
+        done ? 'border-cedar bg-cedar-soft text-cedar-ink dark:text-cedar' : 'border-border bg-card text-foreground',
+      )}
+      title={done ? t('study.togetherDone') : t('study.togetherGoal')}
+      data-testid="together-chip"
+    >
+      <svg viewBox="0 0 24 24" className={cn('size-5 -rotate-90', running && !done && 'animate-pulse')} aria-hidden>
+        <circle cx="12" cy="12" r={r} fill="none" stroke="currentColor" strokeOpacity={0.2} strokeWidth={3} />
+        <circle cx="12" cy="12" r={r} fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - p)} />
+      </svg>
+      <span className="font-mono">{t('study.together', { time: mmss(Math.floor(ms / 1000)) })}</span>
+      {done && <span>{t('study.togetherDone')}</span>}
+    </span>
+  );
+}
+
+/** The discussion card on the Ideas board; shuffling flips it for both partners. */
+function DiscussionCards({ loading, card, index, onNext }: { loading: boolean; card: DiscussionCard | null; index: number; onNext: () => void }) {
+  const t = useTranslations('campus');
+  const i = index;
   const tone = {
     QUESTION: 'bg-med-soft border-med shadow-[0_4px_0_0_var(--med-d)]',
     CHALLENGE: 'bg-flame-soft border-flame shadow-[0_4px_0_0_var(--flame-d)]',
@@ -363,7 +455,7 @@ function DiscussionCards({ sessionId }: { sessionId: string }) {
   return (
     <section className="space-y-2">
       <h2 className="font-display text-xl font-black">{t('study.cards.title')}</h2>
-      {cards.isLoading ? (
+      {loading ? (
         <Thinking label={t('study.cards.loading')} />
       ) : !card ? null : (
         <AnimatePresence mode="wait">
@@ -380,7 +472,7 @@ function DiscussionCards({ sessionId }: { sessionId: string }) {
               <p className="eyebrow">{t(`study.cards.${card.kind}`)}</p>
               <p className="font-display text-xl font-black leading-snug">{card.prompt}</p>
             </div>
-            <Button variant="kidGhost" size="icon" onClick={() => setI((n) => n + 1)} aria-label={t('study.cards.next')} data-testid="next-card">
+            <Button variant="kidGhost" size="icon" onClick={onNext} aria-label={t('study.cards.next')} data-testid="next-card">
               <Shuffle />
             </Button>
           </motion.div>

@@ -29,7 +29,7 @@ export interface Furniture extends Rect {
   label?: string;
 }
 
-export type ZoneKind = 'lobby' | 'study_door' | 'exam_door' | 'garden' | 'stage' | 'study_room' | 'exam_desk' | 'hall_room';
+export type ZoneKind = 'lobby' | 'study_door' | 'exam_door' | 'garden' | 'stage' | 'study_room' | 'exam_desk' | 'hall_room' | 'npc';
 
 export interface Zone extends Rect {
   id: string;
@@ -124,6 +124,8 @@ export const CAMPUS_MAP: CampusMap = {
     { id: 'study-door', kind: 'study_door', x: 520, y: 220, w: 70, h: 80, label: 'Study Hall' },
     { id: 'exam-door', kind: 'exam_door', x: 1010, y: 220, w: 70, h: 80, label: 'Exam Wing' },
     { id: 'garden', kind: 'garden', x: 100, y: 520, w: 1400, h: 420, label: 'Garden' },
+    // walk up to Arzino: it points you to your next mission
+    { id: 'arzino', kind: 'npc', x: 730, y: 150, w: 140, h: 130, label: 'Arzino' },
   ],
   spawns: [
     { x: 800, y: 420 },
@@ -131,6 +133,10 @@ export const CAMPUS_MAP: CampusMap = {
     { x: 860, y: 460 },
     { x: 700, y: 380 },
     { x: 900, y: 380 },
+    { x: 640, y: 440 },
+    { x: 960, y: 440 },
+    { x: 780, y: 500 },
+    { x: 620, y: 340 },
   ],
   decor: [
     { kind: 'flowers', x: 110, y: 500, w: 360, h: 220 },
@@ -159,7 +165,7 @@ export const STUDY_ROOM_MAP: CampusMap = {
   furniture: [
     { kind: 'rug', x: 220, y: 170, w: 360, h: 230 },
     { kind: 'table', x: 330, y: 240, w: 140, h: 80, solid: true, label: 'Discussion table' },
-    { kind: 'board', x: 260, y: 30, w: 280, h: 70, solid: true, label: 'Ideas board' },
+    { kind: 'board', x: 220, y: 24, w: 360, h: 96, solid: true, label: 'Ideas board' },
     { kind: 'sofa', x: 40, y: 220, w: 50, h: 140, solid: true },
     { kind: 'shelf', x: 640, y: 40, w: 120, h: 40, solid: true },
     { kind: 'plant', x: 40, y: 40, w: 40, h: 40, solid: true },
@@ -169,7 +175,7 @@ export const STUDY_ROOM_MAP: CampusMap = {
   ],
   zones: [
     { id: 'table', kind: 'study_room', x: 280, y: 200, w: 240, h: 160, label: 'Table' },
-    { id: 'board', kind: 'stage', x: 240, y: 100, w: 320, h: 70, label: 'Board' },
+    { id: 'board', kind: 'stage', x: 240, y: 124, w: 320, h: 54, label: 'Board' },
   ],
   spawns: [
     { x: 300, y: 440 },
@@ -324,6 +330,23 @@ export function spawnFor(map: CampusMap, index: number): { x: number; y: number 
 }
 
 /**
+ * A spawn point nobody is standing on: tries the spawns in order starting at `preferred`, skipping any with a player
+ * closer than `minGap`. When all are taken, the preferred spawn is nudged by a step that grows with the crowd, so
+ * avatars and name tags never stack exactly on top of each other.
+ */
+export function pickSpawn(map: CampusMap, preferred: number, others: { x: number; y: number }[], minGap = 48): { x: number; y: number } {
+  const n = map.spawns.length;
+  for (let i = 0; i < n; i++) {
+    const s = spawnFor(map, preferred + i);
+    if (others.every((o) => distance(o, s) >= minGap)) return s;
+  }
+  const base = spawnFor(map, preferred);
+  const k = others.length;
+  const angle = (k * 137.5 * Math.PI) / 180; // golden angle spreads the nudges evenly
+  return clampToMap(map, base.x + Math.cos(angle) * (24 + 6 * (k % 6)), base.y + Math.sin(angle) * (24 + 6 * (k % 6)));
+}
+
+/**
  * Voice volume by distance (proximity audio in the study room): full volume up to `near`,
  * fading linearly to `min` at `far`.
  */
@@ -333,12 +356,17 @@ export function voiceGain(dist: number, near = 120, far = 520, min = 0.25): numb
   return 1 - ((dist - near) / (far - near)) * (1 - min);
 }
 
+/** Small stable hash of a user id (avatar color, preferred spawn). */
+export function userHash(userId: string): number {
+  let h = 0;
+  for (let i = 0; i < userId.length; i++) h = (h * 31 + userId.charCodeAt(i)) >>> 0;
+  return h;
+}
+
 /** Stable avatar color per user (Arzino palette: cedar, Mediterranean blue, flag red, flame, leaf, gold, rose). */
 export const AVATAR_COLORS = ['#00a651', '#1c8be0', '#e4252d', '#ff9600', '#22c58b', '#ffc21a', '#e86bb4'] as const;
 export function avatarColor(userId: string): string {
-  let h = 0;
-  for (let i = 0; i < userId.length; i++) h = (h * 31 + userId.charCodeAt(i)) >>> 0;
-  return AVATAR_COLORS[h % AVATAR_COLORS.length];
+  return AVATAR_COLORS[userHash(userId) % AVATAR_COLORS.length];
 }
 
 // ---------- Realtime protocol (Socket.IO) ----------
@@ -384,6 +412,8 @@ export const signalMsg = z.object({
 export const transcriptMsg = z.object({ room: roomName, text: z.string().max(2000) });
 /** A spectator starts/stops listening to an exam room (the student's browser only sends audio while this is on). */
 export const listenMsg = z.object({ room: roomName, on: z.boolean() });
+/** study room: which discussion card is on the Ideas board (the same for both partners) */
+export const boardMsg = z.object({ room: roomName, index: z.number().int().min(0).max(999) });
 
 export interface PlayerState {
   userId: string;
@@ -398,6 +428,8 @@ export interface PlayerState {
   speaking?: boolean;
   /** spectators only: currently hearing the room */
   listening?: boolean;
+  /** students: overall level (shown on the avatar) */
+  level?: number;
 }
 
 export interface RoomSnapshot {
@@ -413,7 +445,7 @@ export const PRESENCE_GRACE_MS = 15_000;
 export const STUDY_ABANDON_MS = 3 * 60_000;
 /** An invite that was not accepted in this time expires. */
 export const STUDY_INVITE_TTL_MS = 10 * 60_000;
-/** Minimum active time for a study session to earn XP. */
+/** Minimum time BOTH partners spend in the room together for a study session to earn XP. */
 export const STUDY_MIN_XP_MS = 5 * 60_000;
 export const STUDY_XP = 20;
 /** study sessions that give XP per student per day (Asia/Beirut); more sessions are fine, just not rewarded */

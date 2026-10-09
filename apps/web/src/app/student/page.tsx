@@ -19,8 +19,8 @@ import { useApi, useL, useMe } from '@/lib/hooks';
 import type { MyExam } from '@/lib/campus/types';
 import type { Gamification, Mission, NotificationItem, Rewards } from '@/lib/types';
 import { cn } from '@/lib/cn';
+import { ACTIVE_STATUSES, pickNextMission } from '@/lib/next-mission';
 
-const ACTIVE = ['IN_PROGRESS', 'AI_CHECKED', 'RETRY', 'SUBMITTED'];
 const WAITING = ['PEER_REVIEW', 'TEACHER_REVIEW', 'FAMILY_CONFIRM'];
 
 export default function StudentHome() {
@@ -41,18 +41,13 @@ export default function StudentHome() {
   if (g.error || missions.error) return <ErrorState onRetry={() => { g.refetch(); missions.refetch(); }} />;
   const gm = g.data!;
   const list = missions.data ?? [];
-  const active = list.find((m) => m.mySubmission && ACTIVE.includes(m.mySubmission.status) && m.audience !== 'FAMILY');
-  const mastered = new Set(progress.data?.filter((p) => p.state === 'MASTERED').map((p) => p.topicId));
-  const open = list.filter((m) => !m.mySubmission && m.audience !== 'FAMILY' && !mastered.has(m.topicId));
-  // Prefer topics that are unlocked (AVAILABLE/IN_PROGRESS), oldest mission first.
-  const unlocked = new Set(progress.data?.filter((p) => p.state === 'AVAILABLE' || p.state === 'IN_PROGRESS').map((p) => p.topicId));
-  const next = [...open].reverse().find((m) => unlocked.has(m.topicId)) ?? open[open.length - 1];
   const waiting = list.filter((m) => m.mySubmission && WAITING.includes(m.mySubmission.status));
   const toReview = reviews.data?.filter((r) => r.status === 'ASSIGNED') ?? [];
   const badges = gm.badges.filter((b) => b.earned).sort((a, b) => (b.earnedAt ?? '').localeCompare(a.earnedAt ?? '')).slice(0, 4);
   const unseen = notifications.data?.find((n) => n.type === 'SUBMISSION_VALIDATED' && !n.readAt);
   const unseenRewards = unseen ? ({ ...(unseen.payload.rewards as Rewards), notificationId: unseen.id } as Rewards) : null;
-  const feature = active ?? next;
+  const feature = pickNextMission(list, progress.data);
+  const resuming = !!feature?.mySubmission && ACTIVE_STATUSES.includes(feature.mySubmission.status);
   // an exam room that is open right now beats everything else on home
   const openExam = exams.data?.find((e) => e.examStatus === 'OPEN' && (e.status === 'NOT_STARTED' || e.status === 'IN_PROGRESS'));
 
@@ -122,18 +117,18 @@ export default function StudentHome() {
                 <TopicGlyph topicKey={feature.topic?.key} icon={feature.topic?.icon} />
               </div>
               <div className="pointer-events-none absolute -bottom-1 end-1 sm:end-3" aria-hidden>
-                <Arzino mood={active ? 'determined' : 'reading'} size={96} className="sm:hidden" title="" />
-                <Arzino mood={active ? 'determined' : 'reading'} size={150} className="hidden sm:inline-flex" title="" />
+                <Arzino mood={resuming ? 'determined' : 'reading'} size={96} className="sm:hidden" title="" />
+                <Arzino mood={resuming ? 'determined' : 'reading'} size={150} className="hidden sm:inline-flex" title="" />
               </div>
               <p className="relative text-[12px] font-black uppercase tracking-[0.09em] text-white/85">
                 {feature.topic?.subject ? `${l(feature.topic.subject.name)} · ` : ''}
-                {active ? t('continueMission') : t('nextMission')}
+                {resuming ? t('continueMission') : t('nextMission')}
               </p>
               <p className="relative mt-1 font-display text-[22px] font-black leading-tight sm:text-[24px]">{l(feature.title)}</p>
               <p className="relative mt-1 line-clamp-2 font-semibold text-white/90">{l(feature.story)}</p>
               <div className="relative mt-4 flex flex-wrap items-center gap-2">
                 <span className="kid-press inline-flex h-12 items-center gap-2 rounded-[16px] bg-white px-5 font-display text-[15px] font-black uppercase tracking-[0.08em] [--press:rgba(0,0,0,0.18)]" style={{ color: fst.hexD }}>
-                  {active ? t('resume') : t('go')} <ArrowRight className="rtl-flip size-5" />
+                  {resuming ? t('resume') : t('go')} <ArrowRight className="rtl-flip size-5" />
                 </span>
                 <span className="rounded-[12px] bg-black/15 px-3 py-1.5 text-sm font-black">
                   ⚡ {t('xp', { xp: feature.xpReward })} · {tc('minutes', { n: feature.estimatedMin })}

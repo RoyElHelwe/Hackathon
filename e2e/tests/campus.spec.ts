@@ -7,6 +7,20 @@ test.use({
   permissions: ['microphone'],
 });
 
+declare global {
+  interface Window {
+    /** dev-only scene handle (campus-canvas.tsx) */
+    __tajribaScene?: { walkTo(x: number, y: number): void };
+  }
+}
+
+/** Walks the avatar to a map point, like tapping the floor there (spawn points differ per user). */
+async function walkTo(page: Page, x: number, y: number) {
+  await page.bringToFront(); // background tabs barely animate
+  await expect.poll(() => page.evaluate(() => !!window.__tajribaScene)).toBe(true);
+  await page.evaluate(([px, py]) => window.__tajribaScene!.walkTo(px, py), [x, y] as const);
+}
+
 async function userPage(browser: Browser, handle: string, next?: string): Promise<{ ctx: BrowserContext; page: Page }> {
   const ctx = await browser.newContext({ permissions: ['microphone'], viewport: { width: 1280, height: 900 } });
   const page = await ctx.newPage();
@@ -40,7 +54,10 @@ test.describe('Tajriba Campus', () => {
 
     await expect(lea.page.getByTestId('partner-status')).toContainText('Karim');
     await expect(karim.page.getByTestId('partner-status')).toContainText('Lea');
-    await expect(lea.page.getByTestId('recording-chip')).toBeVisible();
+    // voices are recorded only when the server turns it on (RECORD_STUDY_SESSIONS); the page follows /auth/config
+    const records = ((await (await lea.page.request.get('/api/auth/config')).json()) as { recordStudySessions?: boolean }).recordStudySessions === true;
+    if (records) await expect(lea.page.getByTestId('recording-chip')).toBeVisible();
+    await expect(lea.page.getByTestId('together-chip')).toBeVisible();
     await expect(lea.page.getByTestId('discussion-card')).toBeVisible();
     await karim.page.getByTestId('emote-dance').click();
     await lea.page.getByTestId('next-card').click();
@@ -57,15 +74,100 @@ test.describe('Tajriba Campus', () => {
     await expect(lea.page.getByTestId('study-ended')).toBeVisible();
     await expect(karim.page.getByTestId('study-ended')).toBeVisible();
 
-    // The replay lists the recordings and the action timeline.
-    await expect
-      .poll(async () => {
-        await lea.page.reload();
-        await lea.page.getByTestId('recording').first().waitFor({ timeout: 5000 }).catch(() => undefined);
-        return lea.page.getByTestId('recording').count();
-      }, { timeout: 30_000 })
-      .toBeGreaterThan(0);
+    // The replay lists the recordings (when recorded) and the action timeline.
+    if (records)
+      await expect
+        .poll(async () => {
+          await lea.page.reload();
+          await lea.page.getByTestId('recording').first().waitFor({ timeout: 5000 }).catch(() => undefined);
+          return lea.page.getByTestId('recording').count();
+        }, { timeout: 30_000 })
+        .toBeGreaterThan(0);
     await expect(lea.page.getByTestId('timeline')).toContainText(/entered the room|emote/);
+    await lea.ctx.close();
+    await karim.ctx.close();
+  });
+
+  test('campus: walking keeps the page still; Arzino, the doors and a classmate card all lead somewhere', async ({ browser }) => {
+    const lea = await userPage(browser, 'lea', '/student/campus');
+    await expect(lea.page.getByTestId('campus-canvas-campus').locator('canvas')).toBeVisible();
+    await expect.poll(() => lea.page.evaluate(() => !!window.__tajribaScene)).toBe(true);
+
+    // arrow keys walk the avatar, they don't scroll the page
+    await lea.page.keyboard.down('ArrowDown');
+    await lea.page.waitForTimeout(400);
+    await lea.page.keyboard.up('ArrowDown');
+    expect(await lea.page.evaluate(() => window.scrollY)).toBe(0);
+
+    // Arzino points to the next mission
+    await walkTo(lea.page, 800, 268);
+    await expect(lea.page.getByTestId('arzino-go')).toBeVisible();
+    // the Exam Wing door opens the exam room that is open now
+    await walkTo(lea.page, 1045, 262);
+    await expect(lea.page.getByTestId('door-enter-exam').first()).toBeVisible();
+    // the Study Hall door lists classmates to invite
+    await walkTo(lea.page, 555, 262);
+    await expect(lea.page.getByTestId('door-invite-omar')).toBeVisible();
+
+    // Omar walks up to Lea → "say hi" → his card → invite
+    await walkTo(lea.page, 800, 330);
+    const omar = await userPage(browser, 'omar', '/student/campus');
+    await expect(omar.page.getByTestId('campus-canvas-campus').locator('canvas')).toBeVisible();
+    await walkTo(omar.page, 850, 330);
+    await omar.page.waitForTimeout(2500);
+    await lea.page.bringToFront();
+    await lea.page.getByTestId('near-chip').click();
+    await expect(lea.page.getByTestId('player-card')).toContainText('Omar');
+    await lea.page.getByTestId('player-invite').click();
+    await expect(lea.page).toHaveURL(/\/student\/study\//);
+
+    // "Not now" really declines, so Lea isn't left waiting
+    await omar.page.bringToFront();
+    await omar.page.getByTestId('invite-decline').click();
+    await lea.page.bringToFront();
+    await expect(lea.page.getByTestId('study-ended')).toContainText('Declined');
+    await lea.ctx.close();
+    await omar.ctx.close();
+  });
+
+  test('"I\'m stuck → Ask a friend": the classmate who mastered it joins a room with the mission on the board', async ({ browser }) => {
+    const lea = await userPage(browser, 'lea', '/student/map');
+    const karim = await userPage(browser, 'karim', '/student');
+    await lea.page.getByTestId('map-node-geo.similar').click();
+    await lea.page.getByTestId('topic-sheet').getByTestId('sheet-mission').first().click();
+    await lea.page.getByTestId('mission-next').click();
+    await lea.page.getByTestId('mission-next').click();
+    for (let i = 1; i <= 3; i++) {
+      await lea.page.getByTestId('im-stuck').click();
+      await expect(lea.page.getByTestId('hint-text')).toHaveCount(i);
+    }
+    // Karim mastered similar triangles: he is offered first
+    await lea.page.getByTestId('ask-friend-karim').click();
+    await expect(lea.page).toHaveURL(/\/student\/study\//);
+
+    await karim.page.bringToFront();
+    await expect(karim.page.getByTestId('study-invite-popup')).toContainText('help');
+    await karim.page.getByTestId('invite-join').click();
+    await karim.page.waitForURL(/\/student\/study\//);
+    await karim.page.getByTestId('join-no-mic').click();
+    await expect(karim.page.getByTestId('helping-with')).toContainText('Measure your building with shadows');
+    await expect(karim.page.getByTestId('mission-on-board')).toBeVisible();
+
+    // the discussion card on the board is the same for both partners
+    await lea.page.bringToFront();
+    await lea.page.getByTestId('join-no-mic').click();
+    await expect(lea.page.getByTestId('study-room')).toBeVisible();
+    await lea.page.getByTestId('board-cards').click();
+    await karim.page.getByTestId('board-cards').click();
+    const first = await lea.page.getByTestId('discussion-card').innerText();
+    await karim.page.getByTestId('next-card').click();
+    await expect(lea.page.getByTestId('discussion-card')).not.toHaveText(first);
+    const karimCard = await karim.page.getByTestId('discussion-card').innerText();
+    await expect.poll(() => lea.page.getByTestId('discussion-card').innerText()).toBe(karimCard);
+
+    await lea.page.getByTestId('end-session').click();
+    await lea.page.getByTestId('confirm-end').click();
+    await expect(lea.page.getByTestId('study-ended')).toBeVisible();
     await lea.ctx.close();
     await karim.ctx.close();
   });

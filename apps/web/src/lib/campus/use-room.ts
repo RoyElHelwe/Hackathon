@@ -13,11 +13,12 @@ export type RoomEvent =
   | { type: 'emote'; userId: string; emote: Emote }
   | { type: 'reaction'; userId: string; emoji: string }
   | { type: 'speaking'; userId: string; speaking: boolean }
-  | { type: 'listening'; userId: string; listening: boolean };
+  | { type: 'listening'; userId: string; listening: boolean }
+  | { type: 'board'; index: number };
 
 export type RoomStatus = 'idle' | 'connecting' | 'joined' | 'reconnecting' | 'error';
 
-type JoinAck = { ok: true; snapshot: RoomSnapshot; publishes: boolean } | { ok: false; error: string };
+type JoinAck = { ok: true; snapshot: RoomSnapshot; publishes: boolean; boardIndex?: number } | { ok: false; error: string };
 
 /**
  * Joins a campus room over Socket.IO and keeps the list of people in it.
@@ -30,6 +31,8 @@ export function useRoom(room: string | null, opts: { spectate?: boolean } = {}) 
   const [error, setError] = useState<string | null>(null);
   const [snapshot, setSnapshot] = useState<RoomSnapshot | null>(null);
   const [publishes, setPublishes] = useState(false);
+  /** study rooms: the discussion card both partners see on the Ideas board */
+  const [boardIndex, setBoardIndex] = useState(0);
   const [players, setPlayers] = useState<Record<string, PlayerState>>({});
   const positions = useRef(new Map<string, PlayerState>());
   const listeners = useRef(new Set<(e: RoomEvent) => void>());
@@ -58,6 +61,7 @@ export function useRoom(room: string | null, opts: { spectate?: boolean } = {}) 
           setPlayers(Object.fromEntries(ack.snapshot.players.map((p) => [p.userId, p])));
           setSnapshot(ack.snapshot);
           setPublishes(ack.publishes);
+          setBoardIndex(ack.boardIndex ?? 0);
           setError(null);
           setStatus('joined');
           fire({ type: 'snapshot', snapshot: ack.snapshot });
@@ -104,6 +108,11 @@ export function useRoom(room: string | null, opts: { spectate?: boolean } = {}) 
       setPlayers((p) => (p[d.userId] ? { ...p, [d.userId]: { ...p[d.userId], listening: d.listening } } : p));
       fire({ type: 'listening', userId: d.userId, listening: d.listening });
     };
+    const onBoard = (d: { room: string; index: number }) => {
+      if (!mine(d)) return;
+      setBoardIndex(d.index);
+      fire({ type: 'board', index: d.index });
+    };
     const onConnect = () => join();
     const onDisconnect = () => alive && setStatus('reconnecting');
     const onConnectError = () => {
@@ -122,6 +131,7 @@ export function useRoom(room: string | null, opts: { spectate?: boolean } = {}) 
     s.on('player:reaction', onReaction);
     s.on('player:speaking', onSpeaking);
     s.on('player:listening', onListening);
+    s.on('board:card', onBoard);
     if (s.connected) join();
     else s.connect();
 
@@ -137,6 +147,7 @@ export function useRoom(room: string | null, opts: { spectate?: boolean } = {}) 
       s.off('player:reaction', onReaction);
       s.off('player:speaking', onSpeaking);
       s.off('player:listening', onListening);
+      s.off('board:card', onBoard);
       if (s.connected) s.emit('room:leave', { room });
       setStatus('idle');
     };
@@ -172,12 +183,18 @@ export function useRoom(room: string | null, opts: { spectate?: boolean } = {}) 
       transcript: (text: string) => room && s().volatile.emit('exam:transcript', { room, text }),
       /** spectators: start/stop hearing this exam room */
       listen: (on: boolean) => room && s().emit('spectate:listen', { room, on }),
+      /** show this discussion card on the Ideas board (for both partners; the server doesn't echo it back) */
+      board: (index: number) => {
+        if (!room) return;
+        setBoardIndex(index);
+        s().emit('board', { room, index });
+      },
     };
   }, [room, fire]);
 
   const others = useMemo(() => Object.values(players), [players]);
 
-  return { status, error, snapshot, self: snapshot?.self ?? null, players: others, positions, publishes, subscribe, ...actions };
+  return { status, error, snapshot, self: snapshot?.self ?? null, players: others, positions, publishes, boardIndex, subscribe, ...actions };
 }
 
 /** Listens to a server event (any room) while mounted. */

@@ -89,9 +89,14 @@ export default function ExamRoomPage() {
             ))}
           </ul>
           {a.exam.status === 'OPEN' ? (
-            <Button variant="kid" size="lg" className="w-full max-w-md" onClick={start} loading={starting} data-testid="start-interview">
-              <Mic /> {t('exam.start')}
-            </Button>
+            <div className="flex w-full max-w-md flex-col gap-2">
+              <Button variant="kid" size="lg" className="w-full" onClick={start} loading={starting} data-testid="start-interview">
+                <Mic /> {t('exam.start')}
+              </Button>
+              <Button asChild variant="kidSunny" size="lg" className="w-full" data-testid="exam-vr">
+                <Link href={`/vr?scene=exam:${a.id}`}>🥽 {t('exam.inVr')}</Link>
+              </Button>
+            </div>
           ) : a.exam.status === 'SCHEDULED' ? (
             <p className="rounded-full bg-med-soft px-4 py-2 font-black text-med-ink dark:text-white">{t('exam.notOpen', { date: when(a.exam.opensAt) })}</p>
           ) : (

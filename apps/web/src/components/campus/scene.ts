@@ -23,6 +23,14 @@ export interface SceneApi {
   teleport(x: number, y: number): void;
   /** Exam Hall: live overlays of every student's room */
   setRooms(rooms: HallRoomView[]): void;
+  /** campus: Study Hall tables glow with "Lea & Karim" while their session is live (one label per table) */
+  setLiveTables(labels: string[]): void;
+  /** campus: the Exam Wing desks glow when the student has an exam room open */
+  setExamGlow(on: boolean): void;
+  /** walk my avatar to a point (same as tapping the floor there) */
+  walkTo(x: number, y: number): void;
+  /** study room: write on the Ideas board (null = just its name) */
+  setBoard(text: string | null): void;
 }
 
 /** What the Exam Hall shows in one student's room. */
@@ -67,6 +75,10 @@ export interface SceneConfig {
   onMove: (x: number, y: number, dir: Dir, moving: boolean) => void;
   onZone: (zone: Zone | null) => void;
   onReady: (api: SceneApi) => void;
+  /** tapped another player's avatar */
+  onPlayerTap?: (userId: string) => void;
+  /** the closest other player within reach changed (null = nobody close) */
+  onNear?: (userId: string | null) => void;
   /** localizes map labels ("Study Hall" → "قاعة الدراسة") */
   translate?: (label: string) => string;
   /** the page's resolved font stack (next/font gives Nunito a generated family name) */
@@ -228,6 +240,10 @@ const RUN = 340;
 const RUN_SEEN = 275;
 /** 3D figure height in world px (2D avatars are ~46 px tall with the sprout) */
 const FIG = 72;
+/** how close another player must be for the "say hi / invite" prompt */
+const NEAR_PX = 80;
+
+type Glow = { box: import('phaser').GameObjects.Rectangle; label?: Chip };
 
 /** Builds the Phaser scene class for one campus map (courtyard, study room, exam room or Exam Hall). */
 export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
@@ -244,6 +260,8 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
     private solids!: import('phaser').Physics.Arcade.StaticGroup;
     private keys: Record<string, import('phaser').Input.Keyboard.Key> = {};
     private target: { x: number; y: number } | null = null;
+    /** tap-to-move: best distance to the target so far, and when it last improved (gives up when stuck) */
+    private progress = { best: Infinity, at: 0 };
     private lastSent = 0;
     private lastPos = { x: 0, y: 0, moving: false };
     private zoneId: string | null = null;
@@ -251,6 +269,10 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
     private coaches: Coach[] = [];
     private three = false;
     private seats: Rect[] = [];
+    private nearId: string | null = null;
+    private tables: Glow[] = [];
+    private desks: Glow[] = [];
+    private board: { text: Text; label: string; w: number } | null = null;
 
     constructor() {
       super('campus');
@@ -284,12 +306,17 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
         if (d.kind === 'window') this.drawWindow(d);
         if (d.kind === 'building') this.drawRoof(d);
       }
+      if (map.id === 'campus') {
+        this.tables = map.furniture.filter((f) => f.kind === 'table').map((f) => this.makeGlow(f, BRAND.cedar, true));
+        this.desks = map.furniture.filter((f) => f.kind === 'desk').map((f) => this.makeGlow(f, BRAND.med, false));
+      }
 
       if (cfg.interactive && this.input.keyboard) {
         // No key capture: typing in inputs/textareas elsewhere on the page must keep working.
         this.keys = this.input.keyboard.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,SHIFT', false) as Record<string, import('phaser').Input.Keyboard.Key>;
-        this.input.on('pointerdown', (p: import('phaser').Input.Pointer) => {
-          this.target = { x: p.worldX, y: p.worldY };
+        this.input.on('pointerdown', (p: import('phaser').Input.Pointer, over: unknown[]) => {
+          if (over?.length) return; // tapped an avatar: open its card, don't walk there
+          this.setTarget(p.worldX, p.worldY);
         });
       }
 
@@ -567,6 +594,20 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
       g.lineStyle(1.5, P.wallLine, 0.6).strokeRect(w.x, w.y, w.w, w.h);
     }
 
+    /** A pulsing highlight around a piece of furniture, hidden until switched on. */
+    private makeGlow(f: Furniture, color: number, withLabel: boolean): Glow {
+      const box = this.add
+        .rectangle(f.x + f.w / 2, f.y + f.h / 2, f.w + 18, f.h + 18, color, 0.2)
+        .setStrokeStyle(3, color, 1)
+        .setDepth(2.9)
+        .setVisible(false);
+      this.tweens.add({ targets: box, alpha: { from: 0.45, to: 1 }, duration: 800, yoyo: true, repeat: -1 });
+      // never empty: a zero-size text texture breaks WebGL framebuffers
+      const label = withLabel ? this.chip(f.x + f.w / 2, f.y - 16, ' ', { bg: color, fg: '#ffffff', size: 12 }) : undefined;
+      label?.c.setDepth(7).setVisible(false);
+      return { box, label };
+    }
+
     private drawZone(z: Zone) {
       const door = z.kind === 'study_door' || z.kind === 'exam_door';
       if (!door && z.kind !== 'exam_desk' && z.kind !== 'stage') return;
@@ -725,7 +766,10 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
             g.strokeTriangle(f.x + 18, f.y + f.h - 14, f.x + 44, f.y + f.h - 14, f.x + 18, f.y + 16);
             g.strokeCircle(f.x + f.w - 30, cy, 12);
             g.lineBetween(f.x + f.w - 30, cy, f.x + f.w - 18, cy);
-            if (f.label) this.text(cx, cy, tr(f.label), 15, '#ffffff').setDepth(4);
+            if (f.label) {
+              const text = this.text(cx, cy, tr(f.label), 15, '#ffffff').setDepth(4);
+              this.board ??= { text, label: tr(f.label), w: f.w };
+            }
           }
           break;
         }
@@ -852,6 +896,20 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
         ? this.chip(0, 35, label, { bg: BRAND.cedar, fg: '#ffffff', edge: BRAND.cedarD, size: 13 })
         : this.chip(0, 35, label, { bg: P.chipBg, fg: P.chipFg, edge: P.chipEdge, size: 13, border: cfg.dark ? undefined : P.chipEdge });
       parts.push(tag.c);
+      if (p.role === 'TEACHER') {
+        parts.push(this.text(-20, 18, '🎓', 14, '#ffffff', 'normal'));
+      } else if (p.level) {
+        // level badge, like a game character
+        parts.push(this.add.circle(-18, 18, 8, BRAND.gold).setStrokeStyle(2, 0xffffff, 1));
+        parts.push(this.text(-18, 18, String(p.level), 10, css(BRAND.ink)));
+      }
+      if (!isSelf && cfg.interactive) {
+        // tap a classmate → their card (say hi, invite to study); the hit area covers the flat and the 3D figure
+        const hit = this.add.rectangle(0, -10, 44, 70, 0xffffff, 0.001);
+        hit.setInteractive({ useHandCursor: true });
+        hit.on('pointerdown', () => cfg.onPlayerTap?.(p.userId));
+        parts.push(hit);
+      }
 
       const c = this.add.container(p.x, p.y, parts).setDepth(10 + p.y / 1000);
       this.tweens.add({ targets: ring, scale: { from: 0.95, to: 1.2 }, alpha: { from: 1, to: 0.45 }, duration: 480, yoyo: true, repeat: -1 });
@@ -862,6 +920,11 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
       };
       if (this.three) this.to3d(a);
       return a;
+    }
+
+    private setTarget(x: number, y: number) {
+      this.target = { x, y };
+      this.progress = { best: Infinity, at: this.time.now };
     }
 
     // ---------- 3D Arzinos ----------
@@ -1087,7 +1150,9 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
         const dx = this.target.x - self.c.x;
         const dy = this.target.y - self.c.y;
         const dist = Math.hypot(dx, dy);
-        if (dist < 6) this.target = null;
+        if (dist < this.progress.best - 2) this.progress = { best: dist, at: now };
+        // arrived, or pressed against a wall/table without getting closer for a moment → stop
+        if (dist < 6 || now - this.progress.at > 400) this.target = null;
         else {
           vx = dx / dist;
           vy = dy / dist;
@@ -1105,7 +1170,6 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
       if (moving) {
         const dir: Dir = Math.abs(vx) > Math.abs(vy) ? (vx < 0 ? 'left' : 'right') : vy < 0 ? 'up' : 'down';
         if (dir !== self.dir) this.look(self, dir);
-        if (this.target && body.blocked.none === false) this.target = null;
       }
       self.c.setDepth(10 + self.c.y / 1000);
 
@@ -1119,6 +1183,19 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
       if ((zone?.id ?? null) !== this.zoneId) {
         this.zoneId = zone?.id ?? null;
         cfg.onZone(zone);
+      }
+      let near: string | null = null;
+      let best = NEAR_PX;
+      for (const [id, a] of this.others) {
+        const d = Math.hypot(a.c.x - self.c.x, a.c.y - self.c.y);
+        if (d < best) {
+          best = d;
+          near = id;
+        }
+      }
+      if (near !== this.nearId) {
+        this.nearId = near;
+        cfg.onNear?.(near);
       }
     }
 
@@ -1213,6 +1290,31 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
           return m;
         },
         selfPos: () => (this.self ? { x: this.self.c.x, y: this.self.c.y } : null),
+        setLiveTables: (labels) => {
+          this.tables.forEach((t, i) => {
+            const text = labels[i];
+            t.box.setVisible(!!text);
+            t.label?.set(text || ' ');
+            t.label?.c.setVisible(!!text);
+          });
+        },
+        setExamGlow: (on) => {
+          for (const d of this.desks) d.box.setVisible(on);
+        },
+        setBoard: (text) => {
+          const b = this.board;
+          if (!b) return;
+          // chalk on the board: wraps to the board's width, at most 4 lines
+          b.text
+            .setText(text?.trim() || b.label)
+            .setFontSize(text ? 13 : 15)
+            .setWordWrapWidth(b.w - 28, true)
+            .setAlign('center')
+            .setMaxLines(4);
+        },
+        walkTo: (x, y) => {
+          if (cfg.interactive) this.setTarget(x, y);
+        },
         teleport: (x, y) => {
           const self = this.self;
           if (!self) return;
