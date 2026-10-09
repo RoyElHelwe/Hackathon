@@ -154,6 +154,16 @@ describe('Peer study sessions', () => {
     expect(await ctx.prisma.xpEvent.count({ where: { reason: 'STUDY_SESSION', refId: sid } })).toBe(xpBefore);
   });
 
+  it('live sessions light up the Study Hall for classmates (first names only); not for staff', async () => {
+    const r = await ctx.http().post('/study-sessions').set('Cookie', await ctx.as('karim')).send({ partnerId: await userId('lea') }).expect(201);
+    await ctx.http().post(`/study-sessions/${r.body.id}/accept`).set('Cookie', await ctx.as('lea')).expect(201);
+    const live = (await ctx.http().get('/study-sessions/live').set('Cookie', await ctx.as('omar')).expect(200)).body;
+    expect(live.length).toBeLessThanOrEqual(2);
+    expect(live.find((x: { id: string }) => x.id === r.body.id)?.names.sort()).toEqual(['Karim', 'Lea']);
+    await ctx.http().get('/study-sessions/live').set('Cookie', await ctx.as('rana')).expect(403);
+    await ctx.http().post(`/study-sessions/${r.body.id}/end`).set('Cookie', await ctx.as('karim')).expect(201);
+  });
+
   it('a session nobody is in gets swept after a while', async () => {
     const r = await ctx.http().post('/study-sessions').set('Cookie', await ctx.as('omar')).send({ partnerId: await userId('karim') }).expect(201);
     await ctx.http().post(`/study-sessions/${r.body.id}/accept`).set('Cookie', await ctx.as('karim')).expect(201);

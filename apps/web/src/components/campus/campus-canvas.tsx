@@ -35,6 +35,10 @@ interface Props {
   selfSpeaking?: boolean;
   onZone?: (zone: Zone | null) => void;
   onApi?: (api: SceneApi | null) => void;
+  /** tapped another player's avatar */
+  onPlayerTap?: (userId: string) => void;
+  /** closest other player within reach changed */
+  onNear?: (userId: string | null) => void;
   className?: string;
 }
 
@@ -42,7 +46,7 @@ interface Props {
  * The 2D campus (Phaser 3, loaded only in the browser). Movement is sent to the room; other players are driven by
  * room events without React re-renders.
  */
-export function CampusCanvas({ room, map, interactive = true, selfSpeaking, onZone, onApi, className }: Props) {
+export function CampusCanvas({ room, map, interactive = true, selfSpeaking, onZone, onApi, onPlayerTap, onNear, className }: Props) {
   const t = useTranslations('campus.mapLabels');
   const trRef = useRef((label: string) => (t.has(label.replace(/ /g, '_')) ? t(label.replace(/ /g, '_')) : label));
   trRef.current = (label: string) => (t.has(label.replace(/ /g, '_')) ? t(label.replace(/ /g, '_')) : label);
@@ -54,6 +58,10 @@ export function CampusCanvas({ room, map, interactive = true, selfSpeaking, onZo
   zoneRef.current = onZone;
   const apiCb = useRef(onApi);
   apiCb.current = onApi;
+  const tapRef = useRef(onPlayerTap);
+  tapRef.current = onPlayerTap;
+  const nearRef = useRef(onNear);
+  nearRef.current = onNear;
   const dark = useDarkClass();
   const locale = useLocale();
   /** where I was standing when the scene was last torn down (theme/language switch → redraw in place) */
@@ -75,8 +83,12 @@ export function CampusCanvas({ room, map, interactive = true, selfSpeaking, onZo
         translate: (label) => trRef.current(label),
         onMove: (x, y, dir, moving) => roomRef.current.move(x, y, dir, moving),
         onZone: (z) => zoneRef.current?.(z),
+        onPlayerTap: (id) => tapRef.current?.(id),
+        onNear: (id) => nearRef.current?.(id),
         onReady: (a) => {
           api.current = a;
+          // test hook (dev/e2e only): lets Playwright walk to exact map points
+          if (process.env.NODE_ENV !== 'production') (window as unknown as { __tajribaScene?: SceneApi }).__tajribaScene = a;
           const r = roomRef.current;
           if (r.snapshot) {
             const was = lastSelf.current?.map === map ? lastSelf.current : null;

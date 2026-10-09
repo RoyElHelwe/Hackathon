@@ -71,3 +71,8 @@ Non-obvious choices made while building Tajriba. CLAUDE.md is the spec; this fil
 - **Only the host may wait in a study room before the invite is accepted**; the invited classmate enters after accepting. "Not now" on the invite pop-up declines on the server, so the host isn't left waiting.
 - **Campus spawns**: each user prefers a spawn point from a hash of their id and gets the first one nobody is standing on (`pickSpawn`), so avatars and name tags never stack.
 - **The map redraws in place** when the theme or language changes (Phaser draws colors and labels at boot): the scene is rebuilt with the player's last position and the live positions of everyone else.
+- **Campus doors and Bousla act in place**: the Study Hall door lists classmates to invite, the Exam Wing door opens the student's open exam room, and standing in front of Bousla shows the next mission (same pick as the home "Continue mission" card, `lib/next-mission.ts`). Tapping a classmate's avatar (or walking up to one) opens their card: level, wave, invite.
+- **Live tables show first names only**, and only for sessions in the student's own classes (`GET /study-sessions/live`, max 2 = the two Study Hall tables).
+- **Tap-to-move slides along furniture** and stops only after 400 ms without getting closer, instead of stopping at the first touch.
+- **`window.__tajribaScene`** (non-production builds only) lets Playwright walk to exact map points, since spawn points differ per user.
+- The campus e2e test checks the "Recording" chip only when the server records study sessions (`RECORD_STUDY_SESSIONS`, off by default).

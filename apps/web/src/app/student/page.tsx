@@ -20,8 +20,8 @@ import { useApi, useL, useMe } from '@/lib/hooks';
 import type { MyExam } from '@/lib/campus/types';
 import type { Gamification, Mission, NotificationItem, Rewards } from '@/lib/types';
 import { cn } from '@/lib/cn';
+import { ACTIVE_STATUSES, pickNextMission } from '@/lib/next-mission';
 
-const ACTIVE = ['IN_PROGRESS', 'AI_CHECKED', 'RETRY', 'SUBMITTED'];
 const WAITING = ['PEER_REVIEW', 'TEACHER_REVIEW', 'FAMILY_CONFIRM'];
 
 export default function StudentHome() {
@@ -42,18 +42,13 @@ export default function StudentHome() {
   if (g.error || missions.error) return <ErrorState onRetry={() => { g.refetch(); missions.refetch(); }} />;
   const gm = g.data!;
   const list = missions.data ?? [];
-  const active = list.find((m) => m.mySubmission && ACTIVE.includes(m.mySubmission.status) && m.audience !== 'FAMILY');
-  const mastered = new Set(progress.data?.filter((p) => p.state === 'MASTERED').map((p) => p.topicId));
-  const open = list.filter((m) => !m.mySubmission && m.audience !== 'FAMILY' && !mastered.has(m.topicId));
-  // Prefer topics that are unlocked (AVAILABLE/IN_PROGRESS), oldest mission first.
-  const unlocked = new Set(progress.data?.filter((p) => p.state === 'AVAILABLE' || p.state === 'IN_PROGRESS').map((p) => p.topicId));
-  const next = [...open].reverse().find((m) => unlocked.has(m.topicId)) ?? open[open.length - 1];
   const waiting = list.filter((m) => m.mySubmission && WAITING.includes(m.mySubmission.status));
   const toReview = reviews.data?.filter((r) => r.status === 'ASSIGNED') ?? [];
   const badges = gm.badges.filter((b) => b.earned).sort((a, b) => (b.earnedAt ?? '').localeCompare(a.earnedAt ?? '')).slice(0, 4);
   const unseen = notifications.data?.find((n) => n.type === 'SUBMISSION_VALIDATED' && !n.readAt);
   const unseenRewards = unseen ? ({ ...(unseen.payload.rewards as Rewards), notificationId: unseen.id } as Rewards) : null;
-  const feature = active ?? next;
+  const feature = pickNextMission(list, progress.data);
+  const resuming = !!feature?.mySubmission && ACTIVE_STATUSES.includes(feature.mySubmission.status);
   // an exam room that is open right now beats everything else on home
   const openExam = exams.data?.find((e) => e.examStatus === 'OPEN' && (e.status === 'NOT_STARTED' || e.status === 'IN_PROGRESS'));
 
@@ -111,13 +106,13 @@ export default function StudentHome() {
               <div className="absolute -end-6 -top-6 text-[120px] opacity-20" aria-hidden>
                 <TopicGlyph topicKey={feature.topic?.key} icon={feature.topic?.icon} />
               </div>
-              <p className="text-sm font-bold uppercase tracking-wider text-white/80">{active ? t('continueMission') : t('nextMission')}</p>
+              <p className="text-sm font-bold uppercase tracking-wider text-white/80">{resuming ? t('continueMission') : t('nextMission')}</p>
               <p className="mt-1 font-display text-2xl font-extrabold leading-tight">{l(feature.title)}</p>
               <p className="mt-1 line-clamp-2 text-white/85">{l(feature.story)}</p>
               <div className="mt-4 flex items-center justify-between gap-3">
                 <span className="rounded-full bg-white/20 px-3 py-1 text-sm font-bold">⚡ {t('xp', { xp: feature.xpReward })} · {tc('minutes', { n: feature.estimatedMin })}</span>
                 <span className="kid-press inline-flex h-12 items-center gap-2 rounded-full bg-sunny px-5 font-display text-lg font-bold text-ink [--press:#d99f12]">
-                  {active ? t('resume') : t('go')} <ArrowRight className="rtl-flip size-5" />
+                  {resuming ? t('resume') : t('go')} <ArrowRight className="rtl-flip size-5" />
                 </span>
               </div>
             </div>

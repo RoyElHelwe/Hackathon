@@ -12,6 +12,7 @@ import {
   clampToMap,
   emoteMsg,
   joinRoomMsg,
+  levelForXp,
   MAPS,
   moveMsg,
   pickSpawn,
@@ -124,6 +125,7 @@ export class CampusGateway implements OnGatewayInit, OnGatewayDisconnect {
       dir: 'down',
       moving: false,
       spectator: grant.spectator,
+      ...(data.ident.role === 'STUDENT' ? { level: await this.levelOf(data.ident.userId) } : {}),
     };
     const { isNew, state } = this.bus.presence.join(grant.key, initial, client.id);
     data.rooms.set(msg.room, grant);
@@ -259,6 +261,16 @@ export class CampusGateway implements OnGatewayInit, OnGatewayDisconnect {
       gone();
     } else {
       this.bus.presence.scheduleRemoval(grant.key, userId, this.graceMs, gone);
+    }
+  }
+
+  /** Overall level shown on the avatar (0 when the lookup fails — the badge is just hidden). */
+  private async levelOf(userId: string): Promise<number> {
+    try {
+      const r = await this.prisma.xpEvent.aggregate({ where: { studentId: userId }, _sum: { amount: true } });
+      return levelForXp(r._sum.amount ?? 0);
+    } catch {
+      return 0;
     }
   }
 

@@ -29,7 +29,7 @@ export interface Furniture extends Rect {
   label?: string;
 }
 
-export type ZoneKind = 'lobby' | 'study_door' | 'exam_door' | 'garden' | 'stage' | 'study_room' | 'exam_desk';
+export type ZoneKind = 'lobby' | 'study_door' | 'exam_door' | 'garden' | 'stage' | 'study_room' | 'exam_desk' | 'npc';
 
 export interface Zone extends Rect {
   id: string;
@@ -109,6 +109,8 @@ export const CAMPUS_MAP: CampusMap = {
     { id: 'study-door', kind: 'study_door', x: 520, y: 220, w: 70, h: 80, label: 'Study Hall' },
     { id: 'exam-door', kind: 'exam_door', x: 1010, y: 220, w: 70, h: 80, label: 'Exam Wing' },
     { id: 'garden', kind: 'garden', x: 100, y: 520, w: 1400, h: 420, label: 'Garden' },
+    // walk up to Bousla: it points you to your next mission
+    { id: 'bousla', kind: 'npc', x: 730, y: 150, w: 140, h: 130, label: 'Bousla' },
   ],
   spawns: [
     { x: 800, y: 420 },
@@ -296,6 +298,8 @@ export interface PlayerState {
   moving: boolean;
   spectator: boolean;
   speaking?: boolean;
+  /** students: overall level (shown on the avatar) */
+  level?: number;
 }
 
 export interface RoomSnapshot {

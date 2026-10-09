@@ -24,7 +24,12 @@
     "exam_door": {
       "title": "Exam Wing",
       "body": "Your private interview rooms with Bousla live here."
-    }
+    },
+    "pick": "Who do you want to study with?",
+    "noMates": "No classmates yet.",
+    "openRoom": "Back to your study room",
+    "noExam": "No exam room is open for you right now.",
+    "nextExam": "Next: {title} — {date}."
   },
   "classmates": {
     "title": "Study with a classmate",
@@ -305,5 +310,19 @@
     "Board": "Board",
     "Interview_desk": "Interview desk",
     "Your_seat": "Your seat"
-  }
+  },
+  "npc": {
+    "next": "Your next mission",
+    "go": "Let's go!",
+    "done": "You finished every mission for now — amazing! Invite a classmate to study?"
+  },
+  "player": {
+    "level": "Level {n}",
+    "teacher": "Teacher",
+    "invite": "Invite to study",
+    "wave": "Wave",
+    "close": "Close",
+    "near": "Say hi to {name}"
+  },
+  "liveTable": "{a} & {b} 📚"
 }

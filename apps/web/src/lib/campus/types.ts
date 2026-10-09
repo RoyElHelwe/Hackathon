@@ -11,6 +11,12 @@ export interface Classmate {
   online: boolean;
 }
 
+/** A study session running right now in one of my classes (the Study Hall tables light up). */
+export interface LiveStudySession {
+  id: string;
+  names: string[];
+}
+
 export type StudyStatus = 'INVITED' | 'ACTIVE' | 'ENDED' | 'DECLINED' | 'EXPIRED';
 
 export interface StudySessionListItem {

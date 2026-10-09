@@ -140,6 +140,22 @@ export class StudySessionsService {
     };
   }
 
+  /**
+   * Study sessions running right now in the student's classes (at most 2, newest first) — the Study Hall tables on
+   * the campus light up with the partners' first names. Classmates only; nothing else about the session is shared.
+   */
+  async live(a: AuthContext) {
+    const actor = await this.actors.actor(a);
+    if (actor.role !== 'STUDENT') throw new ForbiddenException('Only students can see the campus.');
+    const rows = await this.prisma.studySession.findMany({
+      where: { status: 'ACTIVE', classId: { in: actor.classIdsEnrolled ?? [] } },
+      include: { participants: { include: { user: { select: { name: true } } } } },
+      orderBy: { startedAt: 'desc' },
+      take: 2,
+    });
+    return rows.map((s) => ({ id: s.id, names: s.participants.map((p) => p.user.name.trim().split(/\s+/)[0] ?? '') }));
+  }
+
   /** The student's invites and recent sessions. */
   async mine(a: AuthContext) {
     await this.expireStale();

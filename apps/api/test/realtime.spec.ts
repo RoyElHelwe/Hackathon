@@ -47,9 +47,11 @@ describe('Campus realtime', () => {
     const karim = await connect(await ctx.as('karim'));
     const joined = collect(lea, 'player:joined');
     const moved = collect(lea, 'player:moved');
-    const a = await emit<{ ok: boolean; snapshot: { map: string; players: unknown[] } }>(lea, 'room:join', { room: 'campus' });
+    const a = await emit<{ ok: boolean; snapshot: { map: string; self: { level?: number }; players: unknown[] } }>(lea, 'room:join', { room: 'campus' });
     expect(a.ok).toBe(true);
     expect(a.snapshot.map).toBe('campus');
+    // the avatar shows the student's level
+    expect(a.snapshot.self.level).toBeGreaterThanOrEqual(2);
     const b = await emit<{ ok: boolean; snapshot: { self: { x: number; y: number }; players: { name: string; x: number; y: number }[] } }>(karim, 'room:join', { room: 'campus' });
     expect(b.snapshot.players.map((p) => p.name)).toContain('Lea');
     // nobody spawns on top of someone else

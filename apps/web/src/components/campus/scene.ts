@@ -14,6 +14,12 @@ export interface SceneApi {
   speaking(userId: string, on: boolean): void;
   positions(): Map<string, { x: number; y: number }>;
   selfPos(): { x: number; y: number } | null;
+  /** campus: Study Hall tables glow with "Lea & Karim" while their session is live (one label per table) */
+  setLiveTables(labels: string[]): void;
+  /** campus: the Exam Wing desks glow when the student has an exam room open */
+  setExamGlow(on: boolean): void;
+  /** walk my avatar to a point (same as tapping the floor there) */
+  walkTo(x: number, y: number): void;
 }
 
 export interface SceneConfig {
@@ -23,6 +29,10 @@ export interface SceneConfig {
   onMove: (x: number, y: number, dir: Dir, moving: boolean) => void;
   onZone: (zone: Zone | null) => void;
   onReady: (api: SceneApi) => void;
+  /** tapped another player's avatar */
+  onPlayerTap?: (userId: string) => void;
+  /** the closest other player within reach changed (null = nobody close) */
+  onNear?: (userId: string | null) => void;
   /** localizes map labels ("Study Hall" → "قاعة الدراسة") */
   translate?: (label: string) => string;
 }
@@ -69,6 +79,10 @@ interface Avatar {
 
 /** a remote player with no movement update for this long has stopped (the "stopped" packet may be dropped) */
 const IDLE_AFTER_MS = 350;
+/** how close another player must be for the "say hi / invite" prompt */
+const NEAR_PX = 80;
+
+type Glow = { box: import('phaser').GameObjects.Rectangle; label?: import('phaser').GameObjects.Text };
 
 /** Builds the Phaser scene class for one campus map (courtyard, study room or exam room). */
 export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
@@ -80,9 +94,15 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
     private solids!: import('phaser').Physics.Arcade.StaticGroup;
     private keys: Record<string, import('phaser').Input.Keyboard.Key> = {};
     private target: { x: number; y: number } | null = null;
+    /** tap-to-move: best distance to the target so far, and when it last improved (gives up when stuck) */
+    private progress = { best: Infinity, at: 0 };
     private lastSent = 0;
     private lastPos = { x: 0, y: 0, moving: false };
     private zoneId: string | null = null;
+    private nearId: string | null = null;
+    private needle: { g: import('phaser').GameObjects.Graphics; cx: number; cy: number } | null = null;
+    private tables: Glow[] = [];
+    private desks: Glow[] = [];
 
     constructor() {
       super('campus');
@@ -108,12 +128,17 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
         this.add.rectangle(w.x + w.w / 2, w.y + w.h / 2, w.w, w.h, cfg.dark ? 0x2d2850 : C.wall).setDepth(2);
         this.solid(w.x, w.y, w.w, w.h);
       }
+      if (map.id === 'campus') {
+        this.tables = map.furniture.filter((f) => f.kind === 'table').map((f) => this.makeGlow(f, C.mint, true));
+        this.desks = map.furniture.filter((f) => f.kind === 'desk').map((f) => this.makeGlow(f, C.sky, false));
+      }
 
       if (cfg.interactive && this.input.keyboard) {
         // No key capture: typing in inputs/textareas elsewhere on the page must keep working.
         this.keys = this.input.keyboard.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT', false) as Record<string, import('phaser').Input.Keyboard.Key>;
-        this.input.on('pointerdown', (p: import('phaser').Input.Pointer) => {
-          this.target = { x: p.worldX, y: p.worldY };
+        this.input.on('pointerdown', (p: import('phaser').Input.Pointer, over: unknown[]) => {
+          if (over?.length) return; // tapped an avatar: open its card, don't walk there
+          this.setTarget(p.worldX, p.worldY);
         });
       }
 
@@ -135,6 +160,19 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
         .text(x, y, text, { fontFamily: FONT, fontSize: `${size}px`, fontStyle: '800', color, backgroundColor: bg, padding: bg ? { x: 6, y: 2 } : undefined })
         .setOrigin(0.5)
         .setResolution(2);
+    }
+
+    /** A pulsing highlight around a piece of furniture, hidden until switched on. */
+    private makeGlow(f: Furniture, color: number, withLabel: boolean): Glow {
+      const box = this.add
+        .rectangle(f.x + f.w / 2, f.y + f.h / 2, f.w + 18, f.h + 18, color, 0.2)
+        .setStrokeStyle(3, color, 1)
+        .setDepth(2.9)
+        .setVisible(false);
+      this.tweens.add({ targets: box, alpha: { from: 0.45, to: 1 }, duration: 800, yoyo: true, repeat: -1 });
+      // never empty: a zero-size text texture breaks WebGL framebuffers
+      const label = withLabel ? this.label(f.x + f.w / 2, f.y - 16, ' ', 12, '#ffffff', '#1aa884').setDepth(7).setVisible(false) : undefined;
+      return { box, label };
     }
 
     private drawZone(z: Zone) {
@@ -228,13 +266,17 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
           break;
         }
         case 'bousla': {
-          // Bousla, the compass mascot, standing in the room.
+          // Bousla, the compass mascot, standing in the room. Its needle is separate so it can turn toward you.
           g.fillStyle(0x000000, 0.12).fillEllipse(cx, f.y + f.h + 2, f.w * 0.8, 10);
           g.fillStyle(C.violet, 1).fillCircle(cx, cy, f.w / 2);
           g.fillStyle(0xffffff, 1).fillCircle(cx, cy, f.w / 2 - 7);
-          g.fillStyle(C.coral, 1).fillTriangle(cx, cy - f.h / 2 + 10, cx - 5, cy, cx + 5, cy);
           g.fillStyle(C.ink, 1).fillCircle(cx - 9, cy + 4, 3).fillCircle(cx + 9, cy + 4, 3);
-          this.tweens.add({ targets: g, y: { from: 0, to: -4 }, duration: 1300, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+          const needle = this.add.graphics({ x: cx, y: cy }).setDepth(3.2);
+          needle.fillStyle(C.coral, 1).fillTriangle(0, -f.h / 2 + 10, -5, 0, 5, 0);
+          needle.fillStyle(C.ink, 0.25).fillTriangle(0, f.h / 2 - 16, -4, 0, 4, 0);
+          needle.fillStyle(C.ink, 1).fillCircle(0, 0, 2.5);
+          this.needle ??= { g: needle, cx, cy };
+          this.tweens.add({ targets: [g, needle], y: '-=4', duration: 1300, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
           break;
         }
       }
@@ -251,12 +293,32 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
       const pupilL = this.add.circle(-5, -2, 2, C.ink);
       const pupilR = this.add.circle(5, -2, 2, C.ink);
       const name = this.label(0, 29, isSelf ? `${p.name} ★` : p.name, 12, '#ffffff', isSelf ? '#6c4cf1' : '#14112bcc');
-      const figure = this.add.container(0, 0, [body, eyeL, eyeR, pupilL, pupilR]);
+      const parts: import('phaser').GameObjects.GameObject[] = [body, eyeL, eyeR, pupilL, pupilR];
+      if (p.role === 'TEACHER') {
+        parts.push(this.add.text(13, 9, '🎓', { fontSize: '14px' }).setOrigin(0.5));
+      } else if (p.level) {
+        // level badge, like a game character
+        parts.push(this.add.circle(13, 10, 8, C.sunny).setStrokeStyle(2, 0xffffff, 1));
+        parts.push(this.add.text(13, 10, String(p.level), { fontFamily: FONT, fontSize: '10px', fontStyle: '900', color: '#14112b' }).setOrigin(0.5).setResolution(2));
+      }
+      const figure = this.add.container(0, 0, parts);
+      if (!isSelf && cfg.interactive) {
+        // tap a classmate → their card (say hi, invite to study)
+        for (const t of [body, name]) {
+          t.setInteractive({ useHandCursor: true });
+          t.on('pointerdown', () => cfg.onPlayerTap?.(p.userId));
+        }
+      }
       const c = this.add.container(p.x, p.y, [shadow, ring, figure, name]).setDepth(10 + p.y / 1000);
       this.tweens.add({ targets: ring, scale: { from: 0.95, to: 1.15 }, duration: 450, yoyo: true, repeat: -1 });
       const a: Avatar = { c, figure, body, pupils: [pupilL, pupilR], ring, dir: p.dir, lastMove: 0 };
       if (p.moving) this.walk(a, true);
       return a;
+    }
+
+    private setTarget(x: number, y: number) {
+      this.target = { x, y };
+      this.progress = { best: Infinity, at: this.time.now };
     }
 
     /** A little hop while walking, so moving players don't just slide. */
@@ -299,6 +361,7 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
     update() {
       const now = this.time.now;
       for (const a of this.others.values()) if (a.bob && now - a.lastMove > IDLE_AFTER_MS) this.walk(a, false);
+      this.turnNeedle(now);
       const self = this.self;
       if (!self || !cfg.interactive) return;
       const body = self.c.body as import('phaser').Physics.Arcade.Body;
@@ -318,7 +381,9 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
         const dx = this.target.x - self.c.x;
         const dy = this.target.y - self.c.y;
         const dist = Math.hypot(dx, dy);
-        if (dist < 6) this.target = null;
+        if (dist < this.progress.best - 2) this.progress = { best: dist, at: this.time.now };
+        // arrived, or pressed against a wall/table without getting closer for a moment → stop
+        if (dist < 6 || this.time.now - this.progress.at > 400) this.target = null;
         else {
           vx = dx / dist;
           vy = dy / dist;
@@ -331,7 +396,6 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
       if (moving) {
         const dir: Dir = Math.abs(vx) > Math.abs(vy) ? (vx < 0 ? 'left' : 'right') : vy < 0 ? 'up' : 'down';
         if (dir !== self.dir) this.look(self, dir);
-        if (this.target && body.blocked.none === false) this.target = null;
       }
       self.c.setDepth(10 + self.c.y / 1000);
 
@@ -346,6 +410,29 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
         this.zoneId = zone?.id ?? null;
         cfg.onZone(zone);
       }
+      let near: string | null = null;
+      let best = NEAR_PX;
+      for (const [id, a] of this.others) {
+        const d = Math.hypot(a.c.x - self.c.x, a.c.y - self.c.y);
+        if (d < best) {
+          best = d;
+          near = id;
+        }
+      }
+      if (near !== this.nearId) {
+        this.nearId = near;
+        cfg.onNear?.(near);
+      }
+    }
+
+    /** Bousla's needle wobbles, and points at you while you stand in front of it. */
+    private turnNeedle(now: number) {
+      const n = this.needle;
+      if (!n) return;
+      const self = this.self;
+      const facing = self && cfg.map.zones.find((z) => z.id === this.zoneId)?.kind === 'npc';
+      const target = facing ? Math.atan2(self.c.y - n.cy, self.c.x - n.cx) + Math.PI / 2 : Math.sin(now / 700) * 0.35;
+      n.g.rotation += Phaser.Math.Angle.Wrap(target - n.g.rotation) * 0.15;
     }
 
     // ---------- API used by React ----------
@@ -425,6 +512,19 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
           return m;
         },
         selfPos: () => (this.self ? { x: this.self.c.x, y: this.self.c.y } : null),
+        setLiveTables: (labels) => {
+          this.tables.forEach((t, i) => {
+            const text = labels[i];
+            t.box.setVisible(!!text);
+            t.label?.setText(text || ' ').setVisible(!!text);
+          });
+        },
+        setExamGlow: (on) => {
+          for (const d of this.desks) d.box.setVisible(on);
+        },
+        walkTo: (x, y) => {
+          if (cfg.interactive) this.setTarget(x, y);
+        },
       };
     }
   };

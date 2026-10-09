@@ -22,6 +22,12 @@ export class StudySessionsController {
     return this.sessions.create(a, body);
   }
 
+  @Can('write', 'study_session')
+  @Get('study-sessions/live')
+  live(@Auth() a: AuthContext) {
+    return this.sessions.live(a);
+  }
+
   @Can('read', 'study_session')
   @Get('study-sessions/mine')
   mine(@Auth() a: AuthContext) {

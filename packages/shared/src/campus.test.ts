@@ -7,6 +7,8 @@ describe('campus map helpers', () => {
     expect(zoneAt(CAMPUS_MAP, 1040, 260)?.kind).toBe('exam_door');
     expect(zoneAt(CAMPUS_MAP, 800, 300)?.kind).toBe('lobby');
     expect(zoneAt(CAMPUS_MAP, 30, 30)).toBeNull();
+    // standing in front of Bousla (below its body) beats the lobby
+    expect(zoneAt(CAMPUS_MAP, 800, 260)?.kind).toBe('npc');
   });
   it('clamps positions into the map (anti-teleport outside walls, NaN safe)', () => {
     expect(clampToMap(STUDY_ROOM_MAP, -500, 99999)).toEqual({ x: 30, y: STUDY_ROOM_MAP.height - 30 });
