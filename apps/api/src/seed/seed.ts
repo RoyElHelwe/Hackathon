@@ -5,7 +5,8 @@ import { encrypt } from '../common/crypto';
 import { averageHash } from '../uploads/phash';
 import type { PrismaClient } from '../generated/prisma/client';
 import { BADGES, MISSIONS, SUBJECTS, TOPICS } from './content';
-import { seedFamiliesOps, seedSchoolOps } from './school-ops';
+import { seedFamiliesOps } from './families-ops';
+import { seedSchoolOps } from './school-ops';
 import { illustrationJpeg } from './illustrations';
 import { seedCampus } from './campus';
 
