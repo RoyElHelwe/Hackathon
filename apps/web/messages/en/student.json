@@ -57,7 +57,7 @@
   "subjectLevels": "Levels by subject",
   "badges": "Badges",
   "streakCalendar": "Streak calendar",
-  "longest": "Longest: {days} days",
+  "longest": "Longest: {days, plural, one {# day} other {# days}}",
   "wallet": "Evaluation points",
   "walletHelp": "Spend 1 point to get a peer review. Earn 1 by reviewing a classmate.",
   "walletReasons": {

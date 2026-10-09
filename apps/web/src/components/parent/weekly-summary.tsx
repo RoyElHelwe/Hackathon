@@ -3,7 +3,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { Clock, Heart, RefreshCw, Sparkles, Sprout } from 'lucide-react';
 import { motion } from 'motion/react';
-import { useFormatter, useTranslations } from 'next-intl';
+import { useFormatter, useLocale, useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { ErrorState, Thinking } from '@/components/app/states';
 import { Bousla } from '@/components/bousla';
@@ -16,7 +16,9 @@ import type { WeeklySummary as Summary } from './types';
 /** "This week" — AI-written summary in the parent's own language (cached per week). */
 export function WeeklySummary({ studentId }: { studentId: string }) {
   const t = useTranslations('parent.summary');
-  const path = `/parents/summary/${studentId}`;
+  const locale = useLocale();
+  // the language is part of the URL so switching it fetches (or writes) that language's summary instead of the cached one
+  const path = `/parents/summary/${studentId}?lang=${locale}`;
   const qc = useQueryClient();
   const { data, isLoading, error, refetch } = useApi<Summary>(path, { staleTime: 5 * 60_000, retry: 1 });
   const [regenerating, setRegenerating] = useState(false);
@@ -26,7 +28,7 @@ export function WeeklySummary({ studentId }: { studentId: string }) {
     setRegenerating(true);
     setRegenError(null);
     try {
-      const fresh = await api<Summary>(`${path}/generate`, { method: 'POST' });
+      const fresh = await api<Summary>(`/parents/summary/${studentId}/generate?lang=${locale}`, { method: 'POST' });
       qc.setQueryData([path], fresh);
     } catch (e) {
       setRegenError(e instanceof ApiError ? e.message : t('error'));

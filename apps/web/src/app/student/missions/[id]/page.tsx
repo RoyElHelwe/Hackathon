@@ -261,14 +261,15 @@ export default function MissionPage() {
                   <Label>{t('numbers')}</Label>
                   <div className="grid grid-cols-2 gap-3">
                     {fields.map((f) => (
-                      <div key={f.key}>
+                      // a field with a unit is a measurement (number keyboard); others are words like "yes/no" or "12 > 9" (full keyboard, full row)
+                      <div key={f.key} className={f.unit ? undefined : 'col-span-2'}>
                         <label className="mb-1 block text-sm font-semibold text-muted-foreground" htmlFor={`f-${f.key}`}>
                           {l(f.label)} {f.unit && <span>({f.unit})</span>}
                         </label>
                         <Input
                           id={`f-${f.key}`}
-                          inputMode="decimal"
-                          dir="ltr"
+                          inputMode={f.unit ? 'decimal' : 'text'}
+                          dir={f.unit ? 'ltr' : 'auto'}
                           value={draft.answers[f.key] ?? ''}
                           onChange={(e) => setDraft((d) => ({ ...d, answers: { ...d.answers, [f.key]: e.target.value } }))}
                           className="text-lg font-bold"

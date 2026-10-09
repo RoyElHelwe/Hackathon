@@ -86,7 +86,7 @@ export interface ClassroomCourse {
   name: string;
   section: string | null;
   gradeLevel?: number | null;
-  studentCount: number;
+  studentCount?: number | null;
   imported: boolean;
   classId: string | null;
   suggestion: CourseSuggestion;

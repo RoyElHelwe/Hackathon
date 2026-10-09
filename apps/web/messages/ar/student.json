@@ -57,7 +57,7 @@
   "subjectLevels": "المستويات حسب المادة",
   "badges": "الشارات",
   "streakCalendar": "تقويم السلسلة",
-  "longest": "الأطول: {days} أيام",
+  "longest": "الأطول: {days, plural, zero {# يوم} one {يوم واحد} two {يومان} few {# أيام} many {# يومًا} other {# يوم}}",
   "wallet": "نقاط التقييم",
   "walletHelp": "اصرف نقطة لتحصل على تقييم زميل. اكسب نقطة عندما تقيّم زميلاً.",
   "walletReasons": {

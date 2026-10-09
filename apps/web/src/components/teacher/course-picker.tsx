@@ -142,8 +142,14 @@ export function CoursePicker({ onImported }: { onImported: (r: ImportResult[]) =
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-extrabold">{c.name}</span>
                   <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                    {c.section && <span>{c.section} ·</span>}
-                    <Users className="size-3.5" /> {t('studentCount', { n: c.studentCount })}
+                    {c.section && <span>{c.section}</span>}
+                    {/* Google's course list has no roster size; the count is only known for already imported classes */}
+                    {typeof c.studentCount === 'number' && (
+                      <>
+                        {c.section && <span>·</span>}
+                        <Users className="size-3.5" /> {t('studentCount', { n: c.studentCount })}
+                      </>
+                    )}
                   </span>
                 </span>
                 {c.imported && <Badge variant="muted">{t('alreadyImported')}</Badge>}

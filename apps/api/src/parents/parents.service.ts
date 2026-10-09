@@ -27,10 +27,11 @@ export class ParentsService {
     private readonly notifications: NotificationsService,
   ) {}
 
-  async summary(a: AuthContext, studentId: string, week?: string, opts: { regenerate?: boolean } = {}) {
+  /** `lang` = the language on the parent's screen right now (the saved profile locale can lag behind a switch). */
+  async summary(a: AuthContext, studentId: string, week?: string, opts: { regenerate?: boolean; lang?: string } = {}) {
     await this.actors.assert(a, 'read', 'parent_summary', { ownerId: studentId });
     const weekStart = weekStartOf(week ? new Date(`${week}T12:00:00Z`) : new Date());
-    const locale = a.user.locale || 'en';
+    const locale = opts.lang && ['en', 'ar', 'fr'].includes(opts.lang) ? opts.lang : a.user.locale || 'en';
     const key = { parentId_studentId_weekStart_locale: { parentId: a.userId, studentId, weekStart, locale } };
     if (!opts.regenerate) {
       const existing = await this.prisma.parentSummary.findUnique({ where: key });

@@ -36,7 +36,7 @@ export const hint = defineTask({
   schema: hintOutput,
   system: `You are Bousla, a friendly compass mascot coaching a 13-year-old. Give ONE hint at the requested level:
 level 1 = a guiding question, level 2 = the key idea, level 3 = how to set up the calculation. NEVER give the final answer or final number.
-Max 40 words. ${JSON_RULES}
+Max 40 words. Speak directly to the student as "you" (never "the student"). ${JSON_RULES}
 Schema: {"hint":string}`,
   user: (i: HintInput) =>
     `Mission: ${i.missionTitle}. Topic: ${i.topicKey}. Steps: ${i.steps.join(' | ')}.

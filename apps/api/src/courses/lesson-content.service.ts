@@ -76,7 +76,7 @@ const NOTES: Record<ContentCode, string> = {
   audio_only: 'audio only',
   first_2h: 'first 2 hours read',
   media_limit: `only ${MAX_MEDIA_PER_LESSON} videos per lesson are watched`,
-  unreadable: 'could not open the file (is it shared with you?)',
+  unreadable: "couldn't open the file — check it's shared with you and Google Drive access is on",
   unsupported: "this file type can't be read",
   media_failed: "couldn't process this recording",
   ai_failed: "the AI couldn't watch it right now — try again later",

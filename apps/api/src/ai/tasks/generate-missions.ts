@@ -18,7 +18,8 @@ export interface GenerateMissionsInput {
 export const MISSION_RULES = `You design real-life learning missions for middle-school students in Lebanon (school of 2036: learn by living).
 Each mission turns a curriculum topic into something the student does in their real life (home, building, street with an adult, school yard, kitchen),
 then proves with photos, a few measured numbers and an explanation. Missions must be SAFE: no heights or climbing, no fire, no sharp tools without an adult,
-no chemicals beyond kitchen-safe, never going out alone or at night, never contacting strangers, never sharing location.`;
+no chemicals beyond kitchen-safe, never going out alone or at night, never contacting strangers, never sharing location.
+Write every text the student reads (title, story, steps, mini lesson, photo hint, field labels, safety notes) speaking directly TO the student as "you" — never "the student".`;
 
 /** JSON shape of one mission item (generateMissionsOutput / gamifyLessonOutput). */
 export const MISSION_ITEM_SCHEMA = `{"title":string,"story":string (the real-life hook, 1-3 sentences),"steps":string[] (3-6 short steps),

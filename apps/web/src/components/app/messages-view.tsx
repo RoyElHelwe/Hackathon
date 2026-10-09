@@ -41,7 +41,10 @@ export function MessagesView({ initialWith }: { initialWith?: string }) {
   const [sending, setSending] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => endRef.current?.scrollIntoView({ behavior: 'smooth' }), [thread?.length]);
+  // braces: newer Chrome returns a Promise from scrollIntoView, which React would take as the effect's cleanup
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [thread?.length]);
 
   if (isLoading) return <PageSkeleton />;
   if (error) return <ErrorState onRetry={() => refetch()} />;

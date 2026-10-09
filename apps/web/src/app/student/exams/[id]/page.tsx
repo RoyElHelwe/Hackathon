@@ -179,7 +179,10 @@ function Finished({ attempt }: { attempt: AttemptView }) {
 function Transcript({ turns, live }: { turns: ExamTurn[]; live?: string }) {
   const t = useTranslations('campus');
   const end = useRef<HTMLDivElement>(null);
-  useEffect(() => end.current?.scrollIntoView({ block: 'nearest' }), [turns.length]);
+  // braces: newer Chrome returns a Promise from scrollIntoView, which React would take as the effect's cleanup
+  useEffect(() => {
+    end.current?.scrollIntoView({ block: 'nearest' });
+  }, [turns.length]);
   return (
     <Card className="p-4">
       <h2 className="mb-3 font-display text-lg font-bold">{t('exam.transcript')}</h2>

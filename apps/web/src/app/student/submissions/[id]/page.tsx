@@ -88,6 +88,7 @@ export default function SubmissionResult() {
               </Badge>
             )}
             {s.rewards && s.rewards.xpGained > 0 && <p className="font-display text-xl font-extrabold text-success">+{s.rewards.xpGained} XP</p>}
+            {s.teacherReview?.comment && <p className="w-full rounded-[14px] bg-mint-soft p-3 font-semibold">“{s.teacherReview.comment}”</p>}
           </Card>
           {s.rewards?.unlockedTopics?.length ? (
             <Button asChild variant="kidSunny" size="pill" className="w-full">

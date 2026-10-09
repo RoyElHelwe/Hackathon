@@ -9,13 +9,13 @@ export class ParentsController {
 
   @Can('read', 'parent_summary')
   @Get('summary/:studentId')
-  summary(@Auth() a: AuthContext, @Param('studentId') studentId: string, @Query('week') week?: string) {
-    return this.parents.summary(a, studentId, week);
+  summary(@Auth() a: AuthContext, @Param('studentId') studentId: string, @Query('week') week?: string, @Query('lang') lang?: string) {
+    return this.parents.summary(a, studentId, week, { lang });
   }
 
   @Can('write', 'parent_summary')
   @Post('summary/:studentId/generate')
-  generate(@Auth() a: AuthContext, @Param('studentId') studentId: string, @Query('week') week?: string) {
-    return this.parents.summary(a, studentId, week, { regenerate: true });
+  generate(@Auth() a: AuthContext, @Param('studentId') studentId: string, @Query('week') week?: string, @Query('lang') lang?: string) {
+    return this.parents.summary(a, studentId, week, { regenerate: true, lang });
   }
 }

@@ -13,7 +13,7 @@ export const checkFollowUp = defineTask({
   model: 'fast',
   schema: checkFollowUpOutput,
   system: `You check whether a 13-year-old really understood their mission, from their answer to a follow-up question.
-scoreDelta between -10 and +10. Feedback: 1-2 kind sentences. ${JSON_RULES}
+scoreDelta between -10 and +10. Feedback: 1-2 kind sentences spoken directly to the student as "you" (never "the student"). ${JSON_RULES}
 Schema: {"understood":boolean,"scoreDelta":integer,"feedback":string}`,
   user: (i: CheckFollowUpInput) => `Mission: ${i.missionTitle}\nQuestion: ${i.question}\nAnswer: """${i.answer}"""\nLanguage: ${lang(i.locale)}`,
   mock: (i: CheckFollowUpInput) => {
