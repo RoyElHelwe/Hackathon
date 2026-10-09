@@ -1,14 +1,16 @@
 'use client';
 
 import type { MasteryState } from '@tajriba/shared';
-import { AlertTriangle, Lock } from 'lucide-react';
+import { AlertTriangle, Lock, Wand2 } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useMemo } from 'react';
 import { Avatar } from '@/components/ui/misc';
 import { cn } from '@/lib/cn';
 import { useL } from '@/lib/hooks';
-import { MASTERY_CELL, SUBJECT_DOT, SUBJECT_ORDER } from './helpers';
+import { EmptyState } from '@/components/app/states';
+import { Button } from '@/components/ui/button';
+import { MASTERY_CELL, SUBJECT_DOT } from './helpers';
 import type { TeacherDashboard } from './types';
 
 /** Students × topics grid colored by mastery. Stuck students are highlighted. */
@@ -17,10 +19,8 @@ export function Heatmap({ data, classId }: { data: TeacherDashboard; classId: st
   const tm = useTranslations('common.mastery');
   const l = useL();
 
-  const topics = useMemo(
-    () => [...data.topics].sort((a, b) => SUBJECT_ORDER.indexOf(a.subjectKey) - SUBJECT_ORDER.indexOf(b.subjectKey)),
-    [data.topics],
-  );
+  // Grouped by localized subject name; the server order (map position) is kept inside a subject.
+  const topics = useMemo(() => [...data.topics].sort((a, b) => l(a.subjectName).localeCompare(l(b.subjectName))), [data.topics, l]);
   const cellMap = useMemo(() => new Map(data.cells.map((c) => [`${c.studentId}:${c.topicId}`, c])), [data.cells]);
   const stuckSet = useMemo(() => new Set(data.stuck.map((s) => `${s.studentId}:${s.topicId}`)), [data.stuck]);
   const students = useMemo(() => [...data.students].sort((a, b) => Number(b.stuck) - Number(a.stuck) || a.name.localeCompare(b.name)), [data.students]);
@@ -31,6 +31,25 @@ export function Heatmap({ data, classId }: { data: TeacherDashboard; classId: st
     return Math.round((n / students.length) * 100);
   };
 
+  if (!topics.length) {
+    const courseId = data.class.course?.id;
+    return (
+      <EmptyState
+        title={t('noSkills')}
+        body={t('noSkillsBody')}
+        className="py-6"
+        action={
+          courseId ? (
+            <Button asChild size="sm" data-testid="heatmap-open-course">
+              <Link href={`/teacher/courses/${courseId}`}>
+                <Wand2 /> {t('openCourse')}
+              </Link>
+            </Button>
+          ) : undefined
+        }
+      />
+    );
+  }
   if (!students.length) return <p className="p-6 text-center text-sm text-muted-foreground">{t('noStudents')}</p>;
 
   return (

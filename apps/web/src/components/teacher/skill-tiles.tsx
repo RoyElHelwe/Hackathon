@@ -1,10 +1,11 @@
 'use client';
 
 import type { MasteryState } from '@tajriba/shared';
-import { Box, Circle, Landmark, Lock, Ruler, Sparkles, Square, Star, Triangle, Zap, type LucideIcon } from 'lucide-react';
+import { Lock, Star } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { ErrorState } from '@/components/app/states';
+import { topicIcon } from '@/components/app/subject-icon';
 import { Skeleton } from '@/components/ui/misc';
 import { cn } from '@/lib/cn';
 import { useApi, useL } from '@/lib/hooks';
@@ -12,26 +13,16 @@ import type { Graph } from '@/lib/types';
 import { MASTERY_TILE, SUBJECT_DOT } from './helpers';
 import type { Subject } from './types';
 
-const ICONS: Record<string, LucideIcon> = {
-  square: Square,
-  cube: Box,
-  angle: Triangle,
-  triangle: Triangle,
-  circle: Circle,
-  ruler: Ruler,
-  zap: Zap,
-  landmark: Landmark,
-};
-
 /** Read-only compact skill map: one tile per topic, colored by mastery. */
 export function SkillTiles({ studentId }: { studentId: string }) {
   const t = useTranslations('teacher.student');
   const tm = useTranslations('common.mastery');
   const l = useL();
-  const subjects = useApi<Subject[]>('/subjects');
-  const [picked, setPicked] = useState('math');
-  const graph = useApi<Graph>(`/subjects/${picked}/graph?studentId=${studentId}`);
+  const subjects = useApi<Subject[]>(`/subjects?studentId=${studentId}`);
+  const [chosen, setPicked] = useState<string | null>(null);
   const withTopics = subjects.data?.filter((s) => s.topicCount > 0) ?? [];
+  const picked = chosen && withTopics.some((s) => s.key === chosen) ? chosen : (withTopics[0]?.key ?? null);
+  const graph = useApi<Graph>(picked ? `/subjects/${picked}/graph?studentId=${studentId}` : null);
   const order: MasteryState[] = ['MASTERED', 'IN_PROGRESS', 'AVAILABLE', 'LOCKED'];
 
   return (
@@ -52,7 +43,7 @@ export function SkillTiles({ studentId }: { studentId: string }) {
           </button>
         ))}
       </div>
-      {graph.isLoading ? (
+      {subjects.isLoading || graph.isLoading ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {[0, 1, 2].map((i) => (
             <Skeleton key={i} className="h-24" />
@@ -65,7 +56,7 @@ export function SkillTiles({ studentId }: { studentId: string }) {
           {[...(graph.data?.nodes ?? [])]
             .sort((a, b) => order.indexOf(a.state) - order.indexOf(b.state))
             .map((n) => {
-              const Icon = ICONS[n.icon] ?? Sparkles;
+              const Icon = topicIcon(n.icon);
               return (
                 <li key={n.id} className={cn('flex flex-col gap-2 rounded-[18px] p-3', MASTERY_TILE[n.state])} data-state={n.state} data-testid="skill-tile">
                   <div className="flex items-center justify-between">

@@ -83,5 +83,9 @@
   "newBadge": "شارة جديدة!",
   "unlocked": "موضوع جديد مفتوح: {name}",
   "seeMap": "شاهد خريطتي",
-  "mapUnlockedToast": "✨ {name} أصبح متاحاً!"
+  "mapUnlockedToast": "✨ {name} أصبح متاحاً!",
+  "mapNoClasses": "لست في أي صف بعد",
+  "mapNoClassesBody": "اطلب من معلّمك أن يضيفك في Google Classroom.",
+  "mapNoSkills": "لا مهارات هنا بعد",
+  "mapNoSkillsBody": "لم ينشر معلّموك مهارات بعد. عُد قريباً!"
 }

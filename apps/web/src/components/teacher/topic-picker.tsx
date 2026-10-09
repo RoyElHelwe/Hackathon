@@ -5,10 +5,9 @@ import { useTranslations } from 'next-intl';
 import { useL } from '@/lib/hooks';
 import { cn } from '@/lib/cn';
 import { SUBJECT_DOT } from './helpers';
-import type { DashTopic, Subject, TeacherDashboard } from './types';
+import type { DashTopic, TeacherDashboard } from './types';
 
 interface Props {
-  subjects: Subject[];
   dashboard: TeacherDashboard;
   subjectKey: string | null;
   topicId: string | null;
@@ -17,10 +16,13 @@ interface Props {
 }
 
 /** Subject chips, then topic chips with a mastery hint for the selected class. */
-export function TopicPicker({ subjects, dashboard, subjectKey, topicId, onSubject, onTopic }: Props) {
+export function TopicPicker({ dashboard, subjectKey, topicId, onSubject, onTopic }: Props) {
   const t = useTranslations('teacher.studio');
   const l = useL();
-  const withTopics = subjects.filter((s) => dashboard.topics.some((tp) => tp.subjectKey === s.key));
+  // The class's subjects come from its visible skills (one per subject, sorted by localized name).
+  const withTopics = [...new Map(dashboard.topics.map((tp) => [tp.subjectKey, { key: tp.subjectKey, name: tp.subjectName, color: tp.color }])).values()].sort((a, b) =>
+    l(a.name).localeCompare(l(b.name)),
+  );
   const topics = dashboard.topics.filter((tp) => tp.subjectKey === subjectKey);
   const total = dashboard.students.length;
 

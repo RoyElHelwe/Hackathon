@@ -99,7 +99,10 @@
     "classMastered": "أتقنوه",
     "stuckLegend": "متعثّر هنا",
     "scoreLegend": "الرقم = أفضل علامة",
-    "noStudents": "لا تلاميذ بعد."
+    "noStudents": "لا تلاميذ بعد.",
+    "noSkills": "لا مهارات بعد",
+    "noSkillsBody": "افتح المقرّر وحوّل درساً إلى لعبة — تظهر مهارته هنا لكل الشُّعب.",
+    "openCourse": "افتح المقرّر"
   },
   "stuck": {
     "line": "{name} قد يكون متعثّراً في {topic}",

@@ -9,7 +9,8 @@ import { Bousla, BouslaSays } from '@/components/bousla';
 import { ErrorState, PageSkeleton, Thinking } from '@/components/app/states';
 import { VisualSpecView } from '@/components/kid/visual-spec';
 import { PhotoPicker } from '@/components/student/photo-picker';
-import { subjectStyle, topicEmoji } from '@/components/student/subject-style';
+import { TopicGlyph } from '@/components/app/subject-icon';
+import { subjectStyle } from '@/components/student/subject-style';
 import { VoiceInput } from '@/components/student/voice';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -139,7 +140,7 @@ export default function MissionPage() {
   if (isLoading) return <PageSkeleton />;
   if (error || !mission) return <ErrorState message={error instanceof ApiError ? error.message : undefined} onRetry={() => refetch()} />;
 
-  const st = subjectStyle(mission.topic?.subject?.key);
+  const st = subjectStyle(mission.topic?.subject?.key, mission.topic?.subject?.color, mission.topic?.subject?.icon);
   const steps = l(mission.steps) ?? [];
   const fields = mission.proofSpec.fields ?? [];
 
@@ -167,7 +168,7 @@ export default function MissionPage() {
             <div className="space-y-5">
               <div className={cn('relative flex h-56 items-end overflow-hidden rounded-[28px] p-5', 'bg-gradient-to-br from-sky via-violet to-[#8B6CFF]')}>
                 <div className="absolute inset-0 flex items-center justify-center text-[130px] opacity-90" aria-hidden>
-                  {topicEmoji(mission.topic?.key ?? '')}
+                  <TopicGlyph topicKey={mission.topic?.key} icon={mission.topic?.icon} />
                 </div>
                 <div className="absolute end-3 top-3">
                   <Bousla mood="curious" size={70} />

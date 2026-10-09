@@ -1,17 +1,16 @@
 'use client';
 
-import type { MasteryState } from '@tajriba/shared';
-import { Box, Circle, Compass, FlaskConical, Lock, Map as MapIcon, Ruler, Square, Star, Triangle, TriangleRight, Zap, type LucideIcon } from 'lucide-react';
+import type { I18nText, MasteryState } from '@tajriba/shared';
+import { Lock, Map as MapIcon, Star } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { EmptyState } from '@/components/app/states';
+import { SubjectIcon, topicIcon } from '@/components/app/subject-icon';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress, Skeleton } from '@/components/ui/misc';
 import { cn } from '@/lib/cn';
 import { useApi, useL } from '@/lib/hooks';
 import type { MiniGraph } from './types';
-
-const ICONS: Record<string, LucideIcon> = { square: Square, cube: Box, angle: TriangleRight, circle: Circle, triangle: Triangle, ruler: Ruler, zap: Zap, flask: FlaskConical };
 
 const STATE_STYLE: Record<MasteryState, { tile: string; icon: string }> = {
   MASTERED: { tile: 'border-sunny bg-sunny-soft', icon: 'bg-sunny text-ink' },
@@ -40,7 +39,14 @@ export function SkillPath({ studentId }: { studentId: string }) {
   const t = useTranslations('parent.map');
   const tm = useTranslations('common.mastery');
   const l = useL();
-  const { data, isLoading, error } = useApi<MiniGraph>(`/subjects/math/graph?studentId=${studentId}`);
+  const subjects = useApi<{ key: string; name: I18nText; icon: string; topicCount: number }[]>(`/subjects?studentId=${studentId}`);
+  const withTopics = subjects.data?.filter((s) => s.topicCount > 0) ?? [];
+  const [chosen, setChosen] = useState<string | null>(null);
+  const subject = chosen && withTopics.some((s) => s.key === chosen) ? chosen : (withTopics[0]?.key ?? null);
+  const graph = useApi<MiniGraph>(subject ? `/subjects/${subject}/graph?studentId=${studentId}` : null);
+  const { data, error } = graph;
+  const isLoading = subjects.isLoading || graph.isLoading;
+  const emptyTitle = !subjects.data?.length ? t('noClasses') : !withTopics.length ? t('noSkills') : t('empty');
   const nodes = useMemo(() => (data ? ordered(data) : []), [data]);
   const mastered = nodes.filter((n) => n.state === 'MASTERED').length;
 
@@ -53,6 +59,26 @@ export function SkillPath({ studentId }: { studentId: string }) {
         <CardDescription>{t('subtitle')}</CardDescription>
       </CardHeader>
       <CardContent>
+        {withTopics.length > 1 && (
+          <div className="mb-4 flex flex-wrap gap-2" role="tablist">
+            {withTopics.map((s) => (
+              <button
+                key={s.key}
+                type="button"
+                role="tab"
+                aria-selected={s.key === subject}
+                onClick={() => setChosen(s.key)}
+                className={cn(
+                  'inline-flex h-9 items-center gap-2 rounded-full border-2 px-3 text-sm font-bold transition-colors',
+                  s.key === subject ? 'border-primary bg-violet-soft' : 'border-border bg-card hover:border-primary/40',
+                )}
+                data-testid={`skill-subject-${s.key}`}
+              >
+                <SubjectIcon icon={s.icon} /> {l(s.name)}
+              </button>
+            ))}
+          </div>
+        )}
         {isLoading ? (
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-2">
             {Array.from({ length: 6 }).map((_, i) => (
@@ -60,7 +86,7 @@ export function SkillPath({ studentId }: { studentId: string }) {
             ))}
           </div>
         ) : error || !nodes.length ? (
-          <EmptyState title={t('empty')} className="py-4" />
+          <EmptyState title={emptyTitle} className="py-4" />
         ) : (
           <>
             <div className="mb-4 flex items-center gap-3">
@@ -69,7 +95,7 @@ export function SkillPath({ studentId }: { studentId: string }) {
             </div>
             <ol className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-2">
               {nodes.map((n) => {
-                const Icon = n.state === 'LOCKED' ? Lock : (ICONS[n.icon] ?? Compass);
+                const Icon = n.state === 'LOCKED' ? Lock : topicIcon(n.icon);
                 const s = STATE_STYLE[n.state];
                 return (
                   <li key={n.id} className={cn('relative flex items-center gap-2.5 rounded-[16px] border-2 p-2.5', s.tile)} data-testid="skill-tile" data-state={n.state}>

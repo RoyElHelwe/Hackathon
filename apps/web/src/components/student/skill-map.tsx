@@ -7,7 +7,7 @@ import { memo, useMemo } from 'react';
 import { cn } from '@/lib/cn';
 import { useL } from '@/lib/hooks';
 import type { GraphNode } from '@/lib/types';
-import { topicEmoji } from './subject-style';
+import { TopicGlyph } from '@/components/app/subject-icon';
 
 type TopicData = { node: GraphNode; color: string; label: string; justUnlocked: boolean };
 type TopicNodeT = Node<TopicData, 'topic'>;
@@ -32,7 +32,7 @@ const TopicNode = memo(function TopicNode({ data }: NodeProps<TopicNodeT>) {
         style={{ background: s === 'LOCKED' ? undefined : color, ['--node-color' as string]: color }}
       >
         <span className={cn(s === 'LOCKED' && 'opacity-40')} aria-hidden>
-          {topicEmoji(node.key)}
+          <TopicGlyph topicKey={node.key} icon={node.icon} />
         </span>
         {s === 'LOCKED' && (
           <span className="absolute -bottom-1 -end-1 flex size-8 items-center justify-center rounded-full bg-card shadow">

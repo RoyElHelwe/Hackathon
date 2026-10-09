@@ -1,27 +1,12 @@
 'use client';
 
-import { BookOpen, Cpu, Dumbbell, FlaskConical, Globe, Landmark, Languages, Leaf, Music, Palette, Triangle, Zap, type LucideIcon } from 'lucide-react';
 import { SUBJECT_COLORS, SUBJECT_ICONS } from '@tajriba/shared';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
+import { subjectIcon } from '@/components/app/subject-icon';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/cn';
-
-const ICONS: Record<string, LucideIcon> = {
-  triangle: Triangle,
-  zap: Zap,
-  flask: FlaskConical,
-  leaf: Leaf,
-  landmark: Landmark,
-  languages: Languages,
-  book: BookOpen,
-  globe: Globe,
-  music: Music,
-  palette: Palette,
-  cpu: Cpu,
-  dumbbell: Dumbbell,
-};
 
 const SWATCH: Record<string, string> = {
   violet: 'bg-violet',
@@ -85,7 +70,7 @@ export function SubjectForm({ initial, busy, onSubmit, onCancel }: { initial?: S
         <p className="mb-1.5 text-sm font-bold">{t('icon')}</p>
         <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={t('icon')}>
           {SUBJECT_ICONS.map((i) => {
-            const Icon = ICONS[i];
+            const Icon = subjectIcon(i);
             const on = icon === i;
             return (
               <button

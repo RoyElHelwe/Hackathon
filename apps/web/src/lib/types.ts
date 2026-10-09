@@ -41,7 +41,7 @@ export interface Mission {
   dueAt: string | null;
   classroomCourseWorkId: string | null;
   aiGenerated: boolean;
-  topic?: { key: string; name: I18nText; subject?: { key: string; name: I18nText; color: string; icon: string } };
+  topic?: { key: string; name: I18nText; icon?: string; subject?: { key: string; name: I18nText; color: string; icon: string } };
   mySubmission: { id: string; status: SubmissionStatus; attempt: number } | null;
   submissionCount?: number;
 }

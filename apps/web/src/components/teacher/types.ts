@@ -7,8 +7,13 @@ export interface DashTopic {
   id: string;
   key: string;
   name: I18nText;
+  icon: string;
+  /** set for lesson skills (null = legacy topic) */
+  courseId: string | null;
   subjectKey: string;
+  subjectName: I18nText;
   color: string;
+  subjectIcon: string;
 }
 
 export interface DashStudent {

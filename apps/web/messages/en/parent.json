@@ -57,9 +57,11 @@
   },
   "map": {
     "title": "Skill map",
-    "subtitle": "Mathematics — from first steps to what's next",
+    "subtitle": "From first steps to what's next",
     "mastered": "{count} of {total} skills mastered",
-    "empty": "The skill map is not available yet."
+    "empty": "The skill map is not available yet.",
+    "noClasses": "Your child is not in a class yet. Teachers add students from Google Classroom.",
+    "noSkills": "Teachers haven't published skills yet."
   },
   "familyCallout": {
     "title": "{name} is waiting for you!",

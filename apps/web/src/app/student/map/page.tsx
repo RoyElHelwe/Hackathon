@@ -6,20 +6,22 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { BouslaSays } from '@/components/bousla';
-import { ErrorState, PageSkeleton } from '@/components/app/states';
+import { EmptyState, ErrorState, PageSkeleton } from '@/components/app/states';
+import { SubjectIcon, TopicGlyph } from '@/components/app/subject-icon';
 import { SkillMap } from '@/components/student/skill-map';
-import { subjectStyle, topicEmoji } from '@/components/student/subject-style';
+import { subjectStyle } from '@/components/student/subject-style';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogDescription, DialogTitle, SheetContent } from '@/components/ui/dialog';
 import { cn } from '@/lib/cn';
 import { useApi, useL } from '@/lib/hooks';
-import type { Graph, GraphNode } from '@/lib/types';
+import type { ClassSummary, Graph, GraphNode } from '@/lib/types';
 import type { I18nText } from '@tajriba/shared';
 
 interface Subject {
   key: string;
   name: I18nText;
   color: string;
+  icon: string;
   topicCount: number;
 }
 
@@ -31,8 +33,12 @@ function MapInner() {
   const l = useL();
   const params = useSearchParams();
   const subjects = useApi<Subject[]>('/subjects');
-  const [subject, setSubject] = useState('math');
-  const graph = useApi<Graph>(`/subjects/${subject}/graph`);
+  const classes = useApi<ClassSummary[]>('/classes');
+  const [picked, setPicked] = useState<string | null>(null);
+  const visibleSubjects = useMemo(() => (subjects.data ?? []).filter((s) => s.topicCount > 0), [subjects.data]);
+  // Default: the first subject (sorted by name on the server) that has skills — never a hardcoded one.
+  const subject = picked && visibleSubjects.some((s) => s.key === picked) ? picked : (visibleSubjects[0]?.key ?? null);
+  const graph = useApi<Graph>(subject ? `/subjects/${subject}/graph` : null);
   const [selected, setSelected] = useState<GraphNode | null>(null);
   const [justUnlocked, setJustUnlocked] = useState<string[]>([]);
 
@@ -56,8 +62,8 @@ function MapInner() {
     }
   }, [graph.data, params]);
 
-  const visibleSubjects = useMemo(() => (subjects.data ?? []).filter((s) => s.topicCount > 0), [subjects.data]);
-  const st = subjectStyle(subject);
+  const current = visibleSubjects.find((s) => s.key === subject);
+  const st = subjectStyle(subject, current?.color, current?.icon);
   const unlockedNode = graph.data?.nodes.find((n) => justUnlocked.includes(n.id));
 
   return (
@@ -68,18 +74,18 @@ function MapInner() {
       </div>
       <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1" role="tablist">
         {visibleSubjects.map((s) => {
-          const ss = subjectStyle(s.key);
+          const ss = subjectStyle(s.key, s.color, s.icon);
           const active = s.key === subject;
           return (
             <button
               key={s.key}
               role="tab"
               aria-selected={active}
-              onClick={() => setSubject(s.key)}
+              onClick={() => setPicked(s.key)}
               className={cn('inline-flex h-11 shrink-0 items-center gap-2 rounded-full px-4 font-bold transition-colors', active ? `${ss.bg} text-white shadow-md` : 'bg-card border-2 border-border')}
               data-testid={`subject-chip-${s.key}`}
             >
-              <span aria-hidden>{ss.emoji}</span> {l(s.name)}
+              <SubjectIcon icon={s.icon} className="size-5" /> {l(s.name)}
             </button>
           );
         })}
@@ -91,8 +97,16 @@ function MapInner() {
         </div>
       )}
 
-      {graph.isLoading ? (
+      {subjects.isLoading || (subject && graph.isLoading) ? (
         <PageSkeleton />
+      ) : subjects.error ? (
+        <ErrorState onRetry={() => subjects.refetch()} />
+      ) : !subject ? (
+        <EmptyState
+          title={(classes.data?.length ?? 0) === 0 ? t('mapNoClasses') : t('mapNoSkills')}
+          body={(classes.data?.length ?? 0) === 0 ? t('mapNoClassesBody') : t('mapNoSkillsBody')}
+          className="rounded-[24px] border-2 border-dashed border-border bg-card"
+        />
       ) : graph.error || !graph.data ? (
         <ErrorState onRetry={() => graph.refetch()} />
       ) : (
@@ -113,7 +127,7 @@ function MapInner() {
           <SheetContent data-testid="topic-sheet">
             <div className="flex items-center gap-3">
               <span className={cn('flex size-14 items-center justify-center rounded-full text-3xl', st.soft)} aria-hidden>
-                {topicEmoji(selected.key)}
+                <TopicGlyph topicKey={selected.key} icon={selected.icon} />
               </span>
               <div>
                 <DialogTitle className="font-display text-2xl">{l(selected.name)}</DialogTitle>

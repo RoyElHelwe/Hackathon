@@ -12,7 +12,8 @@ import { Coins, LevelRing, StreakFlame, XpBar } from '@/components/kid/stats';
 import { InstallCard } from '@/components/student/install-card';
 import { MissionCard, missionHref } from '@/components/student/mission-card';
 import { RewardCelebration } from '@/components/student/reward-celebration';
-import { subjectStyle, topicEmoji } from '@/components/student/subject-style';
+import { TopicGlyph } from '@/components/app/subject-icon';
+import { subjectStyle } from '@/components/student/subject-style';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useApi, useL, useMe } from '@/lib/hooks';
@@ -85,7 +86,7 @@ export default function StudentHome() {
           <Link href={missionHref(feature)} data-testid="continue-mission">
             <div className={cn('relative overflow-hidden rounded-[28px] p-5 text-white shadow-xl', 'bg-gradient-to-br from-violet to-[#8B6CFF]')}>
               <div className="absolute -end-6 -top-6 text-[120px] opacity-20" aria-hidden>
-                {topicEmoji(feature.topic?.key ?? '')}
+                <TopicGlyph topicKey={feature.topic?.key} icon={feature.topic?.icon} />
               </div>
               <p className="text-sm font-bold uppercase tracking-wider text-white/80">{active ? t('continueMission') : t('nextMission')}</p>
               <p className="mt-1 font-display text-2xl font-extrabold leading-tight">{l(feature.title)}</p>
@@ -150,8 +151,8 @@ export default function StudentHome() {
       {gm.subjects.length > 0 && (
         <div className="flex gap-2 overflow-x-auto pb-1">
           {gm.subjects.map((s) => (
-            <span key={s.key} className={cn('inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-sm font-bold', subjectStyle(s.key).soft)}>
-              {subjectStyle(s.key).emoji} {l(s.name)} · {t('level')} {s.level.level}
+            <span key={s.key} className={cn('inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-sm font-bold', subjectStyle(s.key, s.color, s.icon).soft)}>
+              {subjectStyle(s.key, s.color, s.icon).emoji} {l(s.name)} · {t('level')} {s.level.level}
             </span>
           ))}
         </div>

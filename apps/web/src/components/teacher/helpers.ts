@@ -25,6 +25,8 @@ export const SUBJECT_DOT: Record<string, string> = {
   green: 'bg-green',
   coral: 'bg-coral',
   sunny: 'bg-sunny',
+  pink: 'bg-coral',
+  slate: 'bg-muted-foreground',
 };
 
 export const SUBJECT_SOFT: Record<string, string> = {
@@ -34,9 +36,9 @@ export const SUBJECT_SOFT: Record<string, string> = {
   green: 'bg-green-soft',
   coral: 'bg-coral-soft',
   sunny: 'bg-sunny-soft',
+  pink: 'bg-coral-soft',
+  slate: 'bg-muted',
 };
-
-export const SUBJECT_ORDER = ['math', 'physics', 'chemistry', 'biology', 'history', 'languages'];
 
 export type BadgeVariant = 'default' | 'mint' | 'sunny' | 'coral' | 'sky' | 'muted' | 'outline';
 

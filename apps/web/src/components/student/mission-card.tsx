@@ -7,7 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/cn';
 import { useL } from '@/lib/hooks';
 import type { Mission } from '@/lib/types';
-import { subjectStyle, topicEmoji } from './subject-style';
+import { TopicGlyph } from '@/components/app/subject-icon';
+import { subjectStyle } from './subject-style';
 
 export function missionHref(m: Pick<Mission, 'id' | 'mySubmission'>) {
   const s = m.mySubmission;
@@ -19,13 +20,13 @@ export function MissionCard({ mission, className }: { mission: Mission; classNam
   const t = useTranslations('student');
   const tc = useTranslations('common');
   const l = useL();
-  const st = subjectStyle(mission.topic?.subject?.key);
+  const st = subjectStyle(mission.topic?.subject?.key, mission.topic?.subject?.color, mission.topic?.subject?.icon);
   const status = mission.mySubmission?.status;
   return (
     <Link href={missionHref(mission)} className={cn('group block', className)} data-testid="mission-card">
       <div className="flex items-center gap-4 rounded-[20px] border-2 border-border bg-card p-4 transition-all group-hover:-translate-y-0.5 group-hover:border-primary/40 group-hover:shadow-lg">
         <div className={cn('flex size-14 shrink-0 items-center justify-center rounded-[16px] text-3xl', st.soft)} aria-hidden>
-          {topicEmoji(mission.topic?.key ?? '')}
+          <TopicGlyph topicKey={mission.topic?.key} icon={mission.topic?.icon} />
         </div>
         <div className="min-w-0 flex-1">
           <p className="truncate font-display text-lg font-extrabold leading-tight">{l(mission.title)}</p>

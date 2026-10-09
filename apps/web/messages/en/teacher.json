@@ -99,7 +99,10 @@
     "classMastered": "Mastered",
     "stuckLegend": "Stuck here",
     "scoreLegend": "Number = best score",
-    "noStudents": "No students yet."
+    "noStudents": "No students yet.",
+    "noSkills": "No skills yet",
+    "noSkillsBody": "Open the course and gamify a lesson — its skill shows up here for every section.",
+    "openCourse": "Open the course"
   },
   "stuck": {
     "line": "{name} may be stuck on {topic}",

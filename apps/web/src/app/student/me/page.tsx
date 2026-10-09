@@ -90,7 +90,7 @@ export default function MePage() {
           <h2 className="font-display text-xl font-extrabold">{t('subjectLevels')}</h2>
           {g.subjects.map((s) => (
             <div key={s.key} className="flex items-center gap-3">
-              <span className={cn('flex size-10 items-center justify-center rounded-[12px] text-xl', subjectStyle(s.key).soft)}>{subjectStyle(s.key).emoji}</span>
+              <span className={cn('flex size-10 items-center justify-center rounded-[12px] text-xl', subjectStyle(s.key, s.color, s.icon).soft)}>{subjectStyle(s.key, s.color, s.icon).emoji}</span>
               <div className="flex-1">
                 <div className="flex justify-between text-sm font-bold">
                   <span>{l(s.name)}</span>
@@ -98,7 +98,7 @@ export default function MePage() {
                     {t('level')} {s.level.level}
                   </span>
                 </div>
-                <Progress value={s.level.progress * 100} barClassName={subjectStyle(s.key).bg} />
+                <Progress value={s.level.progress * 100} barClassName={subjectStyle(s.key, s.color, s.icon).bg} />
               </div>
             </div>
           ))}

@@ -11,7 +11,7 @@ import { errMessage } from '@/components/teacher/helpers';
 import { MissionDraftCard } from '@/components/teacher/mission-draft-card';
 import { MissionList } from '@/components/teacher/mission-list';
 import { TopicPicker } from '@/components/teacher/topic-picker';
-import type { Subject, TeacherDashboard } from '@/components/teacher/types';
+import type { TeacherDashboard } from '@/components/teacher/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input, Label, Select } from '@/components/ui/input';
@@ -35,7 +35,6 @@ function ClassStudio({ initialClassId }: { initialClassId: string | null }) {
   const l = useL();
   const invalidate = useInvalidate();
   const classes = useApi<ClassSummary[]>('/classes');
-  const subjects = useApi<Subject[]>('/subjects');
 
   const [pickedClass, setPickedClass] = useState<string | null>(initialClassId);
   const classId = pickedClass ?? classes.data?.[0]?.id ?? null;
@@ -51,7 +50,7 @@ function ClassStudio({ initialClassId }: { initialClassId: string | null }) {
   const [genError, setGenError] = useState<string | null>(null);
   const draftsRef = useRef<HTMLDivElement>(null);
 
-  const subjectKey = pickedSubject ?? (dash.data?.topics.some((tp) => tp.subjectKey === 'math') ? 'math' : (dash.data?.topics[0]?.subjectKey ?? null));
+  const subjectKey = pickedSubject && dash.data?.topics.some((tp) => tp.subjectKey === pickedSubject) ? pickedSubject : (dash.data?.topics[0]?.subjectKey ?? null);
   const topic = dash.data?.topics.find((tp) => tp.id === topicId);
 
   const onChange = useCallback((m: Mission) => setDrafts((ds) => ds.map((d) => (d.id === m.id ? m : d))), []);
@@ -141,10 +140,8 @@ function ClassStudio({ initialClassId }: { initialClassId: string | null }) {
             ) : dash.error ? (
               <ErrorState message={dash.error.message} onRetry={() => dash.refetch()} className="py-4" />
             ) : (
-              dash.data &&
-              subjects.data && (
+              dash.data && (
                 <TopicPicker
-                  subjects={subjects.data}
                   dashboard={dash.data}
                   subjectKey={subjectKey}
                   topicId={topicId}
