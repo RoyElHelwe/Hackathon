@@ -30,6 +30,13 @@ export const FONT_BOLD = '/fonts/Tajawal-Bold.ttf';
 
 type V3 = [number, number, number];
 
+/**
+ * Characters the self-hosted font doesn't have (emoji, arrows, shapes). troika would download fallback fonts from a
+ * CDN for them — that fails offline and on locked-down school networks — so 3D text drops them (use EmojiSprite).
+ */
+const NOT_IN_FONT = /[\p{Extended_Pictographic}\u2190-\u21FF\u2500-\u27BF\uFE0F]/gu;
+const clean = (node: ReactNode): ReactNode => (typeof node === 'string' ? node.replace(NOT_IN_FONT, '').replace(/ {2,}/g, ' ').trim() : node);
+
 /** 3D text: wraps, centers, handles Arabic (troika shapes it and lays it out right-to-left). */
 export function VText({
   children,
@@ -69,7 +76,7 @@ export function VText({
       outlineColor={outline}
       lineHeight={1.25}
     >
-      {children}
+      {clean(children)}
     </Text>
   );
 }

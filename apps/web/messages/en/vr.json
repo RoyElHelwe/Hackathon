@@ -49,8 +49,45 @@
     "tts": "Bousla's voice ({n} voices)",
     "ttsHint": "Optional — Bousla's questions are also shown as text.",
     "hello": "Hi! Press “Enter VR test” to step inside.",
-    "itWorks": "It works! 🎉 Press the Meta button to leave.",
+    "itWorks": "It works! Press the Meta button to leave.",
     "enterTest": "Enter VR test",
     "next": "Open Tajriba VR"
+  },
+  "lab": {
+    "you": "You · h = {h} m",
+    "stepOf": "Step {n} of {total}",
+    "start": "Let's go!",
+    "next": "Next",
+    "again": "Another building",
+    "home": "VR home",
+    "toMission": "Now do it for real!",
+    "higher": "Sun higher",
+    "lower": "Sun lower",
+    "sunAngle": "Sun: {deg}°",
+    "wrong": "Almost! Remember: h / s = H / S, so H = h × S ÷ s. Try again.",
+    "intro": {
+      "title": "How tall is that building?",
+      "body": "No ladder, no drone — just the sun! When the sun shines, it hits you and the building at the same angle, so your shadows make triangles with the same shape."
+    },
+    "sun": {
+      "title": "Move the sun",
+      "body": "Use the sun lever on your right. Watch both shadows grow and shrink together — move it at least twice, then press Next."
+    },
+    "measureYou": {
+      "title": "Measure YOUR shadow (s)",
+      "body": "Point at the red ring at the tip of your shadow and press the trigger."
+    },
+    "measureBuilding": {
+      "title": "Measure the building's shadow (S)",
+      "body": "Now point at the ring at the tip of the building's shadow."
+    },
+    "triangles": {
+      "title": "Same shape, different size!",
+      "body": "Your triangle: h = {h} m, s = {s} m, so h ÷ s = {ratio}.\nThe building's triangle has the same shape, so H ÷ S = {ratio} too.\nS = {S} m. How tall is the building?"
+    },
+    "done": {
+      "title": "You found it!",
+      "body": "The building is {H} m tall. You just used similar triangles: H = h × S ÷ s."
+    }
   }
 }

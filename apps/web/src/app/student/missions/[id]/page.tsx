@@ -3,6 +3,7 @@
 import { ArrowLeft, ArrowRight, Check, Clock, HelpCircle, ShieldCheck, Users } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useTranslations } from 'next-intl';
+import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { Bousla, BouslaSays } from '@/components/bousla';
@@ -206,6 +207,12 @@ export default function MissionPage() {
               <BouslaSays mood="happy" size={64}>
                 <span className="font-normal">{l(mission.miniLesson.text)}</span>
               </BouslaSays>
+              {mission.topic?.key === 'geo.similar' && (
+                // the similar-triangles lesson, hands-on: move the sun and measure shadows (works on a laptop too)
+                <Button asChild variant="kidSunny" className="w-full" data-testid="try-vr">
+                  <Link href={`/vr?scene=shadow-lab&mission=${mission.id}`}>🥽 {t('tryVr')}</Link>
+                </Button>
+              )}
               <Button variant="kid" size="pill" className="w-full" onClick={() => go(2)} data-testid="mission-next">
                 {t('gotIt')} <Check />
               </Button>

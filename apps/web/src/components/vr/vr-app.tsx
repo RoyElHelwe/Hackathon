@@ -8,6 +8,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { VRNavCtx, parseScene, sceneParam, type VRScene } from './nav';
 import { HubScene } from './scenes/hub';
+import { ShadowLab } from './scenes/shadow-lab';
 import { XRStage, useVRStore, useVRSupported } from './stage';
 import { vrTest } from './test-hook';
 import { Panel, VButton, VText } from './kit';
@@ -60,7 +61,13 @@ export default function VRApp() {
     <VRNavCtx.Provider value={nav}>
       <div className="fixed inset-0 bg-[#d9ecff]" data-testid="vr-app" data-scene={sceneParam(scene)} data-session={inVR ? 'immersive-vr' : 'none'}>
         <XRStage store={store} debug={debug} onSession={setInVR}>
-          {scene.kind === 'hub' ? <HubScene /> : <Soon onBack={() => go({ kind: 'hub' })} />}
+          {scene.kind === 'hub' ? (
+            <HubScene />
+          ) : scene.kind === 'shadow-lab' ? (
+            <ShadowLab key="lab" missionId={scene.missionId} />
+          ) : (
+            <Soon onBack={() => go({ kind: 'hub' })} />
+          )}
         </XRStage>
 
         <header className="pointer-events-none absolute inset-x-0 top-0 flex items-center gap-2 p-3">
