@@ -36,11 +36,15 @@ interface SocketData {
   ident: SocketIdentity;
   /** client room name ("campus", "study:x") → grant */
   rooms: Map<string, RoomGrant>;
+  /** last emote/reaction time (throttle) */
+  lastFx?: number;
 }
 
 type Ack = { ok: true; [k: string]: unknown } | { ok: false; error: string };
 
 const LAST_SEEN_EVERY_MS = 30_000;
+/** emotes and reactions closer together than this are dropped (spam guard) */
+const FX_MIN_GAP_MS = 1_000;
 
 /**
  * The Tajriba Campus realtime hub: presence, movement, emotes, WebRTC signaling and live exam transcripts.
@@ -169,7 +173,7 @@ export class CampusGateway implements OnGatewayInit, OnGatewayDisconnect {
   emote(@ConnectedSocket() client: Socket, @MessageBody() body: unknown) {
     const msg = this.parse(emoteMsg, body);
     const ctx = msg && this.inRoom(client, msg.room);
-    if (!msg || !ctx || ctx.state.spectator) return;
+    if (!msg || !ctx || ctx.state.spectator || this.throttled(client)) return;
     client.to(ctx.grant.key).emit('player:emote', { room: msg.room, userId: ctx.state.userId, emote: msg.emote });
     if (ctx.grant.refId) void this.sessionLog.log(this.kind(ctx.grant), ctx.grant.refId, ctx.state.userId, 'EMOTE', { emote: msg.emote });
   }
@@ -178,7 +182,7 @@ export class CampusGateway implements OnGatewayInit, OnGatewayDisconnect {
   reaction(@ConnectedSocket() client: Socket, @MessageBody() body: unknown) {
     const msg = this.parse(reactionMsg, body);
     const ctx = msg && this.inRoom(client, msg.room);
-    if (!msg || !ctx || ctx.state.spectator) return;
+    if (!msg || !ctx || ctx.state.spectator || this.throttled(client)) return;
     client.to(ctx.grant.key).emit('player:reaction', { room: msg.room, userId: ctx.state.userId, emoji: msg.emoji });
     if (ctx.grant.refId) void this.sessionLog.log(this.kind(ctx.grant), ctx.grant.refId, ctx.state.userId, 'REACTION', { emoji: msg.emoji });
   }
@@ -213,6 +217,15 @@ export class CampusGateway implements OnGatewayInit, OnGatewayDisconnect {
   }
 
   // ---------- helpers ----------
+
+  /** true = drop this emote/reaction (one per FX_MIN_GAP_MS per socket). */
+  private throttled(client: Socket): boolean {
+    const data = client.data as SocketData;
+    const now = Date.now();
+    if (data.lastFx && now - data.lastFx < FX_MIN_GAP_MS) return true;
+    data.lastFx = now;
+    return false;
+  }
 
   private inRoom(client: Socket, room: string): { grant: RoomGrant; state: PlayerState } | null {
     const data = client.data as SocketData;

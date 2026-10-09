@@ -1,5 +1,5 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { I18nText, pickText, STUDY_ABANDON_MS, STUDY_INVITE_TTL_MS, STUDY_MIN_XP_MS, STUDY_XP } from '@tajriba/shared';
+import { BadRequestException, ConflictException, ForbiddenException, HttpException, HttpStatus, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { dayKey, I18nText, pickText, STUDY_ABANDON_MS, STUDY_INVITE_TTL_MS, STUDY_MIN_XP_MS, STUDY_XP, STUDY_XP_DAILY_CAP } from '@tajriba/shared';
 import { AiService } from '../ai/ai.service';
 import { discussionCards } from '../ai/tasks';
 import { AuthContext } from '../common/auth-context';
@@ -23,6 +23,9 @@ const sessionInclude = {
 @Injectable()
 export class StudySessionsService {
   private readonly logger = new Logger('StudySessions');
+  /** minimum gap between two invites from the same student to the same classmate (overridable in tests) */
+  inviteGapMs = 10_000;
+  private readonly lastInvite = new Map<string, number>();
 
   constructor(
     private readonly prisma: PrismaService,
@@ -65,6 +68,7 @@ export class StudySessionsService {
     const classId = body.classId && shared.some((s) => s.classId === body.classId) ? body.classId : shared[0]?.classId;
     if (!classId) throw new ForbiddenException('You can only study with classmates.');
     await this.actors.assert(a, 'write', 'study_session', { schoolId: actor.schoolId, classId, participantIds: [a.userId, body.partnerId] });
+    this.throttleInvite(a.userId, body.partnerId);
 
     await this.expireStale();
     const busy = await this.prisma.studySession.findFirst({
@@ -77,7 +81,7 @@ export class StudySessionsService {
 
     let topicName: string | null = null;
     if (body.topicId) {
-      const t = await this.prisma.topic.findUnique({ where: { id: body.topicId }, select: { name: true } });
+      const t = await this.schoolTopic(body.topicId, actor.schoolId);
       topicName = t ? pickText(t.name as I18nText, a.user.locale) : null;
     }
     const s = await this.prisma.studySession.create({
@@ -103,7 +107,7 @@ export class StudySessionsService {
     await this.actors.assert(a, 'read', 'study_session', { schoolId: s.class.schoolId, classId: s.classId, participantIds });
     let topic: string | null = null;
     if (s.topicId) {
-      const t = await this.prisma.topic.findUnique({ where: { id: s.topicId }, select: { name: true } });
+      const t = await this.schoolTopic(s.topicId, s.class.schoolId);
       topic = t ? pickText(t.name as I18nText, a.user.locale) : null;
     }
     const events = await this.sessionLog.list('STUDY', id);
@@ -202,7 +206,7 @@ export class StudySessionsService {
     const s = await this.load(a, id, 'read');
     let topic = '';
     if (s.topicId) {
-      const t = await this.prisma.topic.findUnique({ where: { id: s.topicId }, select: { name: true } });
+      const t = await this.schoolTopic(s.topicId, s.class.schoolId);
       topic = t ? pickText(t.name as I18nText, a.user.locale) : '';
     }
     if (!topic) {
@@ -245,6 +249,7 @@ export class StudySessionsService {
     const lasted = s.startedAt ? now.getTime() - s.startedAt.getTime() : 0;
     if (lasted >= STUDY_MIN_XP_MS) {
       for (const p of s.participants.filter((x) => x.joinedAt)) {
+        if (await this.dailyCapReached(p.userId, now)) continue;
         const before = await this.gamification.totalXp(p.userId);
         await this.gamification.addXp(p.userId, STUDY_XP, 'STUDY_SESSION', id, s.class.subjectId);
         await this.gamification.recordActivity(p.userId, now);
@@ -268,6 +273,37 @@ export class StudySessionsService {
       }
     }
     return n;
+  }
+
+  /** A topic usable in this school: global or the school's own subject, and (for lesson skills) the school's course. */
+  private schoolTopic(topicId: string, schoolId: string) {
+    return this.prisma.topic.findFirst({
+      where: { id: topicId, subject: { OR: [{ schoolId: null }, { schoolId }] }, OR: [{ courseId: null }, { course: { schoolId } }] },
+      select: { name: true },
+    });
+  }
+
+  private throttleInvite(fromId: string, toId: string) {
+    const key = `${fromId}>${toId}`;
+    const now = Date.now();
+    const last = this.lastInvite.get(key);
+    if (last && now - last < this.inviteGapMs) {
+      throw new HttpException({ message: 'You just invited this classmate — give them a few seconds.', code: 'INVITE_TOO_SOON' }, HttpStatus.TOO_MANY_REQUESTS);
+    }
+    this.lastInvite.set(key, now);
+    if (this.lastInvite.size > 5_000) {
+      for (const [k, t] of this.lastInvite) if (now - t >= this.inviteGapMs) this.lastInvite.delete(k);
+    }
+  }
+
+  /** STUDY_XP_DAILY_CAP rewarded sessions per student per (Beirut) day. */
+  private async dailyCapReached(userId: string, now: Date): Promise<boolean> {
+    const recent = await this.prisma.xpEvent.findMany({
+      where: { studentId: userId, reason: 'STUDY_SESSION', createdAt: { gte: new Date(now.getTime() - 26 * 3_600_000) } },
+      select: { createdAt: true },
+    });
+    const today = dayKey(now);
+    return recent.filter((e) => dayKey(e.createdAt) === today).length >= STUDY_XP_DAILY_CAP;
   }
 
   private async expireStale(now = new Date()): Promise<number> {

@@ -14,6 +14,11 @@ import {
 } from '@tajriba/shared';
 import { defineTask, JSON_RULES, lang, stableNumber } from '../task';
 
+/** Output budget for exam tasks that write one block per question: 600 + 250 × questions, at least the task default, max 6000. */
+export function examMaxTokens(questions: number, taskDefault = 0): number {
+  return Math.min(6000, Math.max(taskDefault, 600 + 250 * Math.max(0, questions)));
+}
+
 // ---------- prepareExam: question bank sized to the interview time ----------
 
 export interface PrepareExamInput {

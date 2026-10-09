@@ -94,6 +94,22 @@ describe('Campus realtime', () => {
     expect(joined).toHaveLength(1);
   });
 
+  it('parents cannot enter the school courtyard; teachers can', async () => {
+    const mona = await connect(await ctx.as('mona'));
+    expect(await emit(mona, 'room:join', { room: 'campus' })).toEqual({ ok: false, error: 'forbidden' });
+    const rana = await connect(await ctx.as('rana'));
+    expect(await emit(rana, 'room:join', { room: 'campus' })).toMatchObject({ ok: true });
+  });
+
+  it('logout drops the user\'s sockets', async () => {
+    const cookie = await ctx.as('omar');
+    const s = await connect(cookie);
+    const closed = new Promise((r) => s.on('disconnect', r));
+    await ctx.http().post('/auth/logout').set('Cookie', cookie).expect(201);
+    await closed;
+    expect(s.connected).toBe(false);
+  });
+
   it('rejects unknown or forbidden rooms', async () => {
     const lea = await connect(await ctx.as('lea'));
     expect(await emit(lea, 'room:join', { room: 'admin:1' })).toEqual({ ok: false, error: 'forbidden' });

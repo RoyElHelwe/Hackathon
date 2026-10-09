@@ -34,6 +34,10 @@ const schema = z.object({
   TURN_URLS: z.string().optional().default(''),
   TURN_USERNAME: z.string().optional().default(''),
   TURN_CREDENTIAL: z.string().optional().default(''),
+  // Mic recordings (stored in Postgres): per-school budget, retention, and whether study sessions are recorded at all
+  RECORDINGS_MAX_MB_PER_SCHOOL: z.coerce.number().positive().default(300),
+  RECORDINGS_RETENTION_DAYS: z.coerce.number().positive().default(14),
+  RECORD_STUDY_SESSIONS: bool,
   CRON_ENABLED: z
     .string()
     .optional()

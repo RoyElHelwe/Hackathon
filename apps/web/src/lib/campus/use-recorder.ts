@@ -13,18 +13,21 @@ function pickMime(): string | null {
   return '';
 }
 
-async function uploadChunk(id: string, seq: number, blob: Blob) {
+/** 'full' = the recording or the school's recording space is full (413): stop recording. */
+async function uploadChunk(id: string, seq: number, blob: Blob): Promise<'ok' | 'full'> {
   for (let attempt = 0; attempt < 4; attempt++) {
     const form = new FormData();
     form.append('chunk', blob, `chunk-${seq}.webm`);
     try {
       const res = await fetch(`/api/recordings/${id}/chunks?seq=${seq}`, { method: 'POST', body: form, credentials: 'include', keepalive: blob.size < 60_000 });
-      if (res.ok || res.status === 403 || res.status === 404 || res.status === 413) return;
+      if (res.status === 413) return 'full';
+      if (res.ok || res.status === 403 || res.status === 404) return 'ok';
     } catch {
       /* offline: retry */
     }
     await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
   }
+  return 'ok';
 }
 
 /**
@@ -66,7 +69,13 @@ export function useRecorder(opts: { kind: 'STUDY' | 'EXAM'; refId: string | null
           if (!e.data.size || !recId.current) return;
           const n = seq.current++;
           const rid = recId.current;
-          queue.current = queue.current.then(() => uploadChunk(rid, n, e.data));
+          queue.current = queue.current.then(async () => {
+            if (recId.current !== rid) return;
+            if ((await uploadChunk(rid, n, e.data)) === 'full' && !cancelled) {
+              setError('full');
+              stop();
+            }
+          });
         };
         r.onstop = () => {
           const rid = recId.current;

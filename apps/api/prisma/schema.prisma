@@ -247,6 +247,8 @@ model Lesson {
   /// per attachment {title,type,status,note?,codes?} of the last gamify run
   contentReport    Json?
   contentChangedAt DateTime?
+  /// lesson text collected at the last gamify run (≤ 60 000 chars), reused by exam prep
+  contentText      String?
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
 
@@ -838,6 +840,8 @@ model Recording {
   chunks RecordingChunk[]
 
   @@index([kind, refId])
+  @@index([schoolId])
+  @@index([startedAt])
 }
 
 model RecordingChunk {

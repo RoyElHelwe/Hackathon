@@ -8,6 +8,7 @@ import {
   ExamQuestion,
   ExamReport,
   I18nText,
+  InterviewTurnOutput,
   MAX_FOLLOW_UPS,
   MOOD_EMOJI,
   pickText,
@@ -15,7 +16,7 @@ import {
   WRAP_UP_SECONDS,
 } from '@tajriba/shared';
 import { AiService } from '../ai/ai.service';
-import { examReport, interviewTurn } from '../ai/tasks';
+import { examMaxTokens, examReport, interviewTurn } from '../ai/tasks';
 import { AuthContext } from '../common/auth-context';
 import { ActorService } from '../common/actor.service';
 import { Prisma } from '../generated/prisma/client';
@@ -41,15 +42,20 @@ const LINES = {
   en: {
     hello: (n: number, min: number) => `Hi! I'm Bousla 👋 We'll talk for about ${min} minutes — ${n} questions. Take your time and think out loud. Ready? Here's the first one:`,
     bye: "That's all my questions! You did great. Your teacher will share your results soon. 🎉",
+    goOn: "Thanks for sharing that! Let's keep going.",
     timeUp: "Time's up! Thanks for talking with me — your teacher will share your results soon.",
   },
   ar: {
     hello: (n: number, min: number) => `مرحباً! أنا بوصلة 👋 سنتحدث لمدة ${min} دقائق تقريباً — ${n} أسئلة. خذ وقتك وفكّر بصوت عالٍ. جاهز؟ إليك السؤال الأول:`,
     bye: 'انتهت أسئلتي! أحسنت كثيراً. سيشاركك معلمك النتيجة قريباً. 🎉',
+    goOn: 'شكراً لمشاركتك! لنكمل.',
     timeUp: 'انتهى الوقت! شكراً لحديثك معي — سيشاركك معلمك النتيجة قريباً.',
   },
 };
 const lines = (locale: string) => (locale === 'ar' ? LINES.ar : LINES.en);
+
+/** How long finishing/grading waits for an answer that is still being evaluated (the AI call times out at 20 s). */
+const INFLIGHT_WAIT_MS = 25_000;
 
 /**
  * The private AI interview room. The server owns the clock (`endsAt`), the question order and every turn, so a reload
@@ -61,6 +67,8 @@ export class ExamRoomService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger('ExamRoom');
   private readonly timers = new Map<string, ReturnType<typeof setTimeout>>();
   private readonly busy = new Set<string>();
+  /** answer evaluations in progress, per attempt: finishing and grading wait for them */
+  private readonly inflight = new Map<string, Promise<unknown>>();
   private readonly grading = new Map<string, Promise<void>>();
 
   constructor(
@@ -137,23 +145,39 @@ export class ExamRoomService implements OnModuleInit, OnModuleDestroy {
     }
     if (this.busy.has(attemptId)) throw new ConflictException({ message: 'Bousla is still thinking about your last answer.', code: 'BUSY' });
     this.busy.add(attemptId);
+    const job = this.evaluate(a, att, text, now);
+    this.inflight.set(attemptId, job);
     try {
-      const bank = this.bank(att);
-      const q = bank[Math.min(att.questionIdx, bank.length - 1)];
-      const turns = await this.prisma.examTurn.findMany({ where: { attemptId }, orderBy: { idx: 'asc' } });
-      const last = turns[turns.length - 1];
-      // Retry after an AI failure: the previous answer is still waiting for a reply — replace its text.
-      const studentTurn =
-        last?.role === 'STUDENT'
-          ? await this.prisma.examTurn.update({ where: { id: last.id }, data: { text, at: now } })
-          : await this.addTurn(attemptId, { role: 'STUDENT', text, questionId: q.id });
-      this.bus.toRoom(`exam:${attemptId}`, 'exam:turn', { attemptId, turn: this.turnView(studentTurn, true) });
+      return await job;
+    } finally {
+      this.inflight.delete(attemptId);
+      this.busy.delete(attemptId);
+    }
+  }
 
-      const secondsLeft = att.endsAt ? (att.endsAt.getTime() - now.getTime()) / 1000 : 600;
-      const isLast = att.questionIdx >= bank.length - 1;
-      const history = [...turns.filter((t) => t.id !== studentTurn.id), studentTurn].slice(-6).map((t) => ({ role: t.role as 'AI' | 'STUDENT', text: t.text }));
-      const subject = await this.subjectName(att);
-      const out = await this.ai.run(interviewTurn, {
+  private async evaluate(a: AuthContext, att: AttemptWithExam, text: string, now: Date) {
+    const attemptId = att.id;
+    const bank = this.bank(att);
+    const q = bank[Math.min(att.questionIdx, bank.length - 1)];
+    const turns = await this.prisma.examTurn.findMany({ where: { attemptId }, orderBy: { idx: 'asc' } });
+    const last = turns[turns.length - 1];
+    // Retry after an AI failure: the previous answer is still waiting for a reply — replace its text.
+    const studentTurn =
+      last?.role === 'STUDENT'
+        ? await this.prisma.examTurn.update({ where: { id: last.id }, data: { text, at: now } })
+        : await this.addTurn(attemptId, { role: 'STUDENT', text, questionId: q.id });
+    // Spectating teachers get the scored view through the teacher endpoints; the room (student included) never sees evals.
+    this.bus.toRoom(`exam:${attemptId}`, 'exam:turn', { attemptId, turn: this.turnView(studentTurn, false) });
+
+    const secondsLeft = att.endsAt ? (att.endsAt.getTime() - now.getTime()) / 1000 : 600;
+    const isLast = att.questionIdx >= bank.length - 1;
+    const history = [...turns.filter((t) => t.id !== studentTurn.id), studentTurn].slice(-6).map((t) => ({ role: t.role as 'AI' | 'STUDENT', text: t.text }));
+    const subject = await this.subjectName(att);
+    const L = lines(att.exam.locale);
+    let out: InterviewTurnOutput;
+    let scored = true;
+    try {
+      out = await this.ai.run(interviewTurn, {
         locale: att.exam.locale,
         subject,
         question: { text: q.text, expectedPoints: q.expectedPoints, followUp: q.followUp },
@@ -164,29 +188,36 @@ export class ExamRoomService implements OnModuleInit, OnModuleDestroy {
         isLastQuestion: isLast,
         secondsLeft,
       });
+    } catch (e) {
+      // AI down or slow: never stall the interview. Move on deterministically; this turn stays unscored (the report counts it as missing evidence).
+      this.logger.warn(`Interview turn AI failed for ${attemptId}, continuing without a score: ${e instanceof Error ? e.message : e}`);
+      scored = false;
+      out = { assessment: { score: 0, understood: false, notes: '' }, mood: 'calm', emoji: MOOD_EMOJI.calm, reaction: L.goOn, next: isLast ? 'FINISH' : 'NEXT_QUESTION' };
+    }
+    if (scored) {
       const score = Math.round(out.assessment.score * 10) / 10;
       await this.prisma.examTurn.update({ where: { id: studentTurn.id }, data: { eval: { ...out.assessment, score } as Prisma.InputJsonValue, mood: out.mood } });
-
-      const mood = out.mood as ExamMood;
-      const emoji = out.emoji || MOOD_EMOJI[mood];
-      const timeLow = secondsLeft <= WRAP_UP_SECONDS;
-      const L = lines(att.exam.locale);
-      if (!timeLow && out.next === 'FOLLOW_UP' && att.followUps < MAX_FOLLOW_UPS && (out.followUpQuestion || q.followUp)) {
-        await this.prisma.examAttempt.update({ where: { id: attemptId }, data: { followUps: { increment: 1 } } });
-        await this.addTurn(attemptId, { role: 'AI', text: `${out.reaction} ${out.followUpQuestion || q.followUp}`, emoji, mood, questionId: q.id });
-      } else if (!timeLow && !isLast) {
-        // The model may say FINISH early; questions are left and there is time, so the interview goes on.
-        const next = bank[att.questionIdx + 1];
-        await this.prisma.examAttempt.update({ where: { id: attemptId }, data: { questionIdx: att.questionIdx + 1, followUps: 0 } });
-        await this.addTurn(attemptId, { role: 'AI', text: `${out.reaction} ${next.text}`, emoji, mood, questionId: next.id });
-      } else {
-        await this.addTurn(attemptId, { role: 'AI', text: `${out.reaction} ${timeLow ? L.timeUp : L.bye}`, emoji: '🎉', mood, questionId: null });
-        await this.finish(attemptId, timeLow ? 'TIME_UP' : 'COMPLETED');
-      }
-      return this.view(a, await this.reload(attemptId));
-    } finally {
-      this.busy.delete(attemptId);
     }
+    // The interview may have ended while the AI was thinking (timer, window closed): keep the assessment, add no new questions.
+    const current = await this.prisma.examAttempt.findUnique({ where: { id: attemptId }, select: { status: true } });
+    if (current?.status !== 'IN_PROGRESS') return this.view(a, await this.reload(attemptId));
+
+    const mood = out.mood as ExamMood;
+    const emoji = out.emoji || MOOD_EMOJI[mood];
+    const timeLow = secondsLeft <= WRAP_UP_SECONDS;
+    if (!timeLow && out.next === 'FOLLOW_UP' && att.followUps < MAX_FOLLOW_UPS && (out.followUpQuestion || q.followUp)) {
+      await this.prisma.examAttempt.update({ where: { id: attemptId }, data: { followUps: { increment: 1 } } });
+      await this.addTurn(attemptId, { role: 'AI', text: `${out.reaction} ${out.followUpQuestion || q.followUp}`, emoji, mood, questionId: q.id });
+    } else if (!timeLow && !isLast) {
+      // The model may say FINISH early; questions are left and there is time, so the interview goes on.
+      const next = bank[att.questionIdx + 1];
+      await this.prisma.examAttempt.update({ where: { id: attemptId }, data: { questionIdx: att.questionIdx + 1, followUps: 0 } });
+      await this.addTurn(attemptId, { role: 'AI', text: `${out.reaction} ${next.text}`, emoji, mood, questionId: next.id });
+    } else {
+      await this.addTurn(attemptId, { role: 'AI', text: `${out.reaction} ${timeLow ? L.timeUp : L.bye}`, emoji: '🎉', mood, questionId: null });
+      await this.finishNow(attemptId, timeLow ? 'TIME_UP' : 'COMPLETED');
+    }
+    return this.view(a, await this.reload(attemptId));
   }
 
   /** "I'm done" from the student. */
@@ -198,8 +229,22 @@ export class ExamRoomService implements OnModuleInit, OnModuleDestroy {
 
   // ---------- lifecycle ----------
 
-  /** Ends the interview once (IN_PROGRESS → GRADING) and grades it in the background. */
+  /** Waits (bounded) for an answer of this attempt that is still being evaluated. */
+  private async settle(attemptId: string) {
+    const job = this.inflight.get(attemptId);
+    if (!job) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    await Promise.race([job.catch(() => undefined), new Promise((r) => (timer = setTimeout(r, INFLIGHT_WAIT_MS)))]);
+    clearTimeout(timer);
+  }
+
+  /** Ends the interview once (IN_PROGRESS → GRADING) and grades it in the background. A late answer is evaluated first. */
   async finish(attemptId: string, reason: string): Promise<boolean> {
+    await this.settle(attemptId);
+    return this.finishNow(attemptId, reason);
+  }
+
+  private async finishNow(attemptId: string, reason: string): Promise<boolean> {
     const flipped = await this.prisma.examAttempt.updateMany({
       where: { id: attemptId, status: 'IN_PROGRESS' },
       data: { status: 'GRADING', finishedAt: new Date(), finishReason: reason },
@@ -252,6 +297,7 @@ export class ExamRoomService implements OnModuleInit, OnModuleDestroy {
 
   /** AI report; if the AI is down the deterministic report (from per-answer scores) is used so the teacher is never blocked. */
   private async grade(attemptId: string) {
+    await this.settle(attemptId);
     const att = await this.reload(attemptId);
     if (att.status !== 'GRADING') return;
     const bank = this.bank(att);
@@ -266,7 +312,7 @@ export class ExamRoomService implements OnModuleInit, OnModuleDestroy {
     let report: ExamReport;
     let fallback = false;
     try {
-      report = await this.ai.run(examReport, input);
+      report = await this.ai.run(examReport, input, { maxTokens: examMaxTokens(bank.length, examReport.maxTokens) });
     } catch {
       report = examReport.mock(input);
       fallback = true;

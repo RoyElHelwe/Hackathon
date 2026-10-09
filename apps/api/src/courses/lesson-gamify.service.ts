@@ -7,7 +7,7 @@ import { ActorService } from '../common/actor.service';
 import { Mission, Prisma } from '../generated/prisma/client';
 import { missionFromAi, MissionsService } from '../missions/missions.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { LessonContentService } from './lesson-content.service';
+import { LessonContentService, MAX_LESSON_CHARS } from './lesson-content.service';
 
 /** Error codes stored in Lesson.gamifyError; the web shows a localized message per code. */
 export type GamifyErrorCode = 'AI_UNAVAILABLE' | 'INTERRUPTED' | 'FAILED';
@@ -88,7 +88,7 @@ export class LessonGamifyService implements OnModuleInit {
     const count = Math.min(3, Math.max(1, opts.count ?? 2));
     const content = await this.content.collect(lessonId, { locale });
     // Saved before the AI call so the teacher sees what could be read even when gamifying fails.
-    await this.prisma.lesson.update({ where: { id: lessonId }, data: { contentReport: content.report as unknown as Prisma.InputJsonValue } });
+    await this.prisma.lesson.update({ where: { id: lessonId }, data: { contentReport: content.report as unknown as Prisma.InputJsonValue, contentText: content.text.slice(0, MAX_LESSON_CHARS) } });
     const out = await this.ai.run(
       gamifyLesson,
       {

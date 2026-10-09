@@ -6,6 +6,7 @@ import { CoursesService } from '../courses/courses.service';
 import { ExamsService } from '../exams/exams.service';
 import { StudySessionsService } from '../study-sessions/study-sessions.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { RecordingsService } from '../recordings/recordings.service';
 import { PeerReviewsService } from '../peer-reviews/peer-reviews.service';
 import { StuckService } from '../progress/stuck.service';
 
@@ -22,6 +23,7 @@ export class JobsService {
     private readonly prisma: PrismaService,
     private readonly exams: ExamsService,
     private readonly studySessions: StudySessionsService,
+    private readonly recordings: RecordingsService,
   ) {}
 
   @Cron(CronExpression.EVERY_10_MINUTES)
@@ -64,5 +66,13 @@ export class JobsService {
     if (!config.CRON_ENABLED) return;
     const n = await this.studySessions.sweep();
     if (n) this.logger.log(`Study sessions swept: ${n}`);
+  }
+
+  /** Recording retention (RECORDINGS_RETENTION_DAYS); keeps the Postgres-backed audio within the plan's storage. */
+  @Cron(CronExpression.EVERY_DAY_AT_3AM, { timeZone: 'Asia/Beirut' })
+  async recordingRetention() {
+    if (!config.CRON_ENABLED) return;
+    const n = await this.recordings.purgeOld();
+    if (n) this.logger.log(`Old recordings deleted: ${n}`);
   }
 }

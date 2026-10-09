@@ -178,7 +178,8 @@ export class LessonContentService {
     return { ok: false };
   }
 
-  async collect(lessonId: string, opts: { locale?: string } = {}): Promise<LessonContent> {
+  /** `textOnly`: no video/recording download, transcoding or AI watching — media attachments are listed by title only. */
+  async collect(lessonId: string, opts: { locale?: string; textOnly?: boolean } = {}): Promise<LessonContent> {
     const lesson = await this.prisma.lesson.findUnique({ where: { id: lessonId }, include: { course: { include: { subject: true } } } });
     if (!lesson) throw new NotFoundException();
     const ctx: Ctx = {
@@ -225,6 +226,11 @@ export class LessonContentService {
         continue;
       }
       if (m.type === 'youtube') {
+        if (opts.textOnly) {
+          parts.push(`## Video: ${m.title}\n${m.url}`);
+          add(m.title, 'youtube', 'title');
+          continue;
+        }
         if (mediaCount >= MAX_MEDIA_PER_LESSON) {
           parts.push(`## Video: ${m.title}\n${m.url}`);
           add(m.title, 'youtube', 'title', ['media_limit']);
@@ -241,6 +247,11 @@ export class LessonContentService {
       }
 
       const mediaHint = /^(video|audio)\//.test(m.mimeType ?? '');
+      if (opts.textOnly && mediaHint) {
+        parts.push(`## ${m.mimeType?.startsWith('audio/') ? 'Audio' : 'Video'}: ${m.title}`);
+        add(m.title, m.mimeType?.startsWith('audio/') ? 'audio' : 'video', 'title');
+        continue;
+      }
       let text: string | null = null;
       if (!mediaHint) {
         const r = await this.withOwners(ctx, m.id, (c) => this.drive.readText(c, m.id!));
@@ -264,6 +275,11 @@ export class LessonContentService {
       }
 
       // Not text: maybe a video or a recording.
+      if (opts.textOnly) {
+        parts.push(`## File: ${m.title}`);
+        add(m.title, 'file', 'title');
+        continue;
+      }
       const meta = await this.withOwners(ctx, m.id, (c) => this.drive.meta(c, m.id!));
       const mime = meta.ok ? meta.value.mimeType : '';
       const kind = mime.startsWith('video/') ? 'video' : mime.startsWith('audio/') ? 'audio' : null;

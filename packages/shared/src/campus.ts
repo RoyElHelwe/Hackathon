@@ -288,3 +288,5 @@ export const STUDY_INVITE_TTL_MS = 10 * 60_000;
 /** Minimum active time for a study session to earn XP. */
 export const STUDY_MIN_XP_MS = 5 * 60_000;
 export const STUDY_XP = 20;
+/** study sessions that give XP per student per day (Asia/Beirut); more sessions are fine, just not rewarded */
+export const STUDY_XP_DAILY_CAP = 3;

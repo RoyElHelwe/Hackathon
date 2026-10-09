@@ -24,6 +24,8 @@ export class RoomAccessService {
     if (!ref) return null;
 
     if (ref.kind === 'campus') {
+      // The school courtyard is for students; the school's teachers may drop in. Parents, directors and admins may not.
+      if (who.role !== 'STUDENT' && who.role !== 'TEACHER') return null;
       return { key: roomKey(ref, who.schoolId), map: 'campus', kind: 'campus', refId: null, spectator: false, spawnIndex: 0, publishes: false };
     }
 

@@ -1,6 +1,10 @@
 import { io, Socket } from 'socket.io-client';
 import { STUDY_MIN_XP_MS } from '@tajriba/shared';
+import { AiService } from '../src/ai/ai.service';
+import { config } from '../src/config';
+import { LessonContentService } from '../src/courses/lesson-content.service';
 import { ExamPrepService } from '../src/exams/exam-prep.service';
+import { MAX_RECORDING_BYTES, RecordingsService } from '../src/recordings/recordings.service';
 import { ExamRoomService } from '../src/exams/exam-room.service';
 import { ExamsService } from '../src/exams/exams.service';
 import { CampusGateway } from '../src/realtime/campus.gateway';
@@ -28,6 +32,7 @@ beforeAll(async () => {
   const addr = ctx.app.getHttpServer().address();
   url = `http://127.0.0.1:${typeof addr === 'object' && addr ? addr.port : 0}`;
   ctx.app.get(CampusGateway).graceMs = 200;
+  ctx.app.get(StudySessionsService).inviteGapMs = 0;
 });
 afterEach(() => {
   for (const s of sockets.splice(0)) s.disconnect();
@@ -125,6 +130,10 @@ describe('Peer study sessions', () => {
     const sid = r.body.id;
     await ctx.http().post(`/study-sessions/${sid}/accept`).set('Cookie', await ctx.as('karim')).expect(201);
     const lea = await ctx.as('lea');
+    // study sessions are recorded only when enabled
+    config.RECORD_STUDY_SESSIONS = false;
+    await ctx.http().post('/recordings').set('Cookie', lea).send({ kind: 'STUDY', refId: sid, mime: 'audio/webm' }).expect(409);
+    config.RECORD_STUDY_SESSIONS = true;
     const rec = (await ctx.http().post('/recordings').set('Cookie', lea).send({ kind: 'STUDY', refId: sid, mime: 'audio/webm;codecs=opus' }).expect(201)).body;
     await ctx.http().post(`/recordings/${rec.id}/chunks?seq=0`).set('Cookie', lea).attach('chunk', Buffer.from('AAAA'), { filename: 'c0.webm', contentType: 'audio/webm' }).expect(201);
     await ctx.http().post(`/recordings/${rec.id}/chunks?seq=1`).set('Cookie', lea).attach('chunk', Buffer.from('BBB'), { filename: 'c1.webm', contentType: 'audio/webm' }).expect(201);
@@ -140,6 +149,37 @@ describe('Peer study sessions', () => {
     expect(list[0]).toMatchObject({ bytes: 7, chunks: 2 });
     await ctx.http().get(`/recordings/${rec.id}/audio`).set('Cookie', await ctx.as('omar')).expect(403);
     await ctx.http().get(`/recordings/${rec.id}/audio`).set('Cookie', await ctx.as('mona')).expect(403);
+
+    // Range requests (Safari playback, seeking): 206 with the exact bytes across chunk boundaries
+    const part = await ctx.http().get(`/recordings/${rec.id}/audio`).set('Cookie', lea).set('Range', 'bytes=2-5').expect(206);
+    expect(part.headers['content-range']).toBe('bytes 2-5/7');
+    expect(part.headers['accept-ranges']).toBe('bytes');
+    expect(part.headers['content-length']).toBe('4');
+    expect(Buffer.from(part.body).toString()).toBe('AABB');
+    const tail = await ctx.http().get(`/recordings/${rec.id}/audio`).set('Cookie', lea).set('Range', 'bytes=-2').expect(206);
+    expect(Buffer.from(tail.body).toString()).toBe('BB');
+    await ctx.http().get(`/recordings/${rec.id}/audio`).set('Cookie', lea).set('Range', 'bytes=9-').expect(416);
+
+    // per-recording cap and per-school budget → friendly 413
+    const rec2 = (await ctx.http().post('/recordings').set('Cookie', lea).send({ kind: 'STUDY', refId: sid, mime: 'audio/webm' }).expect(201)).body;
+    await ctx.prisma.recording.update({ where: { id: rec2.id }, data: { bytes: MAX_RECORDING_BYTES - 1 } });
+    const full = await ctx.http().post(`/recordings/${rec2.id}/chunks?seq=0`).set('Cookie', lea).attach('chunk', Buffer.from('CC'), { filename: 'c.webm', contentType: 'audio/webm' }).expect(413);
+    expect(full.body.code).toBe('RECORDING_FULL');
+    await ctx.prisma.recording.update({ where: { id: rec2.id }, data: { bytes: 0 } });
+    const budget = config.RECORDINGS_MAX_MB_PER_SCHOOL;
+    config.RECORDINGS_MAX_MB_PER_SCHOOL = 8 / (1024 * 1024); // 8 bytes; the school already has 7
+    try {
+      const over = await ctx.http().post(`/recordings/${rec2.id}/chunks?seq=0`).set('Cookie', lea).attach('chunk', Buffer.from('CC'), { filename: 'c.webm', contentType: 'audio/webm' }).expect(413);
+      expect(over.body.code).toBe('SCHOOL_BUDGET_FULL');
+    } finally {
+      config.RECORDINGS_MAX_MB_PER_SCHOOL = budget;
+    }
+
+    // retention removes old recordings
+    await ctx.prisma.recording.update({ where: { id: rec2.id }, data: { startedAt: new Date(Date.now() - (config.RECORDINGS_RETENTION_DAYS + 1) * 86_400_000) } });
+    expect(await ctx.app.get(RecordingsService).purgeOld()).toBeGreaterThanOrEqual(1);
+    expect(await ctx.prisma.recording.findUnique({ where: { id: rec2.id } })).toBeNull();
+    config.RECORD_STUDY_SESSIONS = false;
     await ctx.http().post(`/study-sessions/${sid}/end`).set('Cookie', lea).expect(201);
   });
 });
@@ -151,8 +191,13 @@ describe('AI voice-interview exams', () => {
   it('teacher creates an exam over chosen lessons; AI prepares questions sized to the time', async () => {
     const rana = await ctx.as('rana');
     const cls = await ctx.prisma.class.findFirstOrThrow({ where: { name: '8B Math' } });
-    const lessons = await ctx.prisma.lesson.findMany({ where: { courseId: cls.courseId! } });
-    expect(lessons.length).toBeGreaterThan(0);
+    const lessons = await ctx.prisma.lesson.findMany({ where: { courseId: cls.courseId! }, orderBy: { position: 'asc' } });
+    expect(lessons.length).toBeGreaterThan(1);
+    // Text stored at gamify time is reused; other lessons get a text-only read (no video download / AI watching).
+    await ctx.prisma.lesson.update({ where: { id: lessons[0].id }, data: { contentText: 'STORED-LESSON-TEXT-MARKER' } });
+    const collect = jest.spyOn(ctx.app.get(LessonContentService), 'collect');
+    const ai = ctx.app.get(AiService);
+    const run = jest.spyOn(ai, 'run');
     const now = Date.now();
     const r = await ctx.http().post('/exams').set('Cookie', rana).send({
       classId: cls.id,
@@ -165,6 +210,13 @@ describe('AI voice-interview exams', () => {
     }).expect(201);
     examId = r.body.id;
     await ctx.app.get(ExamPrepService).idle();
+    expect(collect.mock.calls.some(([id]) => id === lessons[0].id)).toBe(false);
+    expect(collect.mock.calls.length).toBe(lessons.length - 1);
+    expect(collect.mock.calls.every(([, o]) => o?.textOnly === true)).toBe(true);
+    const prep = run.mock.calls.find(([task]) => task.name === 'prepareExam');
+    expect((prep?.[1] as { content: string }).content).toContain('STORED-LESSON-TEXT-MARKER');
+    collect.mockRestore();
+    run.mockRestore();
     const d = (await ctx.http().get(`/exams/${examId}`).set('Cookie', rana).expect(200)).body;
     expect(d.status).toBe('READY');
     expect(d.questions).toHaveLength(7); // 10 minutes → ~1 question / 90 s
@@ -265,6 +317,31 @@ describe('AI voice-interview exams', () => {
     expect(atts.find((a) => a.student.devHandle === 'omar')?.status).toBe('MISSED');
     expect(atts.find((a) => a.student.devHandle === 'karim')?.status).toBe('GRADED');
     expect((await ctx.prisma.exam.findUniqueOrThrow({ where: { id: examId } })).status).toBe('CLOSED');
+  });
+
+  it('an AI failure mid-interview still moves on to the next question (unscored turn)', async () => {
+    const att = await ctx.prisma.examAttempt.findFirstOrThrow({ where: { exam: { title: 'Geometry voice check-in' }, student: { devHandle: 'karim' } } });
+    const karim = await ctx.as('karim');
+    await ctx.http().post(`/exam-attempts/${att.id}/start`).set('Cookie', karim).expect(201);
+    const ai = ctx.app.get(AiService);
+    const orig = ai.run.bind(ai);
+    const run = jest.spyOn(ai, 'run').mockImplementation(async (task, input, opts) => {
+      if (task.name === 'interviewTurn') throw new Error('AI down');
+      return orig(task, input, opts);
+    });
+    try {
+      const st = (await ctx.http().post(`/exam-attempts/${att.id}/answer`).set('Cookie', karim).send({ text: 'A long enough answer about the area of triangles and why it works.' }).expect(201)).body;
+      expect(st.status).toBe('IN_PROGRESS');
+      expect(st.questionIdx).toBe(1);
+      expect(st.turns[st.turns.length - 1]).toMatchObject({ role: 'AI', questionId: 'q2' });
+      expect(st.turns[st.turns.length - 1].text).toMatch(/keep going/);
+    } finally {
+      run.mockRestore();
+    }
+    const turn = await ctx.prisma.examTurn.findFirstOrThrow({ where: { attemptId: att.id, role: 'STUDENT' } });
+    expect(turn.eval).toBeNull();
+    await ctx.http().post(`/exam-attempts/${att.id}/finish`).set('Cookie', karim).expect(201);
+    await ctx.app.get(ExamRoomService).idle();
   });
 
   it('time limit: an answer after endsAt finishes the interview', async () => {

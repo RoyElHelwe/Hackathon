@@ -126,7 +126,9 @@ function StudyRoom({ session, myId, withMic, names }: { session: StudySessionDet
   const t = useTranslations('campus');
   const room = useRoom(session.room);
   const voice = useVoice({ room: session.room, selfId: myId, publishes: room.publishes, peers: room.players, joined: room.status === 'joined' });
-  const rec = useRecorder({ kind: 'STUDY', refId: session.id, stream: voice.stream, active: session.status === 'ACTIVE' });
+  // Study sessions are recorded only when the server enables it (RECORD_STUDY_SESSIONS).
+  const { data: cfg } = useApi<{ recordStudySessions?: boolean }>('/auth/config');
+  const rec = useRecorder({ kind: 'STUDY', refId: session.id, stream: voice.stream, active: session.status === 'ACTIVE' && cfg?.recordStudySessions === true });
   const scene = useRef<SceneApi | null>(null);
   const [confirm, setConfirm] = useState(false);
   const [ending, setEnding] = useState(false);

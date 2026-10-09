@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { Avatar } from '@/components/ui/misc';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown';
 import { api } from '@/lib/api';
+import { resetSocket } from '@/lib/campus/socket';
 import { useMe } from '@/lib/hooks';
 import { useSettings } from './theme';
 import { useQueryClient } from '@tanstack/react-query';
@@ -22,12 +23,14 @@ export function UserMenu() {
 
   const switchRole = async (membershipId: string) => {
     const r = await api<{ home: string }>('/me/active-role', { body: { membershipId } });
+    resetSocket();
     qc.clear();
     router.push(r.home);
     router.refresh();
   };
   const logout = async () => {
     await api('/auth/logout', { method: 'POST' });
+    resetSocket();
     qc.clear();
     router.push('/login');
   };

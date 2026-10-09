@@ -23,6 +23,20 @@ export class RealtimeBus {
     this.server?.to(`user:${userId}`).emit(event, data);
   }
 
+  /**
+   * Drops every socket of a user so none keeps an old identity. `reconnect: true` closes only the transport, so the
+   * client reconnects and re-authenticates with its current cookie (role switch); false ends them for good (logout).
+   */
+  disconnectUser(userId: string, reconnect: boolean) {
+    const ids = this.server?.sockets.adapter.rooms.get(`user:${userId}`);
+    for (const id of [...(ids ?? [])]) {
+      const s = this.server?.sockets.sockets.get(id);
+      if (!s) continue;
+      if (reconnect) s.conn.close();
+      else s.disconnect(true);
+    }
+  }
+
   isOnline(userId: string): boolean {
     return (this.server?.sockets.adapter.rooms.get(`user:${userId}`)?.size ?? 0) > 0;
   }

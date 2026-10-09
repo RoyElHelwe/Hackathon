@@ -85,6 +85,16 @@ export class AuthService {
     return token;
   }
 
+  /** User id of a session cookie, or null when missing/invalid. */
+  async sessionUserId(token: string | undefined): Promise<string | null> {
+    if (!token) return null;
+    try {
+      return (await this.jwt.verifyAsync<SessionPayload>(token)).sub;
+    } catch {
+      return null;
+    }
+  }
+
   clear(res: Response) {
     res.clearCookie(SESSION_COOKIE, { path: '/' });
   }

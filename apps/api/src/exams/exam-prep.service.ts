@@ -1,7 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { I18nText, pickText, prepareExamOutput, questionCountFor } from '@tajriba/shared';
 import { AiService, AiUnavailableError } from '../ai/ai.service';
-import { prepareExam } from '../ai/tasks';
+import { examMaxTokens, prepareExam } from '../ai/tasks';
 import { LessonContentService } from '../courses/lesson-content.service';
 import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -63,8 +63,14 @@ export class ExamPrepService implements OnModuleInit {
     const lessons = exam.lessons.map((l) => l.lesson).sort((a, b) => a.position - b.position);
     let content = '';
     for (const l of lessons) {
-      const c = await this.content.collect(l.id).catch(() => ({ text: `${l.title}\n${l.description}` }));
-      content += `\n\n## ${l.title}\n${c.text}`;
+      // Stored at gamify time; otherwise a text-only read (never re-downloads or re-watches videos).
+      const text =
+        l.contentText ??
+        (await this.content
+          .collect(l.id, { textOnly: true })
+          .then((c) => c.text)
+          .catch(() => `${l.title}\n${l.description}`));
+      content += `\n\n## ${l.title}\n${text}`;
       if (content.length > MAX_EXAM_CHARS) break;
     }
     const count = questionCountFor(exam.durationMin);
@@ -79,7 +85,7 @@ export class ExamPrepService implements OnModuleInit {
         durationMin: exam.durationMin,
         locale: exam.locale,
       },
-      { fresh: true },
+      { fresh: true, maxTokens: examMaxTokens(count, prepareExam.maxTokens) },
     );
     // Stable ids q1..qN whatever the model returned.
     const questions = out.questions.slice(0, count).map((q, i) => ({ ...q, id: `q${i + 1}` }));

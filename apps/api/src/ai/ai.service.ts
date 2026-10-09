@@ -119,6 +119,8 @@ export interface RunOptions {
   provider?: Record<string, unknown>;
   /** bypass cache (e.g. "regenerate") */
   fresh?: boolean;
+  /** overrides the task's maxTokens (output sized to the input, e.g. number of exam questions) */
+  maxTokens?: number;
 }
 
 @Injectable()
@@ -209,7 +211,7 @@ export class AiService {
     for (let attempt = 0; attempt < 2; attempt++) {
       let reply: CompletionResult;
       try {
-        reply = await this.transport.complete(model, messages, { jsonMode, maxTokens: task.maxTokens, timeoutMs: task.timeoutMs, provider });
+        reply = await this.transport.complete(model, messages, { jsonMode, maxTokens: opts.maxTokens ?? task.maxTokens, timeoutMs: task.timeoutMs, provider });
       } catch (e) {
         const status = (e as { status?: number }).status;
         if (status === 400 && jsonMode) {

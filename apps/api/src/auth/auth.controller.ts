@@ -1,13 +1,14 @@
-import { BadRequestException, Body, Controller, Get, NotFoundException, Patch, Post, Query, Res } from '@nestjs/common';
-import type { Response } from 'express';
+import { BadRequestException, Body, Controller, Get, NotFoundException, Patch, Post, Query, Req, Res } from '@nestjs/common';
+import type { Request, Response } from 'express';
 import { activeRoleBody, LOCALES } from '@tajriba/shared';
 import { z } from 'zod';
 import { config } from '../config';
-import { AuthContext } from '../common/auth-context';
+import { AuthContext, SESSION_COOKIE } from '../common/auth-context';
 import { Auth, Can, Public } from '../common/decorators';
 import { encrypt } from '../common/crypto';
 import { ZodPipe } from '../common/zod.pipe';
 import { PrismaService } from '../prisma/prisma.service';
+import { RealtimeBus } from '../realtime/realtime.bus';
 import { AuthService, CLASSROOM_SCOPES, LOGIN_SCOPES } from './auth.service';
 
 const safeNext = (next?: string) => (next && next.startsWith('/') && !next.startsWith('//') ? next : undefined);
@@ -17,12 +18,13 @@ export class AuthController {
   constructor(
     private readonly auth: AuthService,
     private readonly prisma: PrismaService,
+    private readonly bus: RealtimeBus,
   ) {}
 
   @Public()
   @Get('config')
   authConfig() {
-    return { google: this.auth.googleEnabled(), devLogin: config.DEV_LOGIN, classroomProvider: config.CLASSROOM_PROVIDER };
+    return { google: this.auth.googleEnabled(), devLogin: config.DEV_LOGIN, classroomProvider: config.CLASSROOM_PROVIDER, recordStudySessions: config.RECORD_STUDY_SESSIONS };
   }
 
   @Public()
@@ -100,8 +102,10 @@ export class AuthController {
 
   @Public()
   @Post('logout')
-  logout(@Res({ passthrough: true }) res: Response) {
+  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const userId = await this.auth.sessionUserId(req.cookies?.[SESSION_COOKIE]);
     this.auth.clear(res);
+    if (userId) this.bus.disconnectUser(userId, false);
     return { ok: true };
   }
 }
@@ -113,6 +117,7 @@ export class MeController {
   constructor(
     private readonly auth: AuthService,
     private readonly prisma: PrismaService,
+    private readonly bus: RealtimeBus,
   ) {}
 
   @Can('read', 'self')
@@ -164,6 +169,8 @@ export class MeController {
     const m = a.memberships.find((x) => x.id === body.membershipId && x.status === 'APPROVED');
     if (!m) throw new BadRequestException('That role is not available.');
     await this.auth.issue(res, { sub: a.userId, mid: m.id });
+    // Open sockets reconnect and re-authenticate with the new active membership.
+    this.bus.disconnectUser(a.userId, true);
     const home = { DIRECTOR: '/director', ADMIN: '/director', TEACHER: '/teacher', PARENT: '/parent', STUDENT: '/student' }[m.role];
     return { ok: true, home };
   }

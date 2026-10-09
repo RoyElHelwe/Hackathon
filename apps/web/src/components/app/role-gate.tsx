@@ -4,6 +4,7 @@ import type { Role } from '@tajriba/shared';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { ApiError } from '@/lib/api';
+import { resetSocket } from '@/lib/campus/socket';
 import { useMe } from '@/lib/hooks';
 import { LocaleSync } from './locale-sync';
 import { PageSkeleton } from './states';
@@ -45,6 +46,7 @@ function SwitchPrompt({ membershipId }: { membershipId: string }) {
   const router = useRouter();
   useEffect(() => {
     fetch('/api/me/active-role', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ membershipId }) }).then(() => {
+      resetSocket();
       window.location.reload();
     });
   }, [membershipId, router]);
