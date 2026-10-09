@@ -69,6 +69,28 @@ describe('permissions — missions', () => {
   });
 });
 
+describe('permissions — course mission templates', () => {
+  const tpl = { classId: null, courseClassIds: ['c2', 'c1'] };
+  it('teacher reads/writes a template when teaching any section of its course', () => {
+    expect(can(teacher, 'write', 'mission_draft', tpl)).toBe(true);
+    expect(can(teacher, 'read', 'mission', tpl)).toBe(true);
+    expect(can(teacher, 'write', 'mission_draft', { classId: null, courseClassIds: ['c2'] })).toBe(false);
+    expect(can(teacher, 'read', 'mission_draft', { classId: null, courseClassIds: ['c2'] })).toBe(false);
+  });
+  it('director/admin read only; students and parents never see templates', () => {
+    expect(can(director, 'read', 'mission_draft', tpl)).toBe(true);
+    expect(can(admin, 'write', 'mission_draft', tpl)).toBe(false);
+    expect(can(student, 'read', 'mission', tpl)).toBe(false);
+    expect(can(parent, 'read', 'mission', { ...tpl, audience: 'FAMILY' })).toBe(false);
+  });
+  it('section missions and global missions keep their old rules', () => {
+    expect(can(teacher, 'write', 'mission_draft', { classId: 'c1', courseClassIds: ['c2'] })).toBe(true);
+    expect(can(teacher, 'write', 'mission_draft', { classId: 'c2', courseClassIds: ['c1'] })).toBe(false);
+    expect(can(teacher, 'read', 'mission', { classId: null })).toBe(true);
+    expect(can(teacher, 'write', 'mission', { classId: null })).toBe(false);
+  });
+});
+
 describe('permissions — submissions', () => {
   it('director reads all', () => expect(can(director, 'read', 'submission', { classId: 'c1', ownerId: 'x' })).toBe(true));
   it('teacher reviews own classes only', () => {

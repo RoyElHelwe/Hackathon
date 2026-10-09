@@ -45,6 +45,17 @@ export const aiMission = z.object({
 export type AiMission = z.infer<typeof aiMission>;
 export const generateMissionsOutput = z.object({ missions: z.array(aiMission).min(1).max(5) });
 
+/** "Gamify this lesson": one skill (topic) for the lesson + 1–3 missions (same item schema as generateMissions). */
+export const gamifyLessonOutput = z.object({
+  skill: z.object({
+    name: z.object({ en: z.string().min(2).max(120), ar: z.string().min(1).max(120) }),
+    description: z.object({ en: z.string().min(3).max(600), ar: z.string().min(1).max(600) }),
+    icon: z.string().min(1).max(40),
+  }),
+  missions: generateMissionsOutput.shape.missions,
+});
+export type GamifyLessonOutput = z.infer<typeof gamifyLessonOutput>;
+
 export const safetyCheckOutput = z.object({
   safe: z.boolean(),
   issues: z.array(z.string()),
@@ -160,6 +171,9 @@ export const updateMissionBody = z.object({
   estimatedMin: z.number().int().min(5).max(240).optional(),
   audience: z.enum(MISSION_AUDIENCES).optional(),
 });
+/** POST /lessons/:id/gamify — number of missions to draft (default 2). */
+export const gamifyLessonBody = z.object({ count: z.number().int().min(1).max(3).optional() }).default({});
+export type GamifyLessonBody = z.infer<typeof gamifyLessonBody>;
 export const approveMissionBody = z.object({
   postToClassroom: z.boolean().default(false),
   dueAt: z.iso.datetime().optional().nullable(),

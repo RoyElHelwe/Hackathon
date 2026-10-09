@@ -142,6 +142,16 @@ export function roleMayEver(role: Role, action: Action, resource: Resource): boo
 const has = (list: string[] | undefined, id: string | null | undefined) => !!id && !!list?.includes(id);
 const intersects = (a: string[] | undefined, b: string[] | undefined) => !!a && !!b && a.some((x) => b.includes(x));
 
+/**
+ * Teacher access to a mission: a section mission → teaches that section; a course template (classId null +
+ * courseClassIds) → teaches any section of the course; a global mission (neither) → read-only.
+ */
+function teacherMission(actor: Actor, action: Action, target: Target): boolean {
+  if (target.classId != null) return has(actor.classIdsTaught, target.classId);
+  if (target.courseClassIds) return intersects(actor.classIdsTaught, target.courseClassIds);
+  return action === 'read';
+}
+
 /** Object-level permission check (CLAUDE.md §4). Default deny. */
 export function can(actor: Actor, action: Action, resource: Resource, target: Target = {}): boolean {
   if (!roleMayEver(actor.role, action, resource)) return false;
@@ -169,12 +179,12 @@ export function can(actor: Actor, action: Action, resource: Resource, target: Ta
 
     case 'mission_draft':
       if (isAdmin) return action === 'read';
-      if (actor.role === 'TEACHER') return target.classId == null ? action === 'read' : teaches;
+      if (actor.role === 'TEACHER') return teacherMission(actor, action, target);
       return false;
 
     case 'mission':
       if (isAdmin) return action === 'read';
-      if (actor.role === 'TEACHER') return target.classId == null ? action === 'read' : teaches;
+      if (actor.role === 'TEACHER') return teacherMission(actor, action, target);
       if (actor.role === 'STUDENT') return action === 'read' && enrolled;
       if (actor.role === 'PARENT')
         return action === 'read' && target.audience === 'FAMILY' && has(actor.childClassIds, target.classId);
