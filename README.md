@@ -65,6 +65,12 @@ Then follow the video script in `CLAUDE.md` §17. Golden path: Lea → Map → *
 
 Classroom scopes requested incrementally by teachers: `classroom.courses.readonly`, `classroom.rosters.readonly`, `classroom.profile.emails`, `classroom.coursework.students`. Missions published from Tajriba become Classroom assignments (with a link back), and validated scores are written back as grades.
 
+## Tajriba Campus (2D study rooms + AI voice exams)
+- **Students → Campus tab**: a 2D courtyard (Phaser) where classmates walk around. Invite a classmate → a private study room with voice (WebRTC), emotes, AI discussion cards; every session is recorded (voices + actions) and ends only on "End session".
+- **Exam rooms**: the teacher creates an exam from Classroom lessons (Teacher → Exams), Bousla prepares questions sized to the time limit, and each student gets a private room where Bousla interviews them by voice and reacts with emojis. Scores stay hidden until the teacher approves. Teachers can watch any room live and listen.
+- Voice works best in Chrome. For strict school networks set `TURN_URLS`, `TURN_USERNAME`, `TURN_CREDENTIAL`.
+- Demo: as Lea open Campus → "Geometry voice check-in"; as Rana open Exams → watch Lea's room. "Angles quick interview" has graded interviews waiting for approval.
+
 ## Tests
 
 ```bash

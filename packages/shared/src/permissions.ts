@@ -21,6 +21,10 @@ export const RESOURCES = [
   'self',
   'subject',
   'course',
+  'study_session',
+  'exam',
+  'exam_attempt',
+  'recording',
 ] as const;
 export type Resource = (typeof RESOURCES)[number];
 
@@ -50,6 +54,10 @@ export interface Target {
   membershipUserId?: string;
   /** section (class) ids of a course */
   courseClassIds?: string[];
+  /** students taking part in a study session (or the owner of an exam attempt) */
+  participantIds?: string[];
+  /** exam result released to the student by the teacher */
+  released?: boolean;
 }
 
 /**
@@ -72,6 +80,10 @@ const ROLE_TABLE: Record<Role, Partial<Record<Resource, Action[]>>> = {
     self: ['read', 'write'],
     subject: ['read', 'write'],
     course: ['read', 'write'],
+    study_session: ['read'],
+    exam: ['read'],
+    exam_attempt: ['read'],
+    recording: ['read'],
   },
   ADMIN: {
     school: ['read', 'write'],
@@ -88,6 +100,10 @@ const ROLE_TABLE: Record<Role, Partial<Record<Resource, Action[]>>> = {
     self: ['read', 'write'],
     subject: ['read', 'write'],
     course: ['read', 'write'],
+    study_session: ['read'],
+    exam: ['read'],
+    exam_attempt: ['read'],
+    recording: ['read'],
   },
   TEACHER: {
     school: ['read'],
@@ -105,6 +121,10 @@ const ROLE_TABLE: Record<Role, Partial<Record<Resource, Action[]>>> = {
     self: ['read', 'write'],
     subject: ['read'],
     course: ['read', 'write'],
+    study_session: ['read'],
+    exam: ['read', 'write'],
+    exam_attempt: ['read', 'review'],
+    recording: ['read'],
   },
   STUDENT: {
     class: ['read'],
@@ -118,6 +138,10 @@ const ROLE_TABLE: Record<Role, Partial<Record<Resource, Action[]>>> = {
     self: ['read', 'write'],
     subject: ['read'],
     course: ['read'],
+    study_session: ['read', 'write'],
+    exam: ['read'],
+    exam_attempt: ['read', 'write'],
+    recording: ['read', 'write'],
   },
   PARENT: {
     class: ['read'],
@@ -132,6 +156,7 @@ const ROLE_TABLE: Record<Role, Partial<Record<Resource, Action[]>>> = {
     self: ['read', 'write'],
     subject: ['read'],
     course: ['read'],
+    exam_attempt: ['read'],
   },
 };
 
@@ -231,12 +256,51 @@ export function can(actor: Actor, action: Action, resource: Resource, target: Ta
       if (actor.role === 'PARENT') return action === 'read' && intersects(actor.childClassIds, target.courseClassIds);
       return false;
 
+    case 'study_session':
+      if (isAdmin) return action === 'read';
+      if (actor.role === 'TEACHER') return teaches;
+      // students: only sessions they take part in, in a class they are enrolled in
+      if (actor.role === 'STUDENT') return enrolled && has(target.participantIds, actor.userId);
+      return false;
+
+    case 'exam':
+      if (isAdmin) return action === 'read';
+      if (actor.role === 'TEACHER') return teaches;
+      if (actor.role === 'STUDENT') return action === 'read' && enrolled;
+      return false;
+
+    case 'exam_attempt':
+      if (isAdmin) return action === 'read';
+      if (actor.role === 'TEACHER') return teaches;
+      if (actor.role === 'STUDENT') return own;
+      // parents see a child's exam only once the teacher released the result
+      if (actor.role === 'PARENT') return action === 'read' && child && !!target.released;
+      return false;
+
+    case 'recording':
+      if (isAdmin) return action === 'read';
+      if (actor.role === 'TEACHER') return teaches;
+      if (actor.role === 'STUDENT') return own || (action === 'read' && has(target.participantIds, actor.userId));
+      return false;
+
     case 'family':
     case 'message':
     case 'notification':
     case 'self':
       return true;
   }
+  return false;
+}
+
+/**
+ * Exam scores (AI and teacher) are hidden from students and parents until the teacher releases the result.
+ * Teachers of the class and school admins always see them.
+ */
+export function canSeeExamScore(actor: Actor, target: { classId?: string | null; ownerId?: string; released?: boolean }): boolean {
+  if (actor.role === 'DIRECTOR' || actor.role === 'ADMIN') return true;
+  if (actor.role === 'TEACHER') return has(actor.classIdsTaught, target.classId);
+  if (actor.role === 'STUDENT') return target.ownerId === actor.userId && !!target.released;
+  if (actor.role === 'PARENT') return has(actor.childIds, target.ownerId) && !!target.released;
   return false;
 }
 

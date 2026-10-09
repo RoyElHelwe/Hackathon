@@ -50,3 +50,20 @@ Non-obvious choices made while building Tajriba. CLAUDE.md is the spec; this fil
 - Student mode uses chunky "press" buttons, Baloo Bhaijaan 2 headings and motion; adult mode reuses the tokens with calmer layouts. Dark mode is a class on `<html>` saved in localStorage.
 - Bousla is an SVG component with 5 moods; PWA icons are generated from it (`node scripts/make-icons.cjs`).
 - Sounds are synthesized with Web Audio (no assets) and are off by default.
+
+## Tajriba Campus (2D peer study rooms + AI voice-interview exams)
+- **Inspired by dev_pulse** (2D office, Phaser + Socket.IO + WebRTC), rebuilt for Tajriba. Its bugs were deliberately not copied: presence is tracked **per socket** (a second tab or a stale disconnect never evicts a user), a 15 s grace period hides reconnects, and sockets are authenticated from the same `tj_session` cookie as HTTP.
+- **Sockets never end sessions.** A study session ends only on "End session" or when nobody has been in it for 3 min (cron sweep); an exam attempt ends on the server-owned timer (`endsAt`), "I'm done", the last question, or the window closing. A disconnect is logged (`LEAVE`/`REJOIN`) and the room resumes from the DB.
+- **Socket.IO through the Next.js `/api` rewrite** (WebSocket upgrade and polling both work), path `/api/socket.io` with `addTrailingSlash: false` because Next redirects trailing slashes. No extra port, so it fits the single Heroku dyno.
+- Global HTTP guards skip non-HTTP contexts; the gateway authenticates in Socket.IO middleware and every room join goes through `RoomAccessService` (default deny).
+- **Voice = native WebRTC mesh** (≤ 3 peers: 2 students, or a student + watching teachers), signaling over Socket.IO, STUN + optional TURN from env (`TURN_URLS`…, served by `GET /realtime/ice`). simple-peer was not used (needs Node polyfills in the browser). Glare-free: between two speakers the smaller user id calls; a student always calls a spectator; spectators never send audio.
+- **Proximity audio** in the study room: `<audio>` volume follows avatar distance (`voiceGain`).
+- **Recording**: each participant records only their own mic (MediaRecorder, Opus 24 kbps, 10 s chunks) and uploads ordered chunks (`RecordingChunk`, idempotent per seq); concatenated chunks of one recorder are a playable webm. ~180 KB/min, stored in Postgres like uploads. The AI side of exams is stored as text turns. A "Recording" chip and a notice before joining are always shown.
+- **Action log**: `SessionEvent` (join/leave/rejoin/emote/reaction/turns/spectator/end) is the replay timeline.
+- **AI voice**: browser speech-to-text (Chrome) + `speechSynthesis` for Bousla, OpenRouter text model for `prepareExam`, `interviewTurn`, `examReport`, `discussionCards`. Typed answers always work as a fallback. Student answers and lesson content are wrapped in tags and treated as untrusted (prompt-injection guard).
+- **Question bank sized to the time**: ~1 question per 90 s (3–12). At most 1 follow-up per question; under 25 s left the interviewer wraps up. If the model says FINISH while questions and time remain, the interview goes on.
+- **Emotions**: `interviewTurn` returns the student's detected `mood` + an empathetic `emoji`; Bousla's face reacts (nervous → reassuring, confident → cheering).
+- **Hidden scores**: per-answer assessments, AI score and report are only shaped out to staff (`canSeeExamScore`) until the teacher approves/releases; parents then see the result. If the AI is down at grading time, the deterministic report (from per-answer scores) is used so the teacher is never blocked.
+- **Spectating is transparent**: the student sees "Your teacher is watching".
+- Exams are built from **course lessons** (Classroom posts) of the class's course; the seed creates the 8B lessons exactly as lesson sync would (same fingerprint + source ids) so a later sync keeps them.
+- Map art is drawn with Phaser primitives (the dev_pulse "Modern Office" tileset forbids redistribution).

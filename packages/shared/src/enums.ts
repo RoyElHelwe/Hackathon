@@ -37,6 +37,8 @@ export const XP_REASONS = [
   'HELPFUL_REVIEW',
   'STREAK',
   'FAMILY_MISSION',
+  'STUDY_SESSION',
+  'EXAM_DONE',
 ] as const;
 export type XpReason = (typeof XP_REASONS)[number];
 
@@ -49,6 +51,11 @@ export const NOTIFICATION_TYPES = [
   'SUMMARY_READY',
   'MEMBER_PENDING',
   'SUBMISSION_VALIDATED',
+  'STUDY_INVITE',
+  'STUDY_ACCEPTED',
+  'EXAM_SCHEDULED',
+  'EXAM_OPEN',
+  'EXAM_RESULT_RELEASED',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 

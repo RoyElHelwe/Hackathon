@@ -30,6 +30,10 @@ const schema = z.object({
   AI_MAX_TOKENS: z.coerce.number().default(1200),
   AI_CACHE: bool,
   DEV_LOGIN: bool,
+  // WebRTC: optional TURN relay for strict school networks (comma-separated URLs, e.g. turn:relay.example.com:3478)
+  TURN_URLS: z.string().optional().default(''),
+  TURN_USERNAME: z.string().optional().default(''),
+  TURN_CREDENTIAL: z.string().optional().default(''),
   CRON_ENABLED: z
     .string()
     .optional()

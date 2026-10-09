@@ -17,6 +17,6 @@ import { FakeMediaTools, FfmpegMediaTools, MEDIA_TOOLS } from './media-tools';
     LessonContentService,
     LessonGamifyService,
   ],
-  exports: [LessonGamifyService, DRIVE_READER, MEDIA_TOOLS],
+  exports: [LessonGamifyService, LessonContentService, DRIVE_READER, MEDIA_TOOLS],
 })
 export class LessonsModule {}

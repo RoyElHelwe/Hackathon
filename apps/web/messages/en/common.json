@@ -73,7 +73,12 @@
     "MISSION_PUBLISHED": "New mission: {title}",
     "SUMMARY_READY": "Your weekly summary is ready",
     "MEMBER_PENDING": "{name} wants to join your school",
-    "SUBMISSION_VALIDATED": "Mission validated: {title} ✓"
+    "SUBMISSION_VALIDATED": "Mission validated: {title} ✓",
+    "STUDY_INVITE": "{name} invited you to study together 📚",
+    "STUDY_ACCEPTED": "{name} joined your study room!",
+    "EXAM_SCHEDULED": "New exam: {title}",
+    "EXAM_OPEN": "Your exam room is open: {title}",
+    "EXAM_RESULT_RELEASED": "Exam result ready: {title}"
   },
   "noContacts": "No conversations yet.",
   "typeMessage": "Write a message…",

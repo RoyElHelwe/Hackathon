@@ -20,6 +20,11 @@ const ICON: Record<string, string> = {
   SUMMARY_READY: '📬',
   MEMBER_PENDING: '🙋',
   SUBMISSION_VALIDATED: '✅',
+  STUDY_INVITE: '📚',
+  STUDY_ACCEPTED: '🤝',
+  EXAM_SCHEDULED: '🗓️',
+  EXAM_OPEN: '🎙️',
+  EXAM_RESULT_RELEASED: '🏆',
 };
 
 function linkFor(n: NotificationItem): string | undefined {
@@ -37,6 +42,14 @@ function linkFor(n: NotificationItem): string | undefined {
       return '/director/members';
     case 'SUMMARY_READY':
       return '/parent';
+    case 'STUDY_INVITE':
+    case 'STUDY_ACCEPTED':
+      return `/student/study/${p.sessionId}`;
+    case 'EXAM_SCHEDULED':
+    case 'EXAM_OPEN':
+      return '/student/campus';
+    case 'EXAM_RESULT_RELEASED':
+      return p.studentId ? `/parent?child=${p.studentId}` : `/student/exams/${p.attemptId}`;
   }
 }
 
@@ -54,7 +67,7 @@ export function NotificationsBell({ className }: { className?: string }) {
     const p = n.payload as Record<string, unknown>;
     const title = p.title ? l(p.title as I18nText) : '';
     return t(`notif.${n.type}`, {
-      name: String(p.name ?? p.studentName ?? ''),
+      name: String(p.name ?? p.studentName ?? p.fromName ?? p.byName ?? ''),
       title,
       level: String(p.level ?? ''),
       badge: p.name && typeof p.name === 'object' ? l(p.name as I18nText) : '',

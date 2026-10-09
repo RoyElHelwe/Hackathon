@@ -11,3 +11,4 @@ export * from './translate-name';
 export * from './parse-courses';
 export * from './gamify-lesson';
 export * from './summarize-video';
+export * from './exam-interview';

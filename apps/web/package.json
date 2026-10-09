@@ -29,9 +29,11 @@
     "motion": "12.23.28",
     "next": "15.5.27",
     "next-intl": "4.14.9",
+    "phaser": "3.90.0",
     "react": "19.1.9",
     "react-dom": "19.1.9",
     "recharts": "3.2.1",
+    "socket.io-client": "4.8.1",
     "tailwind-merge": "3.7.0",
     "zod": "4.6.5"
   },

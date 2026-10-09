@@ -148,6 +148,10 @@ model User {
   messagesReceived Message[]        @relation("MessageTo")
   uploads          Upload[]
   teacherSubjects  TeacherSubject[]
+  studyHosted      StudySession[]            @relation("StudyHost")
+  studySessions    StudySessionParticipant[]
+  examsCreated     Exam[]                    @relation("ExamCreator")
+  examAttempts     ExamAttempt[]
 }
 
 model Membership {
@@ -201,6 +205,8 @@ model Class {
   enrollments   Enrollment[]
   missions      Mission[]
   lessonSources LessonSource[]
+  studySessions StudySession[]
+  exams         Exam[]
 
   @@index([schoolId])
   @@index([courseId])
@@ -247,6 +253,7 @@ model Lesson {
   course  Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
   sources LessonSource[]
   topic   Topic?
+  exams   ExamLesson[]
 
   @@unique([courseId, fingerprint])
   @@index([courseId, position])
@@ -654,4 +661,191 @@ model AiLog {
   ok        Boolean
   error     String?
   createdAt DateTime @default(now())
+}
+
+// ---- Tajriba Campus: peer study sessions, AI voice-interview exams, recordings ----
+
+enum StudySessionStatus {
+  INVITED
+  ACTIVE
+  ENDED
+  DECLINED
+  EXPIRED
+}
+
+/// Two classmates studying together in a private 2D room (voice + emotes), fully recorded.
+model StudySession {
+  id          String             @id @default(cuid())
+  schoolId    String
+  classId     String
+  topicId     String?
+  hostId      String
+  status      StudySessionStatus @default(INVITED)
+  roomIndex   Int?
+  startedAt   DateTime?
+  endedAt     DateTime?
+  endedReason String?
+  createdAt   DateTime           @default(now())
+
+  class        Class                     @relation(fields: [classId], references: [id], onDelete: Cascade)
+  host         User                      @relation("StudyHost", fields: [hostId], references: [id], onDelete: Cascade)
+  participants StudySessionParticipant[]
+
+  @@index([classId, status])
+  @@index([status, createdAt])
+}
+
+model StudySessionParticipant {
+  sessionId String
+  userId    String
+  joinedAt  DateTime?
+  leftAt    DateTime?
+  lastSeen  DateTime?
+
+  session StudySession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([sessionId, userId])
+  @@index([userId])
+}
+
+enum ExamStatus {
+  DRAFT
+  PREPARING
+  READY
+  SCHEDULED
+  OPEN
+  CLOSED
+  FAILED
+}
+
+/// AI voice-interview exam over lessons the teacher picked. Scores stay hidden until the teacher releases them.
+model Exam {
+  id                String     @id @default(cuid())
+  schoolId          String
+  classId           String
+  createdById       String
+  title             String
+  locale            String     @default("en")
+  durationMin       Int
+  opensAt           DateTime
+  closesAt          DateTime
+  status            ExamStatus @default(DRAFT)
+  questionBank      Json?
+  prepError         String?
+  resultsReleasedAt DateTime?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  class     Class         @relation(fields: [classId], references: [id], onDelete: Cascade)
+  createdBy User          @relation("ExamCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  lessons   ExamLesson[]
+  attempts  ExamAttempt[]
+
+  @@index([classId])
+  @@index([status, opensAt])
+}
+
+model ExamLesson {
+  examId   String
+  lessonId String
+
+  exam   Exam   @relation(fields: [examId], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@id([examId, lessonId])
+}
+
+enum ExamAttemptStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  GRADING
+  GRADED
+  RELEASED
+  MISSED
+}
+
+model ExamAttempt {
+  id             String            @id @default(cuid())
+  examId         String
+  studentId      String
+  status         ExamAttemptStatus @default(NOT_STARTED)
+  roomIndex      Int
+  questionIdx    Int               @default(0)
+  followUps      Int               @default(0)
+  startedAt      DateTime?
+  endsAt         DateTime?
+  finishedAt     DateTime?
+  finishReason   String?
+  aiScore        Int?
+  aiReport       Json?
+  teacherScore   Int?
+  teacherComment String?
+  approvedById   String?
+  approvedAt     DateTime?
+  lastSeen       DateTime?
+
+  exam    Exam       @relation(fields: [examId], references: [id], onDelete: Cascade)
+  student User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  turns   ExamTurn[]
+
+  @@unique([examId, studentId])
+  @@index([studentId])
+}
+
+model ExamTurn {
+  id         String   @id @default(cuid())
+  attemptId  String
+  idx        Int
+  role       String // AI | STUDENT
+  text       String
+  emoji      String?
+  mood       String?
+  questionId String?
+  eval       Json?
+  at         DateTime @default(now())
+
+  attempt ExamAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+
+  @@unique([attemptId, idx])
+}
+
+/// Action log for study sessions and exam rooms (join/leave/emote/reaction/turn/spectator…).
+model SessionEvent {
+  id      String   @id @default(cuid())
+  kind    String // STUDY | EXAM
+  refId   String
+  userId  String?
+  type    String
+  payload Json     @default("{}")
+  at      DateTime @default(now())
+
+  @@index([kind, refId, at])
+}
+
+/// One participant's mic audio for a study session or exam attempt, uploaded in ordered chunks.
+model Recording {
+  id        String    @id @default(cuid())
+  kind      String // STUDY | EXAM
+  refId     String
+  userId    String
+  schoolId  String
+  mime      String
+  bytes     Int       @default(0)
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+
+  chunks RecordingChunk[]
+
+  @@index([kind, refId])
+}
+
+model RecordingChunk {
+  recordingId String
+  seq         Int
+  data        Bytes
+
+  recording Recording @relation(fields: [recordingId], references: [id], onDelete: Cascade)
+
+  @@id([recordingId, seq])
 }
