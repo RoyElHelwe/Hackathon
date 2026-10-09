@@ -118,7 +118,8 @@
     "recordings": "التسجيلات",
     "noRecordings": "لا تسجيلات بعد.",
     "timeline": "ماذا حدث",
-    "duration": "المدة: {time}"
+    "duration": "المدة: {time}",
+    "activityNotice": "يرى معلّمك ما يحدث في هذه الجلسة (من انضمّ، التفاعلات، المدّة). لا تُسجَّل الأصوات."
   },
   "events": {
     "INVITED": "أرسل دعوة",
@@ -128,7 +129,7 @@
     "LEAVE": "غادر الغرفة",
     "EMOTE": "تعبير",
     "REACTION": "تفاعل",
-    "ENDED": "انتهت الجلسة",
+    "ENDED": "أنهى الجلسة",
     "DECLINED": "رفض",
     "CANCELLED": "ألغى",
     "SPECTATOR_JOINED": "بدأ المعلم المشاهدة",

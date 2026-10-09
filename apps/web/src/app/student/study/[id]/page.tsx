@@ -36,6 +36,10 @@ export default function StudyRoomPage() {
   const [joined, setJoined] = useState<null | { mic: boolean }>(null);
   const [ended, setEnded] = useState<{ xp: number } | null>(null);
   const [accepting, setAccepting] = useState(false);
+  // voices are only recorded when the school turned study recording on; the notice must say what really happens
+  const { data: cfg } = useApi<{ recordStudySessions?: boolean }>('/auth/config');
+  const recordsVoice = cfg?.recordStudySessions === true;
+  const notice = t(recordsVoice ? 'study.recordingNotice' : 'study.activityNotice');
 
   useSocketEvent<{ sessionId: string; xpBy?: Record<string, number> }>('study:ended', (d) => {
     if (d.sessionId !== id) return;
@@ -92,7 +96,7 @@ export default function StudyRoomPage() {
       <Card className="flex flex-col items-center gap-4 p-6 text-center">
         <Bousla mood="happy" size={100} />
         <h1 className="font-display text-2xl font-extrabold">{t('study.invitedYou', { name: partnerName })}</h1>
-        <p className="max-w-sm text-sm text-muted-foreground">{t('study.recordingNotice')}</p>
+        <p className="max-w-sm text-sm text-muted-foreground">{notice}</p>
         <Button variant="kid" size="lg" onClick={accept} loading={accepting} data-testid="accept-study">
           {t('study.accept')}
         </Button>
@@ -105,8 +109,8 @@ export default function StudyRoomPage() {
       <Card className="flex flex-col items-center gap-4 p-6 text-center" data-testid="study-prejoin">
         <BouslaSays mood="curious">{s.status === 'INVITED' ? t('invites.waiting', { name: partnerName }) : t('study.with', { name: partnerName })}</BouslaSays>
         {s.topic && <p className="font-semibold">{t('study.topic', { topic: s.topic })}</p>}
-        <p className="flex max-w-md items-start gap-2 rounded-[14px] bg-coral-soft p-3 text-start text-sm font-semibold text-coral">
-          <span className="mt-1 inline-flex size-2.5 shrink-0 animate-pulse rounded-full bg-coral" /> {t('study.recordingNotice')}
+        <p className={cn('flex max-w-md items-start gap-2 rounded-[14px] p-3 text-start text-sm font-semibold', recordsVoice ? 'bg-coral-soft text-coral' : 'bg-muted text-muted-foreground')}>
+          {recordsVoice && <span className="mt-1 inline-flex size-2.5 shrink-0 animate-pulse rounded-full bg-coral" />} {notice}
         </p>
         <div className="flex flex-wrap justify-center gap-2">
           <Button variant="kid" size="lg" onClick={() => setJoined({ mic: true })} data-testid="join-voice">

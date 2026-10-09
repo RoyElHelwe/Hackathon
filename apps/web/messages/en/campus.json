@@ -118,7 +118,8 @@
     "recordings": "Recordings",
     "noRecordings": "No recordings yet.",
     "timeline": "What happened",
-    "duration": "Duration: {time}"
+    "duration": "Duration: {time}",
+    "activityNotice": "Your teacher sees what happens in this session (who joined, reactions, how long). Voices are not recorded."
   },
   "events": {
     "INVITED": "sent an invite",
@@ -128,7 +129,7 @@
     "LEAVE": "left the room",
     "EMOTE": "emote",
     "REACTION": "reacted",
-    "ENDED": "Session ended",
+    "ENDED": "ended the session",
     "DECLINED": "declined",
     "CANCELLED": "cancelled",
     "SPECTATOR_JOINED": "teacher started watching",

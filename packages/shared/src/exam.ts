@@ -64,35 +64,40 @@ export type ExamQuestion = z.infer<typeof examQuestion>;
 export const prepareExamOutput = z.object({ questions: z.array(examQuestion).min(1).max(15) });
 export type PrepareExamOutput = z.infer<typeof prepareExamOutput>;
 
+/** AI free text: trimmed to `n` chars instead of failing the whole reply (a long note shouldn't cost a student their score). */
+const aiText = (n: number) => z.string().transform((v) => (v.length > n ? `${v.slice(0, n - 1)}…` : v));
+/** AI lists: extra items are dropped instead of failing the reply. */
+const aiList = <T extends z.ZodTypeAny>(item: T, n: number) => z.array(item).transform((a) => a.slice(0, n));
+
 export const interviewTurnOutput = z.object({
   assessment: z.object({
     score: z.number().min(0).max(10),
     understood: z.boolean(),
-    notes: z.string().max(400),
+    notes: aiText(400),
   }),
   mood: z.enum(EXAM_MOODS),
   emoji: z.string().min(1).max(16),
-  reaction: z.string().min(1).max(300),
+  reaction: z.string().min(1).pipe(aiText(300)),
   next: z.enum(['FOLLOW_UP', 'NEXT_QUESTION', 'FINISH']),
-  followUpQuestion: z.string().max(400).optional(),
+  followUpQuestion: aiText(400).optional(),
 });
 export type InterviewTurnOutput = z.infer<typeof interviewTurnOutput>;
 
 export const examReportOutput = z.object({
   score: z.number().int().min(0).max(100),
-  perQuestion: z.array(z.object({ questionId: z.string(), score: z.number().min(0).max(10), comment: z.string().max(400) })).max(15),
-  strengths: z.array(z.string().max(200)).max(5),
-  gaps: z.array(z.string().max(200)).max(5),
-  teacherNotes: z.string().max(800),
-  studentFeedback: z.string().max(600),
+  perQuestion: aiList(z.object({ questionId: z.string(), score: z.number().min(0).max(10), comment: aiText(400) }), 15),
+  strengths: aiList(aiText(200), 5),
+  gaps: aiList(aiText(200), 5),
+  teacherNotes: aiText(800),
+  studentFeedback: aiText(600),
 });
 export type ExamReport = z.infer<typeof examReportOutput>;
 
 export const discussionCardsOutput = z.object({
   cards: z
-    .array(z.object({ kind: z.enum(['QUESTION', 'CHALLENGE', 'FUN']), prompt: z.string().min(3).max(300) }))
+    .array(z.object({ kind: z.enum(['QUESTION', 'CHALLENGE', 'FUN']), prompt: z.string().min(3).pipe(aiText(300)) }))
     .min(3)
-    .max(8),
+    .transform((a) => a.slice(0, 8)),
 });
 export type DiscussionCards = z.infer<typeof discussionCardsOutput>;
 

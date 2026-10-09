@@ -210,8 +210,11 @@ export class StudySessionsService {
       topic = t ? pickText(t.name as I18nText, a.user.locale) : '';
     }
     if (!topic) {
+      // no topic picked: the class's latest skills (cuids sort by creation), so the cards match what the class is learning now
       const cls = await this.prisma.class.findUnique({ where: { id: s.classId }, include: { subject: true } });
-      topic = cls?.subject ? pickText(cls.subject.name as I18nText, a.user.locale) : cls?.name ?? '';
+      const recent = cls?.courseId ? await this.prisma.topic.findMany({ where: { courseId: cls.courseId }, orderBy: { id: 'desc' }, take: 3 }) : [];
+      const subject = cls?.subject ? pickText(cls.subject.name as I18nText, a.user.locale) : cls?.name ?? '';
+      topic = recent.length ? `${subject}: ${recent.map((t) => pickText(t.name as I18nText, a.user.locale)).join(', ')}` : subject;
     }
     return this.ai.run(discussionCards, { topic, locale: a.user.locale || 'en' });
   }

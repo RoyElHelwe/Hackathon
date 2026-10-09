@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowRight, BookOpenCheck, Hourglass } from 'lucide-react';
+import { ArrowRight, BookOpenCheck, Hourglass, Mic } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
@@ -17,6 +17,7 @@ import { subjectStyle } from '@/components/student/subject-style';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useApi, useL, useMe } from '@/lib/hooks';
+import type { MyExam } from '@/lib/campus/types';
 import type { Gamification, Mission, NotificationItem, Rewards } from '@/lib/types';
 import { cn } from '@/lib/cn';
 
@@ -33,6 +34,8 @@ export default function StudentHome() {
   const reviews = useApi<{ id: string; status: string; submitter: { firstName: string } }[]>('/peer-reviews/assigned');
   const notifications = useApi<NotificationItem[]>('/notifications');
   const progress = useApi<{ topicId: string; state: string }[]>('/progress/me');
+  const exams = useApi<MyExam[]>('/exams/mine');
+  const tcampus = useTranslations('campus');
   const [celebrated, setCelebrated] = useState(false);
 
   if (g.isLoading || missions.isLoading) return <PageSkeleton />;
@@ -51,6 +54,8 @@ export default function StudentHome() {
   const unseen = notifications.data?.find((n) => n.type === 'SUBMISSION_VALIDATED' && !n.readAt);
   const unseenRewards = unseen ? ({ ...(unseen.payload.rewards as Rewards), notificationId: unseen.id } as Rewards) : null;
   const feature = active ?? next;
+  // an exam room that is open right now beats everything else on home
+  const openExam = exams.data?.find((e) => e.examStatus === 'OPEN' && (e.status === 'NOT_STARTED' || e.status === 'IN_PROGRESS'));
 
   return (
     <div className="space-y-5">
@@ -80,6 +85,24 @@ export default function StudentHome() {
           </div>
         </div>
       </Card>
+
+      {openExam && (
+        <Card className="flex items-center gap-4 border-2 border-sky p-4 shadow-[0_0_0_3px_rgba(76,184,255,0.25)]" data-testid="home-exam">
+          <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-sky/15 text-sky">
+            <Mic className="size-6" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-bold uppercase tracking-wider text-sky">{tcampus('exams.title')}</p>
+            <p className="truncate font-display text-lg font-bold leading-tight">{openExam.title}</p>
+            <p className="text-xs text-muted-foreground">
+              {openExam.className} · {tcampus('exams.minutes', { n: openExam.durationMin })}
+            </p>
+          </div>
+          <Button asChild variant="kid" size="sm">
+            <Link href={`/student/exams/${openExam.attemptId}`}>{tcampus('exams.enter')}</Link>
+          </Button>
+        </Card>
+      )}
 
       {feature && (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
