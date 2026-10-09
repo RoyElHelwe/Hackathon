@@ -72,5 +72,10 @@
   "reviewReward": "+{xp} نقطة خبرة · +{points} نقطة تقييم",
   "alreadyReviewed": "لقد قيّمت هذه المهمّة. شكراً!",
   "ok": "نعم",
-  "notOk": "ليس بعد"
+  "notOk": "ليس بعد",
+  "askFriendAsk": "اسأل",
+  "askFriendMastered": "أتقنه ⭐",
+  "askFriendNobody": "لم يتقن أحد هذا بعد — لكن يمكن لزميل أن يفكر معك.",
+  "askFriendNone": "لا يوجد زملاء بعد.",
+  "askFriendError": "تعذّر إرسال الدعوة. حاول مجددًا."
 }

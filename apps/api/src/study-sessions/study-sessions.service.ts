@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, ForbiddenException, HttpException, HttpStatus, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { dayKey, I18nText, pickText, STUDY_ABANDON_MS, STUDY_INVITE_TTL_MS, STUDY_MIN_XP_MS, STUDY_XP, STUDY_XP_DAILY_CAP } from '@tajriba/shared';
+import { dayKey, I18nText, localized, pickText, STUDY_ABANDON_MS, STUDY_INVITE_TTL_MS, STUDY_MIN_XP_MS, STUDY_XP, STUDY_XP_DAILY_CAP } from '@tajriba/shared';
 import { AiService } from '../ai/ai.service';
 import { discussionCards } from '../ai/tasks';
 import { AuthContext } from '../common/auth-context';
@@ -13,6 +13,7 @@ import { SessionLogService } from '../realtime/session-log.service';
 const sessionInclude = {
   participants: { include: { user: { select: { id: true, name: true, avatarUrl: true } } } },
   class: { select: { id: true, name: true, schoolId: true } },
+  mission: { select: { id: true, title: true, steps: true } },
 } as const;
 
 /**
@@ -37,8 +38,11 @@ export class StudySessionsService {
     private readonly sessionLog: SessionLogService,
   ) {}
 
-  /** Classmates (same ACTIVE class) the student can invite, with their online state. */
-  async classmates(a: AuthContext) {
+  /**
+   * Classmates (same ACTIVE class) the student can invite, with their online state. With a topic ("Ask a friend"),
+   * each one says whether they mastered it, and those come first — they can explain it.
+   */
+  async classmates(a: AuthContext, topicId?: string) {
     const actor = await this.actors.actor(a);
     if (actor.role !== 'STUDENT') throw new ForbiddenException('Only students can start study sessions.');
     const classIds = actor.classIdsEnrolled ?? [];
@@ -52,20 +56,34 @@ export class StudySessionsService {
     for (const r of rows) {
       if (seen.has(r.studentId)) continue;
       seen.add(r.studentId);
-      out.push({ userId: r.student.id, name: r.student.name, avatarUrl: r.student.avatarUrl, classId: r.class.id, className: r.class.name, online: this.bus.isOnline(r.student.id) });
+      out.push({ userId: r.student.id, name: r.student.name, avatarUrl: r.student.avatarUrl, classId: r.class.id, className: r.class.name, online: this.bus.isOnline(r.student.id), mastered: false });
     }
-    return out.sort((x, y) => Number(y.online) - Number(x.online));
+    if (topicId) {
+      const done = await this.prisma.topicProgress.findMany({ where: { topicId, state: 'MASTERED', studentId: { in: out.map((m) => m.userId) } }, select: { studentId: true } });
+      const ids = new Set(done.map((d) => d.studentId));
+      for (const m of out) m.mastered = ids.has(m.userId);
+    }
+    return out.sort((x, y) => Number(y.mastered) - Number(x.mastered) || Number(y.online) - Number(x.online));
   }
 
-  async create(a: AuthContext, body: { partnerId: string; classId?: string; topicId?: string }) {
+  async create(a: AuthContext, body: { partnerId: string; classId?: string; topicId?: string; missionId?: string }) {
     const actor = await this.actors.actor(a);
     if (actor.role !== 'STUDENT') throw new ForbiddenException('Only students can start study sessions.');
     if (body.partnerId === a.userId) throw new BadRequestException('Pick a classmate to study with.');
+    // "Ask a friend": a published mission of one of my classes; the session happens in that class, on its topic.
+    let mission: { id: string; classId: string; topicId: string } | null = null;
+    if (body.missionId) {
+      const m = await this.prisma.mission.findUnique({ where: { id: body.missionId }, select: { id: true, classId: true, topicId: true, status: true, audience: true } });
+      if (!m || m.status !== 'APPROVED' || !m.classId) throw new NotFoundException('Mission not found');
+      await this.actors.assert(a, 'read', 'mission', { classId: m.classId, audience: m.audience });
+      mission = { id: m.id, classId: m.classId, topicId: m.topicId };
+    }
     const shared = await this.prisma.enrollment.findMany({
       where: { studentId: body.partnerId, status: 'ACTIVE', classId: { in: actor.classIdsEnrolled ?? [] } },
       select: { classId: true },
     });
-    const classId = body.classId && shared.some((s) => s.classId === body.classId) ? body.classId : shared[0]?.classId;
+    const wanted = mission?.classId ?? body.classId;
+    const classId = wanted && shared.some((s) => s.classId === wanted) ? wanted : mission ? undefined : shared[0]?.classId;
     if (!classId) throw new ForbiddenException('You can only study with classmates.');
     await this.actors.assert(a, 'write', 'study_session', { schoolId: actor.schoolId, classId, participantIds: [a.userId, body.partnerId] });
     this.throttleInvite(a.userId, body.partnerId);
@@ -79,9 +97,10 @@ export class StudySessionsService {
     // A new invite replaces the host's older pending invites.
     await this.prisma.studySession.updateMany({ where: { hostId: a.userId, status: 'INVITED' }, data: { status: 'EXPIRED', endedAt: new Date(), endedReason: 'REPLACED' } });
 
+    const topicId = mission?.topicId ?? body.topicId;
     let topicName: string | null = null;
-    if (body.topicId) {
-      const t = await this.schoolTopic(body.topicId, actor.schoolId);
+    if (topicId) {
+      const t = await this.schoolTopic(topicId, actor.schoolId);
       topicName = t ? pickText(t.name as I18nText, a.user.locale) : null;
     }
     const s = await this.prisma.studySession.create({
@@ -89,11 +108,13 @@ export class StudySessionsService {
         schoolId: actor.schoolId,
         classId,
         hostId: a.userId,
-        topicId: topicName ? body.topicId : null,
+        topicId: topicName ? topicId : null,
+        missionId: mission?.id ?? null,
         participants: { create: [{ userId: a.userId }, { userId: body.partnerId }] },
       },
     });
-    const payload = { sessionId: s.id, fromId: a.userId, fromName: a.user.name, topic: topicName };
+    // help: the classmate is asked to explain a topic they mastered (the pop-up says so)
+    const payload = { sessionId: s.id, fromId: a.userId, fromName: a.user.name, topic: topicName, help: !!mission };
     await this.notifications.notify(body.partnerId, 'STUDY_INVITE', payload, `study-invite:${s.id}`);
     this.bus.toUser(body.partnerId, 'study:invite', payload);
     await this.sessionLog.log('STUDY', s.id, a.userId, 'INVITED', { partnerId: body.partnerId });
@@ -127,6 +148,9 @@ export class StudySessionsService {
       // stored total; the running segment (if any) started at togetherSince
       togetherMs: s.togetherMs,
       togetherSince: since ? new Date(since).toISOString() : null,
+      mission: s.mission
+        ? { id: s.mission.id, title: pickText(s.mission.title as I18nText, a.user.locale), steps: localized(s.mission.steps as string[] | { en: string[] }, a.user.locale) ?? [] }
+        : null,
       room: `study:${s.id}`,
       participants: s.participants.map((p) => ({
         userId: p.userId,
@@ -272,6 +296,7 @@ export class StudySessionsService {
     const flipped = await this.prisma.studySession.updateMany({ where: { id, status: 'ACTIVE' }, data: { status: 'ENDED', endedAt: now, endedReason: reason } });
     if (!flipped.count) return;
     const running = this.bus.together.flush(`study:${id}`, now.getTime());
+    this.bus.boards.delete(`study:${id}`);
     if (running) await this.prisma.studySession.update({ where: { id }, data: { togetherMs: { increment: running } } });
     const s = await this.prisma.studySession.findUniqueOrThrow({ where: { id }, include: { participants: true, class: { select: { subjectId: true } } } });
     const lasted = s.startedAt ? now.getTime() - s.startedAt.getTime() : 0;

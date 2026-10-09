@@ -423,6 +423,7 @@ model Mission {
   copies        Mission[]    @relation("MissionCopies")
   createdBy     User         @relation(fields: [createdById], references: [id])
   submissions   Submission[]
+  studySessions StudySession[]
 
   @@index([classId, status])
   @@index([topicId])
@@ -681,6 +682,8 @@ model StudySession {
   schoolId    String
   classId     String
   topicId     String?
+  /// "Ask a friend": the mission the host is stuck on (shown on the room's board)
+  missionId   String?
   hostId      String
   status      StudySessionStatus @default(INVITED)
   roomIndex   Int?
@@ -692,6 +695,7 @@ model StudySession {
   createdAt   DateTime           @default(now())
 
   class        Class                     @relation(fields: [classId], references: [id], onDelete: Cascade)
+  mission      Mission?                  @relation(fields: [missionId], references: [id], onDelete: SetNull)
   host         User                      @relation("StudyHost", fields: [hostId], references: [id], onDelete: Cascade)
   participants StudySessionParticipant[]
 

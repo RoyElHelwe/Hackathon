@@ -13,6 +13,9 @@ import { useInvalidate } from '@/lib/hooks';
 interface Invite {
   sessionId: string;
   fromName: string;
+  topic?: string | null;
+  /** "Ask a friend": they need help with a topic I mastered */
+  help?: boolean;
 }
 
 /** Live "X wants to study with you" pop-up for students, anywhere in the app. */
@@ -70,7 +73,7 @@ export function InviteListener() {
           data-testid="study-invite-popup"
         >
           <Bousla mood="cheering" size={52} />
-          <p className="min-w-0 flex-1 font-display text-base font-bold leading-tight">{t('invites.from', { name: invite.fromName.split(' ')[0] })}</p>
+          <p className="min-w-0 flex-1 font-display text-base font-bold leading-tight">{invite.help && invite.topic ? t('invites.help', { name: invite.fromName.split(' ')[0], topic: invite.topic }) : t('invites.from', { name: invite.fromName.split(' ')[0] })}</p>
           <div className="flex flex-col gap-1.5">
             <Button size="sm" variant="kid" onClick={join} loading={busy} data-testid="invite-join">
               {t('invites.accept')}

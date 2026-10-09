@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { createStudySessionBody } from '@tajriba/shared';
 import { z } from 'zod';
 import { AuthContext } from '../common/auth-context';
@@ -12,8 +12,8 @@ export class StudySessionsController {
 
   @Can('write', 'study_session')
   @Get('study-sessions/classmates')
-  classmates(@Auth() a: AuthContext) {
-    return this.sessions.classmates(a);
+  classmates(@Auth() a: AuthContext, @Query('topicId') topicId?: string) {
+    return this.sessions.classmates(a, typeof topicId === 'string' && topicId ? topicId.slice(0, 64) : undefined);
   }
 
   @Can('write', 'study_session')

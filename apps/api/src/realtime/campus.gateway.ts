@@ -9,6 +9,7 @@ import {
 } from '@nestjs/websockets';
 import {
   avatarColor,
+  boardMsg,
   clampToMap,
   emoteMsg,
   joinRoomMsg,
@@ -39,6 +40,8 @@ interface SocketData {
   rooms: Map<string, RoomGrant>;
   /** last emote/reaction time (throttle) */
   lastFx?: number;
+  /** last board flip time (throttles the event log) */
+  lastBoard?: number;
 }
 
 type Ack = { ok: true; [k: string]: unknown } | { ok: false; error: string };
@@ -144,7 +147,7 @@ export class CampusGateway implements OnGatewayInit, OnGatewayDisconnect {
       self: state,
       players: this.bus.presence.players(grant.key).filter((p) => p.userId !== data.ident.userId),
     };
-    return { ok: true, snapshot, publishes: grant.publishes };
+    return { ok: true, snapshot, publishes: grant.publishes, ...(grant.kind === 'study' ? { boardIndex: this.bus.boards.get(grant.key) ?? 0 } : {}) };
   }
 
   @SubscribeMessage('room:leave')
@@ -208,6 +211,22 @@ export class CampusGateway implements OnGatewayInit, OnGatewayDisconnect {
     if (!msg || !ctx || !this.bus.presence.has(ctx.grant.key, msg.to)) return;
     for (const sid of this.bus.presence.socketsOf(ctx.grant.key, msg.to)) {
       client.to(sid).emit('voice:signal', { room: msg.room, from: ctx.state.userId, signal: msg.signal });
+    }
+  }
+
+  /** Study room: a partner flipped the discussion card on the Ideas board — both see the same card. */
+  @SubscribeMessage('board')
+  board(@ConnectedSocket() client: Socket, @MessageBody() body: unknown) {
+    const msg = this.parse(boardMsg, body);
+    const ctx = msg && this.inRoom(client, msg.room);
+    if (!msg || !ctx || ctx.grant.kind !== 'study' || ctx.state.spectator) return;
+    this.bus.boards.set(ctx.grant.key, msg.index);
+    client.to(ctx.grant.key).emit('board:card', { room: msg.room, index: msg.index });
+    const data = client.data as SocketData;
+    const now = Date.now();
+    if (ctx.grant.refId && (!data.lastBoard || now - data.lastBoard >= FX_MIN_GAP_MS)) {
+      data.lastBoard = now;
+      void this.sessionLog.log('STUDY', ctx.grant.refId, ctx.state.userId, 'CARD', { index: msg.index });
     }
   }
 

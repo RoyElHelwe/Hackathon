@@ -1,7 +1,7 @@
 'use client';
 
 import { distance, STUDY_MIN_XP_MS, voiceGain } from '@tajriba/shared';
-import { ArrowLeft, Mic, MicOff, PhoneOff, Shuffle } from 'lucide-react';
+import { ArrowLeft, ListChecks, Mic, MicOff, PhoneOff, Shuffle } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
@@ -140,6 +140,12 @@ function StudyRoom({ session, myId, withMic, names }: { session: StudySessionDet
   const { data: cfg } = useApi<{ recordStudySessions?: boolean }>('/auth/config');
   const rec = useRecorder({ kind: 'STUDY', refId: session.id, stream: voice.stream, active: session.status === 'ACTIVE' && cfg?.recordStudySessions === true });
   const scene = useRef<SceneApi | null>(null);
+  const [sceneApi, setSceneApi] = useState<SceneApi | null>(null);
+  // what the Ideas board shows: the mission we're working on ("Ask a friend") or the discussion cards
+  const [boardMode, setBoardMode] = useState<'mission' | 'cards'>(session.mission ? 'mission' : 'cards');
+  const cards = useApi<{ cards: DiscussionCard[] }>(`/study-sessions/${session.id}/cards`, { staleTime: Infinity });
+  const cardList = cards.data?.cards ?? [];
+  const card = cardList.length ? cardList[room.boardIndex % cardList.length] : null;
   const [confirm, setConfirm] = useState(false);
   const [ending, setEnding] = useState(false);
   const [now, setNow] = useState(() => Date.now());
@@ -215,6 +221,17 @@ function StudyRoom({ session, myId, withMic, names }: { session: StudySessionDet
     }
   };
 
+  // Chalk on the Ideas board, the same for both partners.
+  const boardText =
+    boardMode === 'mission' && session.mission
+      ? [session.mission.title, ...session.mission.steps.slice(0, 3).map((s, i) => `${i + 1}. ${s}`)].join('\n')
+      : card
+        ? `${t(`study.cards.${card.kind}`)}: ${card.prompt}`
+        : null;
+  useEffect(() => {
+    sceneApi?.setBoard(boardText);
+  }, [sceneApi, boardText]);
+
   const onEmote = room.emote;
   const localEmote = useMemo(
     () => (e: Parameters<typeof onEmote>[0]) => {
@@ -238,6 +255,11 @@ function StudyRoom({ session, myId, withMic, names }: { session: StudySessionDet
         </Button>
         <div className="min-w-0 flex-1">
           <h1 className="truncate font-display text-xl font-extrabold">{t('study.with', { name: partner?.name.split(' ')[0] ?? '' })}</h1>
+          {session.mission && (
+            <p className="truncate text-sm font-bold text-violet" data-testid="helping-with">
+              🆘 {t('study.mission.working', { title: session.mission.title })}
+            </p>
+          )}
           <p className={cn('text-xs font-bold', partnerHere ? 'text-success' : 'text-muted-foreground')} data-testid="partner-status">
             {partnerHere ? t('study.here', { name: partner?.name.split(' ')[0] ?? '' }) : t('study.away', { name: partner?.name.split(' ')[0] ?? '' })}
           </p>
@@ -251,7 +273,16 @@ function StudyRoom({ session, myId, withMic, names }: { session: StudySessionDet
       </div>
 
       <div className="relative">
-        <CampusCanvas room={room} map="study" className="aspect-[10/7] w-full" selfSpeaking={voice.speaking} onApi={(a) => (scene.current = a)} />
+        <CampusCanvas
+          room={room}
+          map="study"
+          className="aspect-[10/7] w-full"
+          selfSpeaking={voice.speaking}
+          onApi={(a) => {
+            scene.current = a;
+            setSceneApi(a);
+          }}
+        />
         {room.status !== 'joined' && (
           <div className="absolute inset-0 flex items-center justify-center rounded-[20px] bg-background/70">
             {room.status === 'error' ? <p className="font-bold text-danger">{t('roomError')}</p> : <Thinking label={room.status === 'reconnecting' ? t('reconnecting') : t('connecting')} />}
@@ -278,7 +309,35 @@ function StudyRoom({ session, myId, withMic, names }: { session: StudySessionDet
       </div>
       <EmoteBar onEmote={localEmote} onReaction={localReaction} />
 
-      <DiscussionCards sessionId={session.id} />
+      {session.mission && (
+        <div className="flex flex-wrap items-center gap-2" role="group" aria-label={t('study.board.label')}>
+          <span className="text-sm font-bold text-muted-foreground">{t('study.board.label')}</span>
+          {(['mission', 'cards'] as const).map((m) => (
+            <Button key={m} size="sm" variant={boardMode === m ? 'kid' : 'kidGhost'} aria-pressed={boardMode === m} onClick={() => setBoardMode(m)} data-testid={`board-${m}`}>
+              {t(`study.board.${m}`)}
+            </Button>
+          ))}
+        </div>
+      )}
+      {boardMode === 'mission' && session.mission ? (
+        <section className="space-y-2 rounded-[20px] border-2 border-violet bg-violet-soft p-4" data-testid="mission-on-board">
+          <p className="flex items-center gap-2 font-display text-lg font-bold">
+            <ListChecks className="size-5 text-violet" /> {session.mission.title}
+          </p>
+          <ol className="list-decimal space-y-1 ps-6 text-sm font-semibold">
+            {session.mission.steps.map((s, i) => (
+              <li key={i}>{s}</li>
+            ))}
+          </ol>
+          {session.hostId === myId && (
+            <Link href={`/student/missions/${session.mission.id}`} className="inline-block text-sm font-bold text-primary underline">
+              {t('study.mission.back')}
+            </Link>
+          )}
+        </section>
+      ) : (
+        <DiscussionCards loading={cards.isLoading} card={card} index={room.boardIndex} onNext={() => room.board(room.boardIndex + 1)} />
+      )}
 
       <details className="rounded-[16px] border border-border bg-card p-3">
         <summary className="cursor-pointer font-bold">{t('study.timeline')}</summary>
@@ -328,18 +387,16 @@ function TogetherChip({ ms, running }: { ms: number; running: boolean }) {
   );
 }
 
-function DiscussionCards({ sessionId }: { sessionId: string }) {
+/** The discussion card on the Ideas board; shuffling flips it for both partners. */
+function DiscussionCards({ loading, card, index, onNext }: { loading: boolean; card: DiscussionCard | null; index: number; onNext: () => void }) {
   const t = useTranslations('campus');
-  const cards = useApi<{ cards: DiscussionCard[] }>(`/study-sessions/${sessionId}/cards`, { staleTime: Infinity });
-  const [i, setI] = useState(0);
-  const list = cards.data?.cards ?? [];
-  const card = list.length ? list[i % list.length] : null;
+  const i = index;
   const tone = { QUESTION: 'bg-sky-soft border-sky', CHALLENGE: 'bg-sunny-soft border-sunny', FUN: 'bg-coral-soft border-coral' } as const;
 
   return (
     <section className="space-y-2">
       <h2 className="font-display text-lg font-bold">{t('study.cards.title')}</h2>
-      {cards.isLoading ? (
+      {loading ? (
         <Thinking label={t('study.cards.loading')} />
       ) : !card ? null : (
         <AnimatePresence mode="wait">
@@ -356,7 +413,7 @@ function DiscussionCards({ sessionId }: { sessionId: string }) {
               <p className="text-xs font-extrabold uppercase tracking-wide opacity-70">{t(`study.cards.${card.kind}`)}</p>
               <p className="font-display text-lg font-bold leading-snug">{card.prompt}</p>
             </div>
-            <Button variant="kidGhost" size="icon" onClick={() => setI((n) => n + 1)} aria-label={t('study.cards.next')} data-testid="next-card">
+            <Button variant="kidGhost" size="icon" onClick={onNext} aria-label={t('study.cards.next')} data-testid="next-card">
               <Shuffle />
             </Button>
           </motion.div>

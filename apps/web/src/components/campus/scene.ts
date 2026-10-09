@@ -20,6 +20,8 @@ export interface SceneApi {
   setExamGlow(on: boolean): void;
   /** walk my avatar to a point (same as tapping the floor there) */
   walkTo(x: number, y: number): void;
+  /** study room: write on the Ideas board (null = just its name) */
+  setBoard(text: string | null): void;
 }
 
 export interface SceneConfig {
@@ -102,6 +104,7 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
     private nearId: string | null = null;
     private needle: { g: import('phaser').GameObjects.Graphics; cx: number; cy: number } | null = null;
     private tables: Glow[] = [];
+    private board: { text: import('phaser').GameObjects.Text; label: string; w: number } | null = null;
     private desks: Glow[] = [];
 
     constructor() {
@@ -246,7 +249,10 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
         case 'board':
           g.fillStyle(0x1f5f4a, 1).fillRoundedRect(f.x, f.y, f.w, f.h, 8);
           g.lineStyle(4, C.woodDark, 1).strokeRoundedRect(f.x, f.y, f.w, f.h, 8);
-          if (f.label) this.label(cx, cy, tr(f.label), 15, '#ffffff').setDepth(4);
+          if (f.label) {
+            const text = this.label(cx, cy, tr(f.label), 15, '#ffffff').setDepth(4);
+            this.board ??= { text, label: tr(f.label), w: f.w };
+          }
           break;
         case 'lamp': {
           // floor lamp seen from the front: base, pole, shade and a warm glow
@@ -521,6 +527,17 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
         },
         setExamGlow: (on) => {
           for (const d of this.desks) d.box.setVisible(on);
+        },
+        setBoard: (text) => {
+          const b = this.board;
+          if (!b) return;
+          // chalk on the board: wraps to the board's width, at most 4 lines
+          b.text
+            .setText(text?.trim() || b.label)
+            .setFontSize(text ? 13 : 15)
+            .setWordWrapWidth(b.w - 28, true)
+            .setAlign('center')
+            .setMaxLines(4);
         },
         walkTo: (x, y) => {
           if (cfg.interactive) this.setTarget(x, y);

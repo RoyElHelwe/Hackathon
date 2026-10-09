@@ -44,7 +44,8 @@
     "accept": "انضم",
     "decline": "ليس الآن",
     "waiting": "بانتظار انضمام {name}…",
-    "open": "افتح الغرفة"
+    "open": "افتح الغرفة",
+    "help": "{name} يحتاج مساعدتك في {topic} 🆘"
   },
   "sessions": {
     "title": "جلسات الدراسة",
@@ -127,7 +128,16 @@
     "activityNotice": "يرى معلّمك ما يحدث في هذه الجلسة (من انضمّ، التفاعلات، المدّة). لا تُسجَّل الأصوات.",
     "together": "معًا {time}",
     "togetherGoal": "ادرسا معًا 5 دقائق لتربحا نقاط XP",
-    "togetherDone": "تم فتح نقاط XP ✓"
+    "togetherDone": "تم فتح نقاط XP ✓",
+    "mission": {
+      "working": "نعمل على: {title}",
+      "back": "العودة إلى مهمتي"
+    },
+    "board": {
+      "label": "لوح الأفكار:",
+      "mission": "المهمة",
+      "cards": "البطاقات"
+    }
   },
   "events": {
     "INVITED": "أرسل دعوة",

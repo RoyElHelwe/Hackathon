@@ -72,5 +72,10 @@
   "reviewReward": "+{xp} XP · +{points} point",
   "alreadyReviewed": "You already reviewed this mission. Thanks!",
   "ok": "Yes",
-  "notOk": "Not yet"
+  "notOk": "Not yet",
+  "askFriendAsk": "Ask",
+  "askFriendMastered": "Mastered it ⭐",
+  "askFriendNobody": "Nobody has mastered this yet — a classmate can still think it through with you.",
+  "askFriendNone": "No classmates yet.",
+  "askFriendError": "Couldn't send the invite. Try again."
 }

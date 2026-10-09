@@ -76,3 +76,5 @@ Non-obvious choices made while building Tajriba. CLAUDE.md is the spec; this fil
 - **Tap-to-move slides along furniture** and stops only after 400 ms without getting closer, instead of stopping at the first touch.
 - **`window.__tajribaScene`** (non-production builds only) lets Playwright walk to exact map points, since spawn points differ per user.
 - The campus e2e test checks the "Recording" chip only when the server records study sessions (`RECORD_STUDY_SESSIONS`, off by default).
+- **"I'm stuck → Ask a friend"** (after the 3 hints) lists classmates, those who MASTERED the topic first (`GET /study-sessions/classmates?topicId=`), and invites one to a study room linked to the mission (`StudySession.missionId`). The mission must be an approved mission of the shared class; the room's Ideas board shows its title and steps, and the invite pop-up says the friend needs help with that topic.
+- **The Ideas board is shared**: flipping a discussion card sends `board {index}` to the partner; the index lives in memory per room (like presence) and comes back in the join ack after a reload. The Mission/Cards toggle is per person.

@@ -136,6 +136,8 @@ export const createStudySessionBody = z.object({
   partnerId: z.string().min(1),
   classId: z.string().min(1).optional(),
   topicId: z.string().min(1).optional(),
+  /** "I'm stuck → Ask a friend": the mission to work on together */
+  missionId: z.string().min(1).optional(),
 });
 export const startRecordingBody = z.object({
   kind: z.enum(['STUDY', 'EXAM']),

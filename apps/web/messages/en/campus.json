@@ -44,7 +44,8 @@
     "accept": "Join",
     "decline": "Not now",
     "waiting": "Waiting for {name} to join…",
-    "open": "Open room"
+    "open": "Open room",
+    "help": "{name} needs your help with {topic} 🆘"
   },
   "sessions": {
     "title": "Your study sessions",
@@ -127,7 +128,16 @@
     "activityNotice": "Your teacher sees what happens in this session (who joined, reactions, how long). Voices are not recorded.",
     "together": "Together {time}",
     "togetherGoal": "Study together 5 min to earn XP",
-    "togetherDone": "XP unlocked ✓"
+    "togetherDone": "XP unlocked ✓",
+    "mission": {
+      "working": "Working on: {title}",
+      "back": "Back to my mission"
+    },
+    "board": {
+      "label": "Ideas board:",
+      "mission": "Mission",
+      "cards": "Cards"
+    }
   },
   "events": {
     "INVITED": "sent an invite",

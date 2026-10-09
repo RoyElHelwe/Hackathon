@@ -164,6 +164,45 @@ describe('Peer study sessions', () => {
     await ctx.http().post(`/study-sessions/${r.body.id}/end`).set('Cookie', await ctx.as('karim')).expect(201);
   });
 
+  it('"Ask a friend": classmates who mastered the topic come first; the session carries the mission', async () => {
+    const hero = await ctx.prisma.mission.findFirstOrThrow({ where: { key: 'm.similar.shadows', class: { name: '8B Math' } } });
+    const lea = await ctx.as('lea');
+    const mates = (await ctx.http().get(`/study-sessions/classmates?topicId=${hero.topicId}`).set('Cookie', lea).expect(200)).body as { name: string; mastered: boolean }[];
+    expect(mates[0]).toMatchObject({ name: expect.stringMatching(/Karim/), mastered: true });
+    expect(mates.find((m) => /Omar/.test(m.name))?.mastered).toBe(false);
+
+    const r = await ctx.http().post('/study-sessions').set('Cookie', lea).send({ partnerId: await userId('karim'), missionId: hero.id }).expect(201);
+    expect(r.body.mission).toMatchObject({ id: hero.id, title: 'Measure your building with shadows' });
+    expect(r.body.mission.steps.length).toBeGreaterThan(0);
+    expect(r.body.topicId).toBe(hero.topicId);
+    const notes = (await ctx.http().get('/notifications').set('Cookie', await ctx.as('karim')).expect(200)).body as { type: string; payload: { help?: boolean } }[];
+    expect(notes.find((n) => n.type === 'STUDY_INVITE')?.payload.help).toBe(true);
+    await ctx.http().post(`/study-sessions/${r.body.id}/decline`).set('Cookie', lea).expect(201);
+
+    // a mission of a class Lea is not in → forbidden
+    const other = await ctx.prisma.mission.findFirstOrThrow({ where: { status: 'APPROVED', classId: { not: hero.classId } } });
+    await ctx.http().post('/study-sessions').set('Cookie', lea).send({ partnerId: await userId('karim'), missionId: other.id }).expect(403);
+  });
+
+  it('the Ideas board shows the same card to both partners, also after a rejoin', async () => {
+    const r = await ctx.http().post('/study-sessions').set('Cookie', await ctx.as('karim')).send({ partnerId: await userId('omar') }).expect(201);
+    const sid = r.body.id;
+    await ctx.http().post(`/study-sessions/${sid}/accept`).set('Cookie', await ctx.as('omar')).expect(201);
+    const room = `study:${sid}`;
+    const karim = await connect(await ctx.as('karim'));
+    const omar = await connect(await ctx.as('omar'));
+    expect(await emit(karim, 'room:join', { room })).toMatchObject({ ok: true, boardIndex: 0 });
+    await emit(omar, 'room:join', { room });
+    const cards: { index: number }[] = [];
+    omar.on('board:card', (d) => cards.push(d));
+    karim.emit('board', { room, index: 3 });
+    await wait(150);
+    expect(cards).toEqual([{ room, index: 3 }]);
+    await emit(omar, 'room:leave', { room });
+    expect(await emit(omar, 'room:join', { room })).toMatchObject({ ok: true, boardIndex: 3 });
+    await ctx.http().post(`/study-sessions/${sid}/end`).set('Cookie', await ctx.as('omar')).expect(201);
+  });
+
   it('a session nobody is in gets swept after a while', async () => {
     const r = await ctx.http().post('/study-sessions').set('Cookie', await ctx.as('omar')).send({ partnerId: await userId('karim') }).expect(201);
     await ctx.http().post(`/study-sessions/${r.body.id}/accept`).set('Cookie', await ctx.as('karim')).expect(201);

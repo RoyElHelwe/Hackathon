@@ -135,7 +135,7 @@ export const STUDY_ROOM_MAP: CampusMap = {
   furniture: [
     { kind: 'rug', x: 220, y: 170, w: 360, h: 230 },
     { kind: 'table', x: 330, y: 240, w: 140, h: 80, solid: true, label: 'Discussion table' },
-    { kind: 'board', x: 260, y: 30, w: 280, h: 70, solid: true, label: 'Ideas board' },
+    { kind: 'board', x: 220, y: 24, w: 360, h: 96, solid: true, label: 'Ideas board' },
     { kind: 'sofa', x: 40, y: 220, w: 50, h: 140, solid: true },
     { kind: 'shelf', x: 640, y: 40, w: 120, h: 40, solid: true },
     { kind: 'plant', x: 40, y: 40, w: 40, h: 40, solid: true },
@@ -145,7 +145,7 @@ export const STUDY_ROOM_MAP: CampusMap = {
   ],
   zones: [
     { id: 'table', kind: 'study_room', x: 280, y: 200, w: 240, h: 160, label: 'Table' },
-    { id: 'board', kind: 'stage', x: 240, y: 100, w: 320, h: 70, label: 'Board' },
+    { id: 'board', kind: 'stage', x: 240, y: 124, w: 320, h: 54, label: 'Board' },
   ],
   spawns: [
     { x: 300, y: 440 },
@@ -286,6 +286,8 @@ export const signalMsg = z.object({
   signal: z.object({ type: z.string().max(20).optional(), sdp: z.string().max(20_000).optional(), candidate: z.unknown().optional() }).passthrough(),
 });
 export const transcriptMsg = z.object({ room: roomName, text: z.string().max(2000) });
+/** study room: which discussion card is on the Ideas board (the same for both partners) */
+export const boardMsg = z.object({ room: roomName, index: z.number().int().min(0).max(999) });
 
 export interface PlayerState {
   userId: string;

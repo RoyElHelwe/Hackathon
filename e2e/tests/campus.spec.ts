@@ -130,6 +130,48 @@ test.describe('Tajriba Campus', () => {
     await omar.ctx.close();
   });
 
+  test('"I\'m stuck → Ask a friend": the classmate who mastered it joins a room with the mission on the board', async ({ browser }) => {
+    const lea = await userPage(browser, 'lea', '/student/map');
+    const karim = await userPage(browser, 'karim', '/student');
+    await lea.page.getByTestId('map-node-geo.similar').click();
+    await lea.page.getByTestId('topic-sheet').getByTestId('sheet-mission').first().click();
+    await lea.page.getByTestId('mission-next').click();
+    await lea.page.getByTestId('mission-next').click();
+    for (let i = 1; i <= 3; i++) {
+      await lea.page.getByTestId('im-stuck').click();
+      await expect(lea.page.getByTestId('hint-text')).toHaveCount(i);
+    }
+    // Karim mastered similar triangles: he is offered first
+    await lea.page.getByTestId('ask-friend-karim').click();
+    await expect(lea.page).toHaveURL(/\/student\/study\//);
+
+    await karim.page.bringToFront();
+    await expect(karim.page.getByTestId('study-invite-popup')).toContainText('help');
+    await karim.page.getByTestId('invite-join').click();
+    await karim.page.waitForURL(/\/student\/study\//);
+    await karim.page.getByTestId('join-no-mic').click();
+    await expect(karim.page.getByTestId('helping-with')).toContainText('Measure your building with shadows');
+    await expect(karim.page.getByTestId('mission-on-board')).toBeVisible();
+
+    // the discussion card on the board is the same for both partners
+    await lea.page.bringToFront();
+    await lea.page.getByTestId('join-no-mic').click();
+    await expect(lea.page.getByTestId('study-room')).toBeVisible();
+    await lea.page.getByTestId('board-cards').click();
+    await karim.page.getByTestId('board-cards').click();
+    const first = await lea.page.getByTestId('discussion-card').innerText();
+    await karim.page.getByTestId('next-card').click();
+    await expect(lea.page.getByTestId('discussion-card')).not.toHaveText(first);
+    const karimCard = await karim.page.getByTestId('discussion-card').innerText();
+    await expect.poll(() => lea.page.getByTestId('discussion-card').innerText()).toBe(karimCard);
+
+    await lea.page.getByTestId('end-session').click();
+    await lea.page.getByTestId('confirm-end').click();
+    await expect(lea.page.getByTestId('study-ended')).toBeVisible();
+    await lea.ctx.close();
+    await karim.ctx.close();
+  });
+
   test('AI interview exam: teacher creates from lessons → student answers in a private room → teacher watches live → approves', async ({ browser }) => {
     const rana = await userPage(browser, 'rana');
     await rana.page.goto('/teacher/exams/new');
