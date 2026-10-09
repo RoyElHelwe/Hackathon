@@ -33,6 +33,10 @@ export class SessionGuard implements CanActivate {
     if (!user) return true;
     const { memberships, ...rest } = user;
     req.auth = { userId: user.id, user: rest, memberships, active: pickActive(memberships, payload.mid) };
+    // "last seen" for the director's roster and parents pages; at most one write per 15 minutes, never blocks the request
+    if (!user.lastSeenAt || Date.now() - user.lastSeenAt.getTime() > 15 * 60_000) {
+      void this.prisma.user.update({ where: { id: user.id }, data: { lastSeenAt: new Date() } }).catch(() => undefined);
+    }
     return true;
   }
 }

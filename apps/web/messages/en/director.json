@@ -1,6 +1,11 @@
 {
   "nav": {
     "overview": "Overview",
+    "ask": "Ask Arzino",
+    "timetable": "Timetable",
+    "roster": "Roster",
+    "parents": "Parents",
+    "messages": "Messages",
     "subjects": "Subjects",
     "coverage": "Coverage",
     "classes": "Classes",

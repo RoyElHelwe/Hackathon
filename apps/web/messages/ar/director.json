@@ -1,6 +1,11 @@
 {
   "nav": {
     "overview": "نظرة عامة",
+    "ask": "اسأل أرزينو",
+    "timetable": "الجدول",
+    "roster": "السجلّ",
+    "parents": "الأهالي",
+    "messages": "الرسائل",
     "subjects": "المواد",
     "coverage": "تغطية المنهج",
     "classes": "الصفوف",

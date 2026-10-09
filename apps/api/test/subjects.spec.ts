@@ -9,10 +9,10 @@ describe('school subjects (integration)', () => {
   });
   afterAll(async () => ctx.app.close());
 
-  it('seed: demo school owns its 6 subjects; seeded teachers teach math; seeded classes are math', async () => {
+  it('seed: demo school owns its 10 subjects; seeded teachers teach math; seeded classes are math', async () => {
     const school = await ctx.prisma.school.findUniqueOrThrow({ where: { schoolCode: 'TRP-2036' } });
     const subjects = await ctx.prisma.subject.findMany({ where: { schoolId: school.id } });
-    expect(subjects.map((s) => s.key).sort()).toEqual(['biology', 'chemistry', 'history', 'languages', 'math', 'physics']);
+    expect(subjects.map((s) => s.key).sort()).toEqual(['arabic', 'biology', 'chemistry', 'english', 'french', 'history', 'languages', 'math', 'physics', 'sport']);
     const math = subjects.find((s) => s.key === 'math')!;
     const rana = await ctx.prisma.user.findUniqueOrThrow({ where: { devHandle: 'rana' } });
     expect(await ctx.prisma.teacherSubject.count({ where: { teacherId: rana.id, subjectId: math.id } })).toBe(1);

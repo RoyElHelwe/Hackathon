@@ -78,7 +78,11 @@
     "STUDY_ACCEPTED": "{name} انضم إلى غرفة الدراسة!",
     "EXAM_SCHEDULED": "امتحان جديد: {title}",
     "EXAM_OPEN": "غرفة امتحانك مفتوحة: {title}",
-    "EXAM_RESULT_RELEASED": "نتيجة الامتحان جاهزة: {title}"
+    "EXAM_RESULT_RELEASED": "نتيجة الامتحان جاهزة: {title}",
+    "ANNOUNCEMENT": "📣 {title}",
+    "COVER_ASSIGNED": "ستغطّي {section} · {subject}، الحصة {period} يوم {day}",
+    "TIMETABLE_PUBLISHED": "نُشر الجدول الدراسي الجديد",
+    "FAMILY_LINK_NUDGE": "ادعُ عائلتك لمتابعة تقدّمك 👪"
   },
   "noContacts": "لا محادثات بعد.",
   "typeMessage": "اكتب رسالة…",

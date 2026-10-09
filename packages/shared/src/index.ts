@@ -7,3 +7,8 @@ export * from './safety';
 export * from './stuck';
 export * from './campus';
 export * from './exam';
+export * from './school-time';
+export * from './timetable';
+export * from './roster';
+export * from './privacy';
+export * from './assistant';

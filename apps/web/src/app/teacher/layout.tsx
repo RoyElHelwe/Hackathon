@@ -1,6 +1,6 @@
 'use client';
 
-import { BarChart3, ClipboardCheck, Headphones, MessageCircle, MicVocal, School, Wand2 } from 'lucide-react';
+import { BarChart3, CalendarDays, ClipboardCheck, Headphones, MessageCircle, MicVocal, School, Wand2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { AdultShell } from '@/components/app/adult-shell';
 import { RoleGate } from '@/components/app/role-gate';
@@ -18,7 +18,8 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
         home="/teacher"
         nav={[
           { href: '/teacher', label: t('classes'), icon: School, exact: true, tone: 'flag' },
-          { href: '/teacher/missions', label: t('missions'), icon: Wand2, tone: 'med' },
+          { href: '/teacher/week', label: t('week'), icon: CalendarDays, tone: 'med' },
+          { href: '/teacher/missions', label: t('missions'), icon: Wand2, tone: 'flame' },
           { href: '/teacher/review', label: t('review'), icon: ClipboardCheck, badge: pending, tone: 'cedar' },
           { href: '/teacher/exams', label: tc('navExams'), icon: MicVocal, tone: 'flame' },
           { href: '/teacher/sessions', label: tc('navSessions'), icon: Headphones, tone: 'med' },

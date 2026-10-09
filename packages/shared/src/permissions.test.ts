@@ -329,3 +329,27 @@ describe('permissions — campus: study sessions, exams, recordings', () => {
     expect(can(parent, 'read', 'recording', { classId: 'c1', ownerId: 'lea' })).toBe(false);
   });
 });
+
+describe('permissions — director suite (assistant, timetable, roster)', () => {
+  it('director and admin read & write all three', () => {
+    for (const r of ['assistant', 'timetable', 'roster'] as const) {
+      expect(can(director, 'write', r, { schoolId: S })).toBe(true);
+      expect(can(director, 'read', r, { schoolId: S })).toBe(true);
+    }
+  });
+  it('teacher only reads the timetable', () => {
+    expect(can(teacher, 'read', 'timetable', { schoolId: S })).toBe(true);
+    expect(can(teacher, 'write', 'timetable', { schoolId: S })).toBe(false);
+    expect(can(teacher, 'read', 'assistant', { schoolId: S })).toBe(false);
+    expect(can(teacher, 'read', 'roster', { schoolId: S })).toBe(false);
+  });
+  it('students and parents never', () => {
+    for (const r of ['assistant', 'timetable', 'roster'] as const) {
+      expect(can(student, 'read', r, { schoolId: S })).toBe(false);
+      expect(can(parent, 'read', r, { schoolId: S })).toBe(false);
+    }
+  });
+  it('another school is denied', () => {
+    expect(can(director, 'write', 'timetable', { schoolId: 'other' })).toBe(false);
+  });
+});

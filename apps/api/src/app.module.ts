@@ -2,6 +2,10 @@ import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AiModule } from './ai/ai.module';
+import { AnnouncementsModule } from './announcements/announcements.module';
+import { AssistantModule } from './assistant/assistant.module';
+import { RosterModule } from './roster/roster.module';
+import { TimetableModule } from './timetable/timetable.module';
 import { AuthModule } from './auth/auth.module';
 import { ClassesModule } from './classes/classes.module';
 import { ClassroomModule } from './classroom/classroom.module';
@@ -54,6 +58,10 @@ import { UploadsModule } from './uploads/uploads.module';
     RecordingsModule,
     StudySessionsModule,
     ExamsModule,
+    AnnouncementsModule,
+    TimetableModule,
+    RosterModule,
+    AssistantModule,
     JobsModule,
   ],
   controllers: [HealthController],

@@ -25,6 +25,9 @@ export const RESOURCES = [
   'exam',
   'exam_attempt',
   'recording',
+  'assistant',
+  'timetable',
+  'roster',
 ] as const;
 export type Resource = (typeof RESOURCES)[number];
 
@@ -84,6 +87,9 @@ const ROLE_TABLE: Record<Role, Partial<Record<Resource, Action[]>>> = {
     exam: ['read'],
     exam_attempt: ['read'],
     recording: ['read'],
+    assistant: ['read', 'write'],
+    timetable: ['read', 'write'],
+    roster: ['read', 'write'],
   },
   ADMIN: {
     school: ['read', 'write'],
@@ -104,6 +110,9 @@ const ROLE_TABLE: Record<Role, Partial<Record<Resource, Action[]>>> = {
     exam: ['read'],
     exam_attempt: ['read'],
     recording: ['read'],
+    assistant: ['read', 'write'],
+    timetable: ['read', 'write'],
+    roster: ['read', 'write'],
   },
   TEACHER: {
     school: ['read'],
@@ -125,6 +134,7 @@ const ROLE_TABLE: Record<Role, Partial<Record<Resource, Action[]>>> = {
     exam: ['read', 'write'],
     exam_attempt: ['read', 'review'],
     recording: ['read'],
+    timetable: ['read'],
   },
   STUDENT: {
     class: ['read'],
@@ -283,6 +293,13 @@ export function can(actor: Actor, action: Action, resource: Resource, target: Ta
       if (actor.role === 'STUDENT') return own || (action === 'read' && has(target.participantIds, actor.userId));
       return false;
 
+    case 'assistant':
+    case 'roster':
+      return isAdmin;
+    case 'timetable':
+      // teachers read only their own lessons (the service scopes them to their teacherId)
+      if (isAdmin) return true;
+      return actor.role === 'TEACHER' && action === 'read';
     case 'family':
     case 'message':
     case 'notification':

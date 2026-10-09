@@ -5,6 +5,7 @@ import { encrypt } from '../common/crypto';
 import { averageHash } from '../uploads/phash';
 import type { PrismaClient } from '../generated/prisma/client';
 import { BADGES, MISSIONS, SUBJECTS, TOPICS } from './content';
+import { seedFamiliesOps, seedSchoolOps } from './school-ops';
 import { illustrationJpeg } from './illustrations';
 import { seedCampus } from './campus';
 
@@ -320,6 +321,8 @@ export async function seed(prisma: PrismaClient, opts: { quiet?: boolean } = {})
   });
 
   await seedSchoolLife(prisma, { schoolId: school.id, teacherId: users.hassan, topics, missions: Object.fromEntries(Object.entries(missions).map(([k, v]) => [k, v.id])), now, mathSubjectId: subjects.math });
+  await seedSchoolOps(prisma, { schoolId: school.id, directorId: users.director, users, subjects, now: new Date(now) });
+  await seedFamiliesOps(prisma, { schoolId: school.id, users, now: new Date(now) });
 
   log(`Seeded "${school.name}" (${school.schoolCode}): ${Object.keys(users).length} users, ${Object.keys(missions).length} missions, class ${cls.name}.`);
   return { school, users, class: cls, missions, topics, subjects };

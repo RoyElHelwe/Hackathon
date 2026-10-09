@@ -27,6 +27,10 @@ const TONE: Record<string, string> = {
   STUCK_ALERT: 'bg-flag-soft',
   MEMBER_PENDING: 'bg-flag-soft',
   SUMMARY_READY: 'bg-flame-soft',
+  ANNOUNCEMENT: 'bg-flag-soft',
+  COVER_ASSIGNED: 'bg-med-soft',
+  TIMETABLE_PUBLISHED: 'bg-med-soft',
+  FAMILY_LINK_NUDGE: 'bg-flame-soft',
 };
 
 const ICON: Record<string, string> = {
@@ -43,6 +47,10 @@ const ICON: Record<string, string> = {
   EXAM_SCHEDULED: '🗓️',
   EXAM_OPEN: '🎙️',
   EXAM_RESULT_RELEASED: '🏆',
+  ANNOUNCEMENT: '📣',
+  COVER_ASSIGNED: '🔁',
+  TIMETABLE_PUBLISHED: '🗓️',
+  FAMILY_LINK_NUDGE: '👪',
 };
 
 function linkFor(n: NotificationItem): string | undefined {
@@ -68,6 +76,11 @@ function linkFor(n: NotificationItem): string | undefined {
       return '/student/campus';
     case 'EXAM_RESULT_RELEASED':
       return p.studentId ? `/parent?child=${p.studentId}` : `/student/exams/${p.attemptId}`;
+    case 'COVER_ASSIGNED':
+    case 'TIMETABLE_PUBLISHED':
+      return '/teacher/week';
+    case 'FAMILY_LINK_NUDGE':
+      return '/student/me';
   }
 }
 

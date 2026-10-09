@@ -47,6 +47,7 @@ enum ParentLinkMethod {
   FAMILY_CODE
   INVITE
   CLASSROOM
+  ROSTER
 }
 
 enum MissionStatus {
@@ -113,6 +114,17 @@ model School {
   subjects        Subject[]
   teacherSubjects TeacherSubject[]
   courses         Course[]
+
+  assistantMessages AssistantMessage[]
+  assistantActions  AssistantAction[]
+  announcements     Announcement[]
+  timetableSetup    TimetableSetup?
+  rooms             Room[]
+  timetableRules    TimetableRule[]
+  timetables        Timetable[]
+  absences          Absence[]
+  covers            Cover[]
+  rosterImports     RosterImport[]
 }
 
 model User {
@@ -125,13 +137,14 @@ model User {
   status             UserStatus @default(ACTIVE)
   googleRefreshToken String?
   devHandle          String?    @unique
+  lastSeenAt         DateTime?
   createdAt          DateTime   @default(now())
 
   memberships      Membership[]
   teaching         ClassTeacher[]
   enrollments      Enrollment[]
-  parentLinks      ParentLink[]     @relation("ParentLinkParent")
-  childLinks       ParentLink[]     @relation("ParentLinkStudent")
+  parentLinks      ParentLink[]              @relation("ParentLinkParent")
+  childLinks       ParentLink[]              @relation("ParentLinkStudent")
   familyCodes      FamilyCode[]
   missionsCreated  Mission[]
   submissions      Submission[]
@@ -144,8 +157,8 @@ model User {
   badges           StudentBadge[]
   streak           Streak?
   notifications    Notification[]
-  messagesSent     Message[]        @relation("MessageFrom")
-  messagesReceived Message[]        @relation("MessageTo")
+  messagesSent     Message[]                 @relation("MessageFrom")
+  messagesReceived Message[]                 @relation("MessageTo")
   uploads          Upload[]
   teacherSubjects  TeacherSubject[]
   studyHosted      StudySession[]            @relation("StudyHost")
@@ -424,9 +437,9 @@ model Mission {
   createdBy     User         @relation(fields: [createdById], references: [id])
   submissions   Submission[]
 
+  @@unique([parentMissionId, classId])
   @@index([classId, status])
   @@index([topicId])
-  @@unique([parentMissionId, classId])
   @@index([courseId, status])
 }
 
@@ -852,4 +865,261 @@ model RecordingChunk {
   recording Recording @relation(fields: [recordingId], references: [id], onDelete: Cascade)
 
   @@id([recordingId, seq])
+}
+
+// ---- Director suite: Ask Arzino, timetable, absences & cover, roster imports ----
+
+enum AssistantRole {
+  USER
+  ARZINO
+}
+
+enum AssistantActionStatus {
+  PENDING
+  EXECUTING
+  DONE
+  CANCELLED
+  FAILED
+}
+
+enum AnnouncementAudience {
+  SCHOOL
+  STUDENTS
+  TEACHERS
+  PARENTS
+  GRADE
+  SECTION
+}
+
+enum TimetableStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum RoomKind {
+  CLASSROOM
+  LAB
+  GYM
+  OTHER
+}
+
+enum AbsenceReason {
+  SICK
+  TRAINING
+  PERSONAL
+  TRIP
+  OTHER
+}
+
+enum CoverStatus {
+  CONFIRMED
+  CANCELLED
+}
+
+enum RosterImportStatus {
+  PREVIEW
+  APPLYING
+  APPLIED
+  FAILED
+}
+
+/// One message in a staff member's conversation with Arzino (text is stored detokenized, never sent to the AI as-is).
+model AssistantMessage {
+  id          String        @id @default(cuid())
+  schoolId    String
+  userId      String
+  role        AssistantRole
+  text        String
+  voice       Boolean       @default(false)
+  source      String?
+  suggestions String[]      @default([])
+  createdAt   DateTime      @default(now())
+
+  school  School            @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  actions AssistantAction[]
+
+  @@index([userId, schoolId, createdAt])
+}
+
+/// A draft action Arzino proposed; nothing runs until the user confirms it.
+model AssistantAction {
+  id        String                @id @default(cuid())
+  messageId String
+  schoolId  String
+  userId    String
+  kind      String
+  status    AssistantActionStatus @default(PENDING)
+  params    Json
+  preview   Json
+  result    Json?
+  error     String?
+  createdAt DateTime              @default(now())
+  decidedAt DateTime?
+
+  message AssistantMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  school  School           @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId, status])
+}
+
+model Announcement {
+  id             String               @id @default(cuid())
+  schoolId       String
+  authorId       String
+  title          String
+  body           String
+  audience       AnnouncementAudience
+  gradeLevel     Int?
+  sectionKey     String?
+  includeParents Boolean              @default(false)
+  recipientCount Int
+  createdAt      DateTime             @default(now())
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId, createdAt])
+}
+
+/// The school's timetable settings (days, periods, weekly loads…) and teacher pins per section × subject.
+model TimetableSetup {
+  schoolId    String   @id
+  config      Json
+  assignments Json     @default("{}")
+  updatedAt   DateTime @updatedAt
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+}
+
+model Room {
+  id          String   @id @default(cuid())
+  schoolId    String
+  name        String
+  kind        RoomKind @default(CLASSROOM)
+  homeSection String?
+  createdAt   DateTime @default(now())
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@unique([schoolId, name])
+}
+
+/// A scheduling rule the director wrote in plain words, with its structured form.
+model TimetableRule {
+  id          String   @id @default(cuid())
+  schoolId    String
+  text        String
+  kind        String
+  params      Json
+  hard        Boolean
+  weight      Int      @default(2)
+  active      Boolean  @default(true)
+  source      String
+  createdById String
+  createdAt   DateTime @default(now())
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId])
+}
+
+model Timetable {
+  id            String          @id @default(cuid())
+  schoolId      String
+  status        TimetableStatus @default(DRAFT)
+  seed          Int
+  input         Json
+  score         Int
+  breakdown     Json
+  stats         Json
+  conflicts     Json            @default("[]")
+  explanation   Json?
+  createdById   String
+  createdAt     DateTime        @default(now())
+  publishedAt   DateTime?
+  effectiveFrom DateTime?       @db.Date
+
+  school School          @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  slots  TimetableSlot[]
+
+  @@index([schoolId, status])
+}
+
+/// One lesson in a timetable. The unique keys make double-booking a section, teacher or room impossible.
+model TimetableSlot {
+  id          String  @id @default(cuid())
+  timetableId String
+  day         Int
+  period      Int
+  sectionKey  String
+  gradeLevel  Int
+  subjectId   String
+  teacherId   String
+  roomId      String?
+  classId     String?
+  locked      Boolean @default(false)
+
+  timetable Timetable @relation(fields: [timetableId], references: [id], onDelete: Cascade)
+
+  @@unique([timetableId, sectionKey, day, period])
+  @@unique([timetableId, teacherId, day, period])
+  @@unique([timetableId, roomId, day, period])
+  @@index([teacherId])
+}
+
+model Absence {
+  id          String        @id @default(cuid())
+  schoolId    String
+  teacherId   String
+  date        DateTime      @db.Date
+  periods     Int[]         @default([])
+  reason      AbsenceReason
+  note        String?
+  createdById String
+  createdAt   DateTime      @default(now())
+
+  school School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  covers Cover[]
+
+  @@unique([teacherId, date])
+  @@index([schoolId, date])
+}
+
+model Cover {
+  id           String      @id @default(cuid())
+  absenceId    String
+  schoolId     String
+  date         DateTime    @db.Date
+  period       Int
+  sectionKey   String
+  subjectId    String
+  substituteId String?
+  status       CoverStatus @default(CONFIRMED)
+  createdAt    DateTime    @default(now())
+
+  absence Absence @relation(fields: [absenceId], references: [id], onDelete: Cascade)
+  school  School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@unique([absenceId, period])
+  @@unique([substituteId, date, period])
+  @@index([schoolId, date])
+}
+
+model RosterImport {
+  id          String             @id @default(cuid())
+  schoolId    String
+  createdById String
+  filename    String
+  status      RosterImportStatus @default(PREVIEW)
+  mapping     Json
+  rows        Json
+  issues      Json
+  summary     Json
+  result      Json?
+  createdAt   DateTime           @default(now())
+  appliedAt   DateTime?
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId, createdAt])
 }

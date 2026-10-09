@@ -9,6 +9,11 @@ export const SUBJECTS = [
   { key: 'biology', name: { en: 'Biology', ar: 'الأحياء', fr: 'Biologie' }, color: 'green', icon: 'leaf' },
   { key: 'history', name: { en: 'History', ar: 'التاريخ', fr: 'Histoire' }, color: 'coral', icon: 'landmark' },
   { key: 'languages', name: { en: 'Languages', ar: 'اللغات', fr: 'Langues' }, color: 'sunny', icon: 'languages' },
+  // taught subjects the school timetable schedules (no seeded classes or topics yet)
+  { key: 'arabic', name: { en: 'Arabic', ar: 'اللغة العربية', fr: 'Arabe' }, color: 'coral', icon: 'book' },
+  { key: 'french', name: { en: 'French', ar: 'اللغة الفرنسية', fr: 'Français' }, color: 'pink', icon: 'globe' },
+  { key: 'english', name: { en: 'English', ar: 'اللغة الإنجليزية', fr: 'Anglais' }, color: 'sky', icon: 'languages' },
+  { key: 'sport', name: { en: 'Sport', ar: 'الرياضة البدنية', fr: 'Sport' }, color: 'slate', icon: 'dumbbell' },
 ];
 
 export const TOPICS = [

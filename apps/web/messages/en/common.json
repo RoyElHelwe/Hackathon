@@ -78,7 +78,11 @@
     "STUDY_ACCEPTED": "{name} joined your study room!",
     "EXAM_SCHEDULED": "New exam: {title}",
     "EXAM_OPEN": "Your exam room is open: {title}",
-    "EXAM_RESULT_RELEASED": "Exam result ready: {title}"
+    "EXAM_RESULT_RELEASED": "Exam result ready: {title}",
+    "ANNOUNCEMENT": "📣 {title}",
+    "COVER_ASSIGNED": "You're covering {section} · {subject}, period {period} on {day}",
+    "TIMETABLE_PUBLISHED": "The new timetable is published",
+    "FAMILY_LINK_NUDGE": "Invite your family to follow your progress 👪"
   },
   "noContacts": "No conversations yet.",
   "typeMessage": "Write a message…",

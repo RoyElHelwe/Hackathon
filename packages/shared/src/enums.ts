@@ -56,6 +56,10 @@ export const NOTIFICATION_TYPES = [
   'EXAM_SCHEDULED',
   'EXAM_OPEN',
   'EXAM_RESULT_RELEASED',
+  'ANNOUNCEMENT',
+  'COVER_ASSIGNED',
+  'TIMETABLE_PUBLISHED',
+  'FAMILY_LINK_NUDGE',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 

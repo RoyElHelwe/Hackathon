@@ -147,7 +147,10 @@ export class SchoolsService {
     if (body.role === 'PARENT') {
       if (!body.studentId) throw new BadRequestException('studentId is required for parent invites');
       const enr = await this.prisma.enrollment.findMany({ where: { studentId: body.studentId, status: 'ACTIVE' } });
-      const ok = admin || enr.some((e) => actor.classIdsTaught?.includes(e.classId));
+      // admins: only students of their own school; teachers: only students in a class they teach
+      const ok = admin
+        ? !!(await this.prisma.membership.findFirst({ where: { userId: body.studentId, schoolId: actor.schoolId, role: 'STUDENT', status: 'APPROVED' } }))
+        : enr.some((e) => actor.classIdsTaught?.includes(e.classId));
       if (!ok) throw new ForbiddenException();
     } else if (!admin) {
       throw new ForbiddenException('Only directors can invite staff.');
