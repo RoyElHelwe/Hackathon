@@ -83,7 +83,18 @@ export function useWalker(map: CampusMap, room: Room) {
     (velocity, rotationY, delta) => {
       const o = origin.current;
       if (!o) return;
-      if (rotationY) o.rotation.y += rotationY;
+      if (rotationY) {
+        // turn around the head, not the play-area origin: after room-scale steps the view must not swing sideways
+        // (into a wall or the table) — the head stays where it is
+        camera.getWorldPosition(head);
+        const vx = head.x - o.position.x;
+        const vz = head.z - o.position.z;
+        const c = Math.cos(rotationY);
+        const s = Math.sin(rotationY);
+        o.rotation.y += rotationY;
+        o.position.x += vx - (vx * c + vz * s);
+        o.position.z += vz - (-vx * s + vz * c);
+      }
       if (!velocity.x && !velocity.z) return;
       camera.getWorldPosition(head);
       const from = toMap(head.x, head.z);

@@ -24,6 +24,15 @@ describe('TogetherClock', () => {
     expect(c.flush('study:s', 200_000)).toBe(0);
   });
 
+  it('waits for pending writes of ended segments', async () => {
+    const c = new TogetherClock();
+    let stored = 0;
+    c.track('study:s', new Promise((r) => setTimeout(() => r((stored += 60_000)), 20)));
+    await c.settled('study:s');
+    expect(stored).toBe(60_000);
+    await expect(c.settled('study:none')).resolves.toBeUndefined();
+  });
+
   it('keeps rooms apart', () => {
     const c = new TogetherClock();
     c.update('study:a', true, 0);

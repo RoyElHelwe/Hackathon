@@ -161,7 +161,7 @@ test.describe('VR campus with laptop classmates (emulated Quest 2)', () => {
 test.describe('VR exam room (emulated Quest 2)', () => {
   test.beforeAll(() => reseed());
 
-  test('Bousla interviews Lea in VR; a spoken answer becomes text (server path), she sends it, the next question comes', async ({ page }) => {
+  test('Bousla interviews Lea in VR; she taps, talks, taps again; the answer becomes text, she sends it, the next question comes', async ({ page }) => {
     await loginAs(page, 'lea', '/student/campus');
     const exams = (await (await page.request.get('/api/exams/mine')).json()) as { attemptId: string; title: string }[];
     const exam = exams.find((e) => e.title === 'Geometry voice check-in')!;
@@ -169,14 +169,18 @@ test.describe('VR exam room (emulated Quest 2)', () => {
     await page.goto(`/student/exams/${exam.attemptId}`);
     await expect(page.getByTestId('exam-vr')).toHaveAttribute('href', `/vr?scene=exam:${exam.attemptId}`);
 
-    await page.goto(`/vr?scene=exam:${exam.attemptId}&emulate=1&stt=server`);
-    type Exam = { start(): Promise<void>; transcribe(bytes: string): Promise<void>; send(): Promise<void>; status?: string; question?: number; draft: string };
+    // no `stt=server`: if the browser's own speech recognition hears nothing (headless, or failing on a headset),
+    // the recording made at the same time is turned into text by Tajriba (mock AI here)
+    await page.goto(`/vr?scene=exam:${exam.attemptId}&emulate=1`);
+    type Exam = { start(): Promise<void>; talk(): Promise<void>; stopTalk(): Promise<void>; send(): Promise<void>; status?: string; question?: number; draft: string };
     const ex = () => page.evaluate(() => window.__tajribaVR?.exam as Exam | undefined);
     await expect.poll(async () => (await ex())?.status).toBe('NOT_STARTED');
     await enterVR(page);
     await page.evaluate(() => (window.__tajribaVR!.exam as Exam).start());
     await expect.poll(async () => (await ex())?.status).toBe('IN_PROGRESS');
-    await page.evaluate(() => (window.__tajribaVR!.exam as Exam).transcribe('fake opus answer'));
+    await page.evaluate(() => (window.__tajribaVR!.exam as Exam).talk());
+    await page.waitForTimeout(1500); // the fake microphone plays a tone
+    await page.evaluate(() => (window.__tajribaVR!.exam as Exam).stopTalk());
     await expect.poll(async () => (await ex())?.draft ?? '').toMatch(/similar triangles/i);
     await page.evaluate(() => (window.__tajribaVR!.exam as Exam).send());
     await expect.poll(async () => (await ex())?.question).toBe(1);

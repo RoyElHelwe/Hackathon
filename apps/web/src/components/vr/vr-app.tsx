@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeft, Glasses, Home } from 'lucide-react';
+import { ArrowLeft, Glasses, Home, Mic } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -16,6 +16,34 @@ import { XRStage, useVRStore, useVRSupported } from './stage';
 import { vrTest } from './test-hook';
 
 /**
+ * Microphone permission, asked on the flat page BEFORE entering VR for scenes that use voice: a permission prompt in
+ * the middle of an immersive session is easy to miss in a headset.
+ */
+function useMicPermission(needed: boolean) {
+  const [state, setState] = useState<'granted' | 'prompt' | 'denied' | 'unknown'>('unknown');
+  useEffect(() => {
+    if (!needed) return;
+    let status: PermissionStatus | null = null;
+    const read = () => status && setState(status.state as 'granted' | 'prompt' | 'denied');
+    navigator.permissions
+      ?.query({ name: 'microphone' as PermissionName })
+      .then((s) => {
+        status = s;
+        read();
+        s.addEventListener('change', read);
+      })
+      .catch(() => setState('unknown'));
+    return () => status?.removeEventListener('change', read);
+  }, [needed]);
+  const ask = useCallback(async () => {
+    const s = await navigator.mediaDevices?.getUserMedia({ audio: true }).catch(() => null);
+    s?.getTracks().forEach((tr) => tr.stop());
+    setState(s ? 'granted' : 'denied');
+  }, []);
+  return { state, ask };
+}
+
+/**
  * Tajriba VR: one page, one XR session, several experiences (hub, Shadow Lab, campus, study room, exam room).
  * On a laptop it is a normal 3D page (drag to look around); on a Meta Quest, "Enter VR" puts you inside.
  */
@@ -27,6 +55,8 @@ export default function VRApp() {
   const [inVR, setInVR] = useState(false);
   const supported = useVRSupported(store).vr;
   const debug = params.get('debug') === '1';
+  const mic = useMicPermission(scene.kind === 'campus' || scene.kind === 'study' || scene.kind === 'exam');
+  const needsMic = (scene.kind === 'campus' || scene.kind === 'study' || scene.kind === 'exam') && mic.state !== 'granted';
 
   const go = useCallback((next: VRScene) => {
     setScene(next);
@@ -75,6 +105,11 @@ export default function VRApp() {
             </Button>
           )}
           <div className="flex-1" />
+          {needsMic && !inVR && (
+            <Button variant="kidGhost" className="pointer-events-auto" onClick={mic.ask} data-testid="vr-allow-mic">
+              <Mic /> {t('allowMic')}
+            </Button>
+          )}
           {supported && !inVR && (
             <Button variant="kid" className="pointer-events-auto" onClick={enter} data-testid="enter-vr">
               <Glasses /> {t('enter')}

@@ -295,6 +295,7 @@ export class StudySessionsService {
     const now = new Date();
     const flipped = await this.prisma.studySession.updateMany({ where: { id, status: 'ACTIVE' }, data: { status: 'ENDED', endedAt: now, endedReason: reason } });
     if (!flipped.count) return;
+    await this.bus.together.settled(`study:${id}`);
     const running = this.bus.together.flush(`study:${id}`, now.getTime());
     this.bus.boards.delete(`study:${id}`);
     if (running) await this.prisma.studySession.update({ where: { id }, data: { togetherMs: { increment: running } } });

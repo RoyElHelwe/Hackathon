@@ -1,8 +1,15 @@
 'use client';
 
-import { useFrame } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useRef, useState } from 'react';
+import { Vector3, type Group } from 'three';
 import { Panel, VC, VText } from './kit';
+
+const head = new Vector3();
+const fwd = new Vector3();
+const left = new Vector3();
+const target = new Vector3();
+const UP = new Vector3(0, 1, 0);
 
 const MAX = 6;
 const lines: string[] = [];
@@ -28,10 +35,13 @@ function install() {
 }
 
 /**
- * `?debug=1`: a panel with FPS and the last errors, floating low on the left of the player.
- * This is the "remote debugger" when the Quest is not plugged in.
+ * `?debug=1`: a panel with FPS and the last errors, low on the left of wherever you look (it follows you lazily,
+ * in every scene). This is the "remote debugger" when the Quest is not plugged in.
  */
-export function DebugPanel({ position = [-0.75, 0.9, -1.1] }: { position?: [number, number, number] }) {
+export function DebugPanel() {
+  const camera = useThree((s) => s.camera);
+  const g = useRef<Group>(null);
+  const placed = useRef(false);
   const [, force] = useState(0);
   const [fps, setFps] = useState(0);
   const frames = useRef({ n: 0, t: 0 });
@@ -46,6 +56,20 @@ export function DebugPanel({ position = [-0.75, 0.9, -1.1] }: { position?: [numb
   }, []);
 
   useFrame((_, dt) => {
+    const o = g.current;
+    if (o) {
+      camera.getWorldPosition(head);
+      camera.getWorldDirection(fwd);
+      fwd.y = 0;
+      fwd.normalize();
+      left.crossVectors(UP, fwd).normalize();
+      target.copy(head).addScaledVector(fwd, 0.9).addScaledVector(left, 0.45);
+      target.y = head.y - 0.3;
+      // appear in place, then follow lazily
+      if (!placed.current || o.position.distanceTo(target) > 0.35) o.position.lerp(target, placed.current ? 0.1 : 1);
+      placed.current = true;
+      o.lookAt(head);
+    }
     const f = frames.current;
     f.n++;
     f.t += dt;
@@ -57,7 +81,8 @@ export function DebugPanel({ position = [-0.75, 0.9, -1.1] }: { position?: [numb
   });
 
   return (
-    <Panel width={0.7} height={0.42} position={position} rotation={[0, 0.5, 0]} color={VC.panelDark} opacity={0.9}>
+    <group ref={g}>
+    <Panel width={0.7} height={0.42} color={VC.panelDark} opacity={0.9}>
       <VText size={0.035} color={fps >= 70 ? VC.mint : fps >= 50 ? VC.sunny : VC.coral} bold position={[0, 0.17, 0]}>
         {`FPS ${fps}`}
       </VText>
@@ -65,5 +90,6 @@ export function DebugPanel({ position = [-0.75, 0.9, -1.1] }: { position?: [numb
         {lines.length ? lines.join('\n') : 'No errors ✓'}
       </VText>
     </Panel>
+    </group>
   );
 }

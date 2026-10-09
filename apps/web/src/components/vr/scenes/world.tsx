@@ -186,7 +186,8 @@ function Piece({ f, label, needleAngle, screens }: { f: Furniture; label: (s: st
         </group>
       );
     case 'bousla':
-      return <Bousla3D position={[c.x, 0.65, c.z]} scale={1.6} mood="happy" needleAngle={needleAngle} />;
+      // feet on the floor: Bousla's feet sit ~0.3 below its center at scale 1
+      return <Bousla3D position={[c.x, 0.5, c.z]} scale={1.6} mood="happy" needleAngle={needleAngle} />;
     default:
       return null;
   }

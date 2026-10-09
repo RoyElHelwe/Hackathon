@@ -304,7 +304,8 @@ export class CampusGateway implements OnGatewayInit, OnGatewayDisconnect {
     if (wasTogether === together) return;
     const endedMs = this.bus.together.update(grant.key, together);
     const sessionId = grant.refId;
-    void (async () => {
+    // tracked: ending the session waits for this write, so a segment that just ended still counts for XP
+    const write = (async () => {
       try {
         const s = endedMs
           ? await this.prisma.studySession.update({ where: { id: sessionId }, data: { togetherMs: { increment: endedMs } }, select: { togetherMs: true } })
@@ -315,6 +316,7 @@ export class CampusGateway implements OnGatewayInit, OnGatewayDisconnect {
         this.logger.warn(`together time update failed: ${e instanceof Error ? e.message : e}`);
       }
     })();
+    this.bus.together.track(grant.key, write);
   }
 
   private kind(grant: RoomGrant): 'STUDY' | 'EXAM' {

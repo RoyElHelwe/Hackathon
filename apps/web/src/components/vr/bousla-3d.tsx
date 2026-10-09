@@ -33,8 +33,8 @@ export function Bousla3D({
     const t = clock.elapsedTime;
     const r = root.current;
     if (r) {
-      // idle float; cheering bounces
-      r.position.y = (position?.[1] ?? 0) + (mood === 'cheering' ? Math.abs(Math.sin(t * 6)) * 0.08 : Math.sin(t * 1.6) * 0.015) * scale;
+      // idle float; cheering bounces (an offset inside the placed, scaled group — `position` is applied once, outside)
+      r.position.y = mood === 'cheering' ? Math.abs(Math.sin(t * 6)) * 0.08 : Math.sin(t * 1.6) * 0.015;
       r.rotation.z = mood === 'cheering' ? Math.sin(t * 6) * 0.06 : 0;
     }
     const n = needle.current;

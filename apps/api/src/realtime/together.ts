@@ -6,6 +6,22 @@
  */
 export class TogetherClock {
   private readonly since = new Map<string, number>();
+  /** pending DB writes of ended segments, per room (finish() waits for them before counting) */
+  private readonly writes = new Map<string, Promise<unknown>>();
+
+  /** Registers the DB write of an ended segment, so `settled` can wait for it. */
+  track(key: string, write: Promise<unknown>) {
+    const next = (this.writes.get(key) ?? Promise.resolve()).then(() => write).catch(() => undefined);
+    this.writes.set(key, next);
+    void next.finally(() => {
+      if (this.writes.get(key) === next) this.writes.delete(key);
+    });
+  }
+
+  /** Resolves once every ended segment of this room is stored. */
+  async settled(key: string): Promise<void> {
+    await this.writes.get(key);
+  }
 
   /**
    * Call after anyone joins or leaves. Returns the length of the together-segment that just ended (0 when nothing

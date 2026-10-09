@@ -34,7 +34,8 @@ export function useVRStore(): XRStore {
       ...({ baseAssetPath: `${window.location.origin}/xr-profiles/`, defaultControllerProfileId: 'oculus-touch-v3' } as object),
       // Quest 2: lighter fragment work at the edges of the lenses
       foveation: 1,
-      frameRate: 'high',
+      // 72 Hz (Quest 2's native rate); 'high' would pick 120 Hz, which real-time shadows can't hold
+      frameRate: (rates: ArrayLike<number>) => (Array.from(rates).includes(72) ? 72 : Math.min(...Array.from(rates))),
     });
   }, []);
 }

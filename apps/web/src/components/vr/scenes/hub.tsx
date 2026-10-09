@@ -53,7 +53,8 @@ export function HubScene() {
       <VText size={0.06} color={VC.ink} position={[0, 2.05, -2]}>
         {t('hello')}
       </VText>
-      <Bousla3D mood="happy" position={[0, 0.32, -2.1]} scale={1} />
+      {/* beside the doors, turned toward you (below them it hides behind the middle card from eye height) */}
+      <Bousla3D mood="happy" position={[-1.3, 1.2, -1.75]} rotationY={0.6} scale={0.9} />
       <Tile x={-0.7} rotY={0.45} emoji="🌞" title={t('shadowLab.title')} body={t('shadowLab.body')} color={VC.sunny} onGo={open({ kind: 'shadow-lab' })} name="tile-shadow-lab" />
       <Tile x={0} rotY={0} emoji="🏫" title={t('campus.title')} body={t('campus.body')} color={VC.mint} onGo={open({ kind: 'campus' })} name="tile-campus" />
       <Tile

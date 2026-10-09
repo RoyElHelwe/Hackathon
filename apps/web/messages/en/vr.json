@@ -28,7 +28,7 @@
     "notQuest": "Open this page in the Meta Quest browser to check your headset.",
     "ready": "Ready for VR ✓",
     "notReady": "Not ready for VR yet — see the red rows.",
-    "voiceDevice": "Voice answers in the VR exam: recognized right on this device.",
+    "voiceDevice": "Voice answers in the VR exam: recognized on this device (if that fails, Tajriba turns the recording into text).",
     "voiceServer": "Voice answers in the VR exam: recorded and turned into text by Tajriba.",
     "secure": "Secure page (HTTPS)",
     "secureHint": "VR only works on https:// links (or localhost). Open the https link.",
@@ -112,13 +112,14 @@
     "send": "Send",
     "again": "Say it again",
     "listening": "Turning your voice into text…",
-    "talking": "Listening… let go when you're done.",
-    "holdHint": "Hold the trigger on the button and answer out loud.",
-    "holdHintServer": "Hold the trigger on the button and answer out loud — Tajriba writes it down.",
-    "hold": "Hold to answer",
-    "release": "Let go to stop",
+    "talking": "Listening… tap the button when you're done.",
+    "holdHint": "Tap the button, answer out loud, then tap it again.",
+    "holdHintServer": "Tap the button, answer out loud, then tap it again — Tajriba writes it down.",
+    "hold": "Tap to answer",
+    "release": "Tap when you're done",
     "heardNothing": "I didn't catch that — try again a bit closer to the mic.",
     "noMic": "The microphone is blocked. Allow it in the browser settings.",
     "error": "Something went wrong — try again."
-  }
+  },
+  "allowMic": "Allow the microphone first"
 }

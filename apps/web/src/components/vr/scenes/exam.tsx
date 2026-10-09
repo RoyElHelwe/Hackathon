@@ -29,19 +29,18 @@ const BOUSLA = toWorld(360, 175);
 /** the student's feeling (from the AI) → Bousla's reaction (same as the 2D exam room) */
 const BOUSLA_FOR: Record<string, BouslaMood> = { nervous: 'happy', confused: 'curious', confident: 'cheering', happy: 'cheering', calm: 'happy', thinking: 'thinking' };
 
-/** Press and hold (controller trigger or mouse) — for talking. */
-function HoldButton({ label, onDown, onUp, active, position, disabled }: { label: string; onDown: () => void; onUp: () => void; active: boolean; position: [number, number, number]; disabled?: boolean }) {
-  const down = (e: ThreeEvent<PointerEvent>) => {
+/**
+ * Tap to start talking, tap again when done (controller trigger or mouse). A toggle, not press-and-hold: holding a
+ * ray steady on a small button for a whole answer is hard, and drifting off it must not cut the answer.
+ */
+function TalkButton({ label, onToggle, active, position, disabled }: { label: string; onToggle: () => void; active: boolean; position: [number, number, number]; disabled?: boolean }) {
+  const click = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
-    if (!disabled) onDown();
-  };
-  const up = (e: ThreeEvent<PointerEvent>) => {
-    e.stopPropagation();
-    if (active) onUp();
+    if (!disabled) onToggle();
   };
   return (
-    <group position={position} name="vr-hold-to-talk">
-      <RoundedBox args={[0.62, 0.13, 0.04]} radius={0.03} smoothness={3} position={[0, 0, active ? 0.006 : 0.02]} onPointerDown={down} onPointerUp={up} onPointerLeave={up}>
+    <group position={position} name="vr-talk">
+      <RoundedBox args={[0.62, 0.13, 0.04]} radius={0.03} smoothness={3} position={[0, 0, active ? 0.006 : 0.02]} onClick={click}>
         <meshStandardMaterial color={disabled ? '#9a95b8' : active ? VC.coral : VC.violet} emissive={active ? VC.coral : '#000000'} emissiveIntensity={active ? 0.4 : 0} />
       </RoundedBox>
       <VText size={0.05} bold color={VC.white} position={[0, 0, active ? 0.03 : 0.045]}>
@@ -94,6 +93,12 @@ export function ExamScene({ id }: { id: string }) {
   const lastAi = a ? [...a.turns].reverse().find((x) => x.role === 'AI') : undefined;
 
   const [holding, setHolding] = useState(false);
+  /** mirrors `holding` for async code; `talkId` tells an old press from the current one */
+  const talking = useRef(false);
+  const talkId = useRef(0);
+  const ownStream = useRef<MediaStream | null>(null);
+  const transcriptRef = useRef('');
+  transcriptRef.current = stt.transcript;
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState<'start' | 'listen' | 'send' | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -143,42 +148,87 @@ export function ExamScene({ id }: { id: string }) {
     [path, tv],
   );
 
-  const pressTalk = useCallback(async () => {
+  const releaseOwnStream = () => {
+    ownStream.current?.getTracks().forEach((tr) => tr.stop());
+    ownStream.current = null;
+  };
+
+  /**
+   * Start an answer. The audio is ALWAYS recorded too: on a headset whose speech recognition fails (network,
+   * audio-capture…), the recording is turned into text by Tajriba instead of the answer being lost.
+   */
+  const startTalk = useCallback(async () => {
+    const id = ++talkId.current;
     tts.cancel();
     setError(null);
     setDraft('');
     setHolding(true);
+    talking.current = true;
     if (onDevice) {
       stt.reset();
       stt.start();
+    }
+    let stream = voice.stream;
+    if (!stream) {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true }).catch(() => null);
+      ownStream.current = stream;
+    }
+    // stopped (or restarted) while the mic was being opened: don't leave a recorder running
+    if (talkId.current !== id || !talking.current) {
+      if (stream && stream === ownStream.current) releaseOwnStream();
       return;
     }
-    // record from the mic stream we already have (or ask for one)
-    const stream = voice.stream ?? (await navigator.mediaDevices.getUserMedia({ audio: true }).catch(() => null));
     if (!stream) {
-      setHolding(false);
-      setError(tv('noMic'));
+      if (!onDevice) {
+        talking.current = false;
+        setHolding(false);
+        setError(tv('noMic'));
+      }
       return;
     }
     chunks.current = [];
     const mr = new MediaRecorder(stream);
     mr.ondataavailable = (e) => e.data.size && chunks.current.push(e.data);
-    mr.onstop = () => void transcribe(new Blob(chunks.current, { type: mr.mimeType || 'audio/webm' }));
     mr.start();
     recorder.current = mr;
-  }, [onDevice, stt, tts, voice.stream, transcribe, tv]);
+  }, [onDevice, stt, tts, voice.stream, tv]);
 
-  const releaseTalk = useCallback(() => {
+  /** Finish the answer: on-device text if there is any (final + the phrase still being recognized), else the recording. */
+  const stopTalk = useCallback(async () => {
+    talking.current = false;
     setHolding(false);
-    if (onDevice) {
-      const text = (stt.stop() || stt.transcript).trim();
-      setDraft(text);
-      if (!text) setError(tv('heardNothing'));
-      return;
-    }
-    if (recorder.current?.state === 'recording') recorder.current.stop();
+    const mr = recorder.current;
     recorder.current = null;
-  }, [onDevice, stt, tv]);
+    const audio =
+      mr && mr.state === 'recording'
+        ? await new Promise<Blob>((resolve) => {
+            mr.onstop = () => resolve(new Blob(chunks.current, { type: mr.mimeType || 'audio/webm' }));
+            mr.stop();
+          })
+        : null;
+    releaseOwnStream();
+    if (onDevice) {
+      const finalText = stt.stop();
+      const live = transcriptRef.current.trim();
+      const text = (live.length > finalText.length ? live : finalText).trim();
+      if (text) {
+        setDraft(text);
+        return;
+      }
+    }
+    if (audio?.size) return transcribe(audio);
+    setError(tv('heardNothing'));
+  }, [onDevice, stt, transcribe, tv]);
+
+  // leaving the room mid-answer: stop the recorder and any mic we opened
+  useEffect(
+    () => () => {
+      talking.current = false;
+      if (recorder.current?.state === 'recording') recorder.current.stop();
+      ownStream.current?.getTracks().forEach((tr) => tr.stop());
+    },
+    [],
+  );
 
   const send = useCallback(
     async (text: string) => {
@@ -205,8 +255,8 @@ export function ExamScene({ id }: { id: string }) {
 
   // test hook (dev only)
   useEffect(() => {
-    vrTest({ exam: { start, say: (text: string) => setDraft(text), send: () => send(draft), transcribe: (bytes: string) => transcribe(new Blob([bytes], { type: 'audio/webm' })), status: a?.status, question: a?.questionIdx, draft, onDevice } });
-  }, [start, send, transcribe, draft, a?.status, a?.questionIdx, onDevice]);
+    vrTest({ exam: { start, talk: startTalk, stopTalk, say: (text: string) => setDraft(text), send: () => send(draft), transcribe: (bytes: string) => transcribe(new Blob([bytes], { type: 'audio/webm' })), status: a?.status, question: a?.questionIdx, draft, onDevice } });
+  }, [start, startTalk, stopTalk, send, transcribe, draft, a?.status, a?.questionIdx, onDevice]);
   useEffect(() => () => vrTestClear(['exam']), []);
 
   const mood: BouslaMood = busy === 'send' ? 'thinking' : holding ? 'curious' : BOUSLA_FOR[lastAi?.mood ?? 'calm'] ?? 'happy';
@@ -218,9 +268,9 @@ export function ExamScene({ id }: { id: string }) {
       <color attach="background" args={['#e3f2ff']} />
       <MapWorld map={MAP} skip={['bousla']} />
       {/* Bousla, life-size, behind the desk */}
-      {/* standing on the floor, about as tall as a 13-year-old's shoulder */}
-      <Bousla3D mood={mood} scale={2.4} position={[BOUSLA.x, 0.68, BOUSLA.z]} needleAngle={holding ? 0 : null} />
-      {lastAi?.emoji && running && <EmojiSprite emoji={lastAi.emoji} size={0.4} position={[BOUSLA.x + 0.75, 1.75, BOUSLA.z]} />}
+      {/* life-size behind the desk, face at the student's eye line above the question card */}
+      <Bousla3D mood={mood} scale={2.4} position={[BOUSLA.x, 1.2, BOUSLA.z]} needleAngle={holding ? 0 : null} />
+      {lastAi?.emoji && running && <EmojiSprite emoji={lastAi.emoji} size={0.4} position={[BOUSLA.x + 0.75, 2.2, BOUSLA.z]} />}
 
       {/* a lectern-like card below eye level, so Bousla stays in full view across the desk */}
       <Panel width={1.25} height={0.62} position={[SEAT.x, 1.02, SEAT.z - 0.95]} rotation={[-0.42, 0, 0]}>
@@ -275,7 +325,7 @@ export function ExamScene({ id }: { id: string }) {
                 <VText size={0.03} color="#5b5675" maxWidth={1.15} position={[0, -0.06, 0]}>
                   {busy === 'listen' ? tv('listening') : holding ? (stt.transcript || tv('talking')) : onDevice ? tv('holdHint') : tv('holdHintServer')}
                 </VText>
-                <HoldButton label={holding ? tv('release') : tv('hold')} onDown={() => void pressTalk()} onUp={releaseTalk} active={holding} disabled={busy !== null} position={[0, -0.2, 0]} />
+                <TalkButton label={holding ? tv('release') : tv('hold')} onToggle={() => void (holding ? stopTalk() : startTalk())} active={holding} disabled={busy !== null} position={[0, -0.2, 0]} />
               </>
             )}
           </>

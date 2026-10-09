@@ -58,7 +58,9 @@ function useVRStudy() {
       setBusy(null);
     }
   };
-  return { invite, accept, busy, error };
+  /** "Not now" really declines, so the classmate who invited isn't left waiting (same as the 2D pop-up). */
+  const decline = (id: string) => api(`/study-sessions/${id}/decline`, { method: 'POST' }).then(() => undefined, () => undefined);
+  return { invite, accept, decline, busy, error };
 }
 
 /**
@@ -125,7 +127,7 @@ export function CampusScene() {
           {invite.help && invite.topic ? tc('invites.help', { name: first(invite.fromName), topic: invite.topic }) : tc('invites.from', { name: first(invite.fromName) })}
         </VText>
         <VButton label={tc('invites.accept')} onClick={() => study.accept(invite.sessionId)} position={[-0.2, -0.12, 0]} width={0.34} name="vr-invite-join" />
-        <VButton label={tc('invites.decline')} onClick={() => setInvite(null)} position={[0.2, -0.12, 0]} width={0.34} color="#d9d4f0" textColor={VC.ink} />
+        <VButton label={tc('invites.decline')} onClick={() => study.decline(invite.sessionId).then(() => setInvite(null))} position={[0.2, -0.12, 0]} width={0.34} color="#d9d4f0" textColor={VC.ink} name="vr-invite-decline" />
       </FacingPanel>
     );
   } else if (zone?.kind === 'study_door') {
