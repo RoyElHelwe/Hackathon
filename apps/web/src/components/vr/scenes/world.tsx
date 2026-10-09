@@ -1,7 +1,7 @@
 'use client';
 
 import { useFrame } from '@react-three/fiber';
-import { METERS_PER_PX, type CampusMap, type Furniture, type Rect } from '@tajriba/shared';
+import { METERS_PER_PX, type CampusMap, type Furniture, type FurnitureKind, type Rect } from '@tajriba/shared';
 import { useTranslations } from 'next-intl';
 import { useMemo, useRef } from 'react';
 import type { Mesh } from 'three';
@@ -203,8 +203,11 @@ export function MapWorld({
   glowDesks = false,
   boardText,
   bouslaNeedle,
+  skip = [],
 }: {
   map: CampusMap;
+  /** furniture the scene draws itself (e.g. the life-size Bousla in the exam room) */
+  skip?: FurnitureKind[];
   glowTables?: string[];
   glowDesks?: boolean;
   boardText?: string | null;
@@ -223,7 +226,7 @@ export function MapWorld({
 
   return (
     <group>
-      <directionalLight position={[W * 0.3, 14, D * 0.8]} intensity={1.6} castShadow shadow-mapSize={[2048, 2048]} shadow-camera-left={-W} shadow-camera-right={W} shadow-camera-top={D} shadow-camera-bottom={-D} shadow-camera-far={60} />
+      <directionalLight position={[W * 0.3, 14, D * 0.8]} intensity={1.6} castShadow shadow-mapSize={[1024, 1024]} shadow-camera-left={-W} shadow-camera-right={W} shadow-camera-top={D} shadow-camera-bottom={-D} shadow-camera-far={60} />
       <mesh position={[W / 2, 0, D / 2]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <planeGeometry args={[W, D]} />
         <meshStandardMaterial color={FLOOR[map.floor] ?? FLOOR.violet} roughness={1} />
@@ -231,9 +234,11 @@ export function MapWorld({
       {map.walls.map((w, i) => (
         <Box key={i} r={w} h={WALL_H} color={VC.wall} />
       ))}
-      {map.furniture.map((f, i) => (
+      {map.furniture.map((f, i) =>
+        skip.includes(f.kind) ? null : (
         <Piece key={i} f={f} label={label} needleAngle={bouslaNeedle} screens={map.id === 'campus'} />
-      ))}
+        ),
+      )}
       {map.zones
         .filter((z) => z.kind === 'study_door' || z.kind === 'exam_door')
         .map((z) => (

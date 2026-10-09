@@ -72,7 +72,7 @@ export function ExamScene({ id }: { id: string }) {
   useSocketEvent<{ attemptId: string }>('exam:status', (d) => d.attemptId === id && void invalidate(path, '/exams/mine'));
   useSocketEvent<{ attemptId: string }>('exam:turn', (d) => d.attemptId === id && void invalidate(path));
 
-  useEffect(() => desktop.look([SEAT.x, 1.5, SEAT.z + 1.6], [BOUSLA.x, 1.1, BOUSLA.z]), [desktop]);
+  useEffect(() => desktop.look([SEAT.x, 1.75, SEAT.z + 1.2], [BOUSLA.x, 0.95, BOUSLA.z]), [desktop]);
 
   const running = a?.status === 'IN_PROGRESS';
   const room = useRoom(a ? a.room : null);
@@ -216,13 +216,14 @@ export function ExamScene({ id }: { id: string }) {
     <>
       <XROrigin position={[SEAT.x, 0, SEAT.z + 0.35]} />
       <color attach="background" args={['#e3f2ff']} />
-      <MapWorld map={MAP} />
+      <MapWorld map={MAP} skip={['bousla']} />
       {/* Bousla, life-size, behind the desk */}
       {/* standing on the floor, about as tall as a 13-year-old's shoulder */}
       <Bousla3D mood={mood} scale={2.4} position={[BOUSLA.x, 0.68, BOUSLA.z]} needleAngle={holding ? 0 : null} />
       {lastAi?.emoji && running && <EmojiSprite emoji={lastAi.emoji} size={0.4} position={[BOUSLA.x + 0.75, 1.75, BOUSLA.z]} />}
 
-      <Panel width={1.25} height={0.62} position={[SEAT.x, 1.55, SEAT.z - 1.25]} rotation={[-0.08, 0, 0]}>
+      {/* a lectern-like card below eye level, so Bousla stays in full view across the desk */}
+      <Panel width={1.25} height={0.62} position={[SEAT.x, 1.02, SEAT.z - 0.95]} rotation={[-0.42, 0, 0]}>
         {!a ? (
           <VText size={0.05}>{tv('loading')}</VText>
         ) : a.status === 'NOT_STARTED' ? (
@@ -286,7 +287,7 @@ export function ExamScene({ id }: { id: string }) {
         )}
       </Panel>
       {observed && running && (
-        <Panel width={0.6} height={0.09} position={[SEAT.x, 1.98, SEAT.z - 1.3]} color={VC.violet}>
+        <Panel width={0.6} height={0.09} position={[SEAT.x, 1.42, SEAT.z - 1.05]} rotation={[-0.3, 0, 0]} color={VC.violet}>
           <VText size={0.032} bold color={VC.white}>
             {t('exam.observed')}
           </VText>
