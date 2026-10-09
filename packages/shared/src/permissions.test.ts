@@ -1,4 +1,4 @@
-import { Actor, can, checkFamilyCode, isEligibleEvaluator, makeFamilyCode, makeSchoolCode, pickEvaluator, roleMayEver } from './permissions';
+import { Actor, can, canSeeExamScore, checkFamilyCode, isEligibleEvaluator, makeFamilyCode, makeSchoolCode, pickEvaluator, roleMayEver } from './permissions';
 import { safetyPrefilter } from './safety';
 import { stuckReasons, unlockedTopics } from './stuck';
 
@@ -279,4 +279,53 @@ describe('stuck detection & unlocks', () => {
 
 it('makeFamilyCode random is in range', () => {
   for (let i = 0; i < 20; i++) expect(makeFamilyCode()).toMatch(/^\d{6}$/);
+});
+
+describe('permissions — campus: study sessions, exams, recordings', () => {
+  const both = ['lea', 'karim'];
+  it('students only see sessions they take part in, in their class', () => {
+    expect(can(student, 'write', 'study_session', { classId: 'c1', participantIds: both })).toBe(true);
+    expect(can(student, 'read', 'study_session', { classId: 'c1', participantIds: ['omar', 'karim'] })).toBe(false);
+    expect(can(student, 'write', 'study_session', { classId: 'c2', participantIds: both })).toBe(false);
+  });
+  it('teachers read sessions of their classes only; parents never', () => {
+    expect(can(teacher, 'read', 'study_session', { classId: 'c1', participantIds: both })).toBe(true);
+    expect(can(teacher, 'read', 'study_session', { classId: 'c2', participantIds: both })).toBe(false);
+    expect(can(teacher, 'write', 'study_session', { classId: 'c1' })).toBe(false);
+    expect(can(parent, 'read', 'study_session', { classId: 'c1', participantIds: both })).toBe(false);
+  });
+  it('exams: teacher writes in own classes, student reads when enrolled', () => {
+    expect(can(teacher, 'write', 'exam', { classId: 'c1' })).toBe(true);
+    expect(can(teacher, 'write', 'exam', { classId: 'c2' })).toBe(false);
+    expect(can(student, 'read', 'exam', { classId: 'c1' })).toBe(true);
+    expect(can(student, 'write', 'exam', { classId: 'c1' })).toBe(false);
+    expect(can(director, 'read', 'exam', { classId: 'c9' })).toBe(true);
+    expect(can(director, 'write', 'exam', { classId: 'c9' })).toBe(false);
+  });
+  it('exam attempts: own for students, released-only for parents, review for teachers', () => {
+    expect(can(student, 'write', 'exam_attempt', { classId: 'c1', ownerId: 'lea' })).toBe(true);
+    expect(can(student, 'read', 'exam_attempt', { classId: 'c1', ownerId: 'karim' })).toBe(false);
+    expect(can(parent, 'read', 'exam_attempt', { ownerId: 'lea', released: false })).toBe(false);
+    expect(can(parent, 'read', 'exam_attempt', { ownerId: 'lea', released: true })).toBe(true);
+    expect(can(parent, 'read', 'exam_attempt', { ownerId: 'karim', released: true })).toBe(false);
+    expect(can(teacher, 'review', 'exam_attempt', { classId: 'c1' })).toBe(true);
+    expect(can(teacher, 'review', 'exam_attempt', { classId: 'c2' })).toBe(false);
+  });
+  it('scores stay hidden until released', () => {
+    expect(canSeeExamScore(student, { classId: 'c1', ownerId: 'lea', released: false })).toBe(false);
+    expect(canSeeExamScore(student, { classId: 'c1', ownerId: 'lea', released: true })).toBe(true);
+    expect(canSeeExamScore(student, { classId: 'c1', ownerId: 'karim', released: true })).toBe(false);
+    expect(canSeeExamScore(parent, { ownerId: 'lea', released: false })).toBe(false);
+    expect(canSeeExamScore(teacher, { classId: 'c1', ownerId: 'lea', released: false })).toBe(true);
+    expect(canSeeExamScore(teacher, { classId: 'c2', ownerId: 'lea', released: false })).toBe(false);
+  });
+  it('recordings: owner writes, partner reads, teacher of the class reads', () => {
+    expect(can(student, 'write', 'recording', { classId: 'c1', ownerId: 'lea' })).toBe(true);
+    expect(can(student, 'read', 'recording', { classId: 'c1', ownerId: 'karim', participantIds: both })).toBe(true);
+    expect(can(student, 'write', 'recording', { classId: 'c1', ownerId: 'karim', participantIds: both })).toBe(false);
+    expect(can(student, 'read', 'recording', { classId: 'c1', ownerId: 'omar', participantIds: ['omar'] })).toBe(false);
+    expect(can(teacher, 'read', 'recording', { classId: 'c1', ownerId: 'lea' })).toBe(true);
+    expect(can(teacher, 'read', 'recording', { classId: 'c2', ownerId: 'lea' })).toBe(false);
+    expect(can(parent, 'read', 'recording', { classId: 'c1', ownerId: 'lea' })).toBe(false);
+  });
 });

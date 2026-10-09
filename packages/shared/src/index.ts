@@ -5,3 +5,5 @@ export * from './permissions';
 export * from './schemas';
 export * from './safety';
 export * from './stuck';
+export * from './campus';
+export * from './exam';
