@@ -4,6 +4,7 @@ import { AuthContext } from '../common/auth-context';
 import { ActorService } from '../common/actor.service';
 import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { CourseMissionsService } from './course-missions.service';
 import { LessonSyncService } from './lesson-sync.service';
 
 const COURSE_INCLUDE = {
@@ -34,6 +35,7 @@ export class CoursesService {
     private readonly prisma: PrismaService,
     private readonly actors: ActorService,
     private readonly lessonSync: LessonSyncService,
+    private readonly courseMissions: CourseMissionsService,
   ) {}
 
   /** The course for (school, subject, grade), created on first use. The subject must belong to the school. */
@@ -69,6 +71,8 @@ export class CoursesService {
       await this.lessonSync.archiveOrphans(oldCourseId);
       await this.lessonSync.reorder(oldCourseId);
     }
+    // A section joining a course gets the course's approved missions (already-published ones are not re-posted to Classroom).
+    if (oldCourseId !== course.id) await this.courseMissions.copyApprovedTemplates(course.id, classId);
   }
 
   /** Lesson sync that never throws (used after imports / moves and by the cron). */
@@ -137,9 +141,18 @@ export class CoursesService {
     const visible = visibleClassIds(actor);
     const rows = await this.prisma.lesson.findMany({
       where: { courseId: id, archivedAt: null },
-      include: { sources: { select: { classId: true, classroomUrl: true } } },
+      include: { sources: { select: { classId: true, classroomUrl: true } }, topic: { select: { id: true, name: true } } },
       orderBy: [{ position: 'asc' }, { postedAt: 'asc' }],
     });
+    const topicIds = rows.flatMap((l) => (l.topic ? [l.topic.id] : []));
+    const counts = topicIds.length
+      ? await this.prisma.mission.groupBy({
+          by: ['topicId', 'status'],
+          where: { courseId: id, classId: null, topicId: { in: topicIds }, status: { in: ['DRAFT', 'APPROVED'] } },
+          _count: true,
+        })
+      : [];
+    const count = (topicId: string | undefined, status: 'DRAFT' | 'APPROVED') => counts.find((c) => c.topicId === topicId && c.status === status)?._count ?? 0;
     return rows.map((l) => ({
       id: l.id,
       title: l.title,
@@ -149,8 +162,12 @@ export class CoursesService {
       position: l.position,
       postedAt: l.postedAt,
       status: l.status,
+      gamifyError: l.gamifyError,
       contentChangedAt: l.contentChangedAt,
       archived: false,
+      topic: l.topic ? { id: l.topic.id, name: l.topic.name } : null,
+      draftCount: count(l.topic?.id, 'DRAFT'),
+      approvedCount: count(l.topic?.id, 'APPROVED'),
       // the actor's own sections first, so "Open in Classroom" opens a course they can access
       sources: [...l.sources].sort((x, y) => Number(!!visible && !visible.includes(x.classId)) - Number(!!visible && !visible.includes(y.classId))),
     }));

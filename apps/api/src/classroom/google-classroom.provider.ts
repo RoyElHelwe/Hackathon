@@ -13,14 +13,14 @@ import {
   TeacherCredentials,
 } from './classroom.provider';
 
-function isInvalidGrant(e: unknown): boolean {
+export function isInvalidGrant(e: unknown): boolean {
   const msg = e instanceof Error ? e.message : String(e);
   const data = (e as { response?: { data?: { error?: string } } })?.response?.data;
   return msg.includes('invalid_grant') || data?.error === 'invalid_grant';
 }
 
 /** 403 because the token lacks a scope we now need (teacher connected before new scopes were added). */
-function isInsufficientScope(e: unknown): boolean {
+export function isInsufficientScope(e: unknown): boolean {
   const err = e as { status?: number; code?: number | string; response?: { status?: number; data?: unknown } };
   const status = err?.status ?? err?.response?.status ?? (typeof err?.code === 'number' ? err.code : undefined);
   if (status !== 403) return false;

@@ -10,6 +10,10 @@ export interface TaskDef<I, O> {
   system: string;
   user: (input: I) => string;
   mock: (input: I) => O;
+  /** completion budget (default config.AI_MAX_TOKENS) */
+  maxTokens?: number;
+  /** request timeout (default 30 s) */
+  timeoutMs?: number;
 }
 
 export function defineTask<I, O>(def: TaskDef<I, O>): TaskDef<I, O> {

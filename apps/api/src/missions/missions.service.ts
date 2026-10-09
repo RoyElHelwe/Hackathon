@@ -5,6 +5,7 @@ import { generateMissions, safetyCheckMission } from '../ai/tasks';
 import { ClassroomService } from '../classroom/classroom.service';
 import { AuthContext } from '../common/auth-context';
 import { ActorService } from '../common/actor.service';
+import { CourseMissionsService, isTemplate } from '../courses/course-missions.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { Mission, Prisma } from '../generated/prisma/client';
@@ -37,10 +38,13 @@ export class MissionsService {
     private readonly ai: AiService,
     private readonly classroom: ClassroomService,
     private readonly notifications: NotificationsService,
+    private readonly courseMissions: CourseMissionsService,
   ) {}
 
-  private async target(m: Pick<Mission, 'classId' | 'audience' | 'status'>) {
-    return { resource: m.status === 'DRAFT' ? ('mission_draft' as const) : ('mission' as const), target: { classId: m.classId, audience: m.audience } };
+  /** Course templates (classId null) are checked against the course's sections. */
+  private async target(m: Pick<Mission, 'classId' | 'courseId' | 'audience' | 'status'>) {
+    const courseClassIds = isTemplate(m) ? await this.courseMissions.sectionIds(m.courseId!) : undefined;
+    return { resource: m.status === 'DRAFT' ? ('mission_draft' as const) : ('mission' as const), target: { classId: m.classId, audience: m.audience, courseClassIds } };
   }
 
   async assertRead(a: AuthContext, m: Mission) {
@@ -49,7 +53,8 @@ export class MissionsService {
   }
 
   async assertWrite(a: AuthContext, m: Mission) {
-    await this.actors.assert(a, 'write', 'mission_draft', { classId: m.classId });
+    const t = await this.target(m);
+    await this.actors.assert(a, 'write', 'mission_draft', { classId: m.classId, courseClassIds: t.target.courseClassIds });
   }
 
   async generate(a: AuthContext, body: { topicId: string; classId: string; count: number; interests?: string; audience?: MissionAudience }) {
@@ -116,11 +121,19 @@ export class MissionsService {
     return m;
   }
 
-  async list(a: AuthContext, q: { classId?: string; status?: string; topicId?: string }) {
+  async list(a: AuthContext, q: { classId?: string; courseId?: string; status?: string; topicId?: string }) {
     const actor = await this.actors.actor(a);
     const where: Prisma.MissionWhereInput = {};
     if (q.topicId) where.topicId = q.topicId;
-    if (actor.role === 'STUDENT') {
+    if (q.courseId) {
+      // A course's mission templates (drafts + approved), for teachers of any of its sections and directors.
+      const course = await this.prisma.course.findUnique({ where: { id: q.courseId }, include: { classes: { select: { id: true } } } });
+      if (!course) throw new NotFoundException();
+      await this.actors.assert(a, 'read', 'mission_draft', { schoolId: course.schoolId, classId: null, courseClassIds: course.classes.map((c) => c.id) });
+      where.courseId = q.courseId;
+      where.classId = null;
+      where.status = q.status ? (q.status as Prisma.MissionWhereInput['status']) : { not: 'ARCHIVED' };
+    } else if (actor.role === 'STUDENT') {
       where.classId = { in: q.classId ? actor.classIdsEnrolled!.filter((c) => c === q.classId) : actor.classIdsEnrolled! };
       where.status = 'APPROVED';
     } else if (actor.role === 'PARENT') {
@@ -154,6 +167,8 @@ export class MissionsService {
       key: m.key,
       topicId: m.topicId,
       classId: m.classId,
+      courseId: m.courseId,
+      parentMissionId: m.parentMissionId,
       status: m.status,
       audience: m.audience,
       difficulty: m.difficulty,
@@ -233,6 +248,7 @@ export class MissionsService {
       where: { id },
       data: { status: 'APPROVED', dueAt: body.dueAt ? new Date(body.dueAt) : null },
     });
+    if (isTemplate(approved)) return { mission: this.serialize(approved), classroom: await this.publishToSections(a, approved, body.postToClassroom) };
     let classroom: { posted: boolean; error?: string } | null = null;
     if (body.postToClassroom) {
       try {
@@ -255,9 +271,50 @@ export class MissionsService {
     return { mission: this.serialize(await this.getRaw(id)), classroom };
   }
 
+  /**
+   * An approved course template goes live in every section: one APPROVED copy per section, optionally posted to that
+   * section's Classroom (errors per section are logged, never fatal), and that section's students are notified.
+   */
+  private async publishToSections(a: AuthContext, template: Mission, postToClassroom: boolean) {
+    const copies = await this.courseMissions.copyToSections(template);
+    let posted = 0;
+    let failed = 0;
+    let linked = 0;
+    for (const copy of copies) {
+      if (postToClassroom) {
+        const cls = await this.prisma.class.findUniqueOrThrow({ where: { id: copy.classId! }, include: { teachers: true } });
+        if (cls.classroomCourseId) {
+          linked++;
+          // Post as the approving teacher when they teach the section, otherwise as the section's owner.
+          const poster = cls.teachers.find((t) => t.teacherId === a.userId) ?? cls.teachers.find((t) => t.type === 'OWNER') ?? cls.teachers[0];
+          try {
+            if (!poster) throw new Error('Section has no teacher');
+            if (await this.classroom.publishMission(copy.id, poster.teacherId)) posted++;
+          } catch (e) {
+            failed++;
+            this.logger.warn(`Classroom post failed for section ${cls.id}: ${e instanceof Error ? e.message : e}`);
+          }
+        }
+      }
+      const students = await this.prisma.enrollment.findMany({ where: { classId: copy.classId!, status: 'ACTIVE' } });
+      await this.notifications.notifyMany(
+        students.map((s) => s.studentId),
+        'MISSION_PUBLISHED',
+        { missionId: copy.id, title: copy.title },
+        `published:${copy.id}`,
+      );
+    }
+    if (!postToClassroom) return null;
+    if (!linked) return { posted: false, error: 'No section of this course is linked to Google Classroom.', sections: { posted, failed } };
+    if (failed) return { posted: posted > 0, error: `Could not post to Google Classroom for ${failed} of ${linked} sections. The mission is live in Tajriba.`, sections: { posted, failed } };
+    return { posted: true, sections: { posted, failed } };
+  }
+
   async archive(a: AuthContext, id: string) {
     const m = await this.getRaw(id);
     await this.assertWrite(a, m);
-    return this.serialize(await this.prisma.mission.update({ where: { id }, data: { status: 'ARCHIVED' } }));
+    const archived = await this.prisma.mission.update({ where: { id }, data: { status: 'ARCHIVED' } });
+    if (isTemplate(m)) await this.courseMissions.archiveCopies(id);
+    return this.serialize(archived);
   }
 }

@@ -12,6 +12,7 @@ import { FamiliesModule } from './families/families.module';
 import { GamificationModule } from './gamification/gamification.module';
 import { HealthController } from './health.controller';
 import { JobsModule } from './jobs/jobs.module';
+import { LessonsModule } from './courses/lessons.module';
 import { MessagesModule } from './messages/messages.module';
 import { MissionsModule } from './missions/missions.module';
 import { NotificationsModule } from './notifications/notifications.module';
@@ -39,6 +40,7 @@ import { UploadsModule } from './uploads/uploads.module';
     ClassesModule,
     SubjectsModule,
     MissionsModule,
+    LessonsModule,
     SubmissionsModule,
     FamiliesModule,
     ParentsModule,

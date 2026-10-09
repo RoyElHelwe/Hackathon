@@ -19,12 +19,18 @@ export interface CompletionResult {
 }
 
 /** Transport for chat completions. Swappable in tests. */
+export interface CompletionOptions {
+  jsonMode: boolean;
+  maxTokens?: number;
+  timeoutMs?: number;
+}
+
 export interface AiTransport {
-  complete(model: string, messages: ChatMessage[], opts: { jsonMode: boolean }): Promise<CompletionResult>;
+  complete(model: string, messages: ChatMessage[], opts: CompletionOptions): Promise<CompletionResult>;
 }
 
 export class OpenRouterTransport implements AiTransport {
-  async complete(model: string, messages: ChatMessage[], opts: { jsonMode: boolean }): Promise<CompletionResult> {
+  async complete(model: string, messages: ChatMessage[], opts: CompletionOptions): Promise<CompletionResult> {
     const res = await fetch(`${config.OPENROUTER_BASE_URL}/chat/completions`, {
       method: 'POST',
       headers: {
@@ -36,11 +42,11 @@ export class OpenRouterTransport implements AiTransport {
       body: JSON.stringify({
         model,
         messages,
-        max_tokens: config.AI_MAX_TOKENS,
+        max_tokens: opts.maxTokens ?? config.AI_MAX_TOKENS,
         temperature: 0.4,
         ...(opts.jsonMode ? { response_format: { type: 'json_object' } } : {}),
       }),
-      signal: AbortSignal.timeout(30_000),
+      signal: AbortSignal.timeout(opts.timeoutMs ?? 30_000),
     });
     if (!res.ok) {
       const body = await res.text().catch(() => '');
@@ -175,7 +181,7 @@ export class AiService {
     for (let attempt = 0; attempt < 2; attempt++) {
       let reply: CompletionResult;
       try {
-        reply = await this.transport.complete(model, messages, { jsonMode });
+        reply = await this.transport.complete(model, messages, { jsonMode, maxTokens: task.maxTokens, timeoutMs: task.timeoutMs });
       } catch (e) {
         const status = (e as { status?: number }).status;
         if (status === 400 && jsonMode) {

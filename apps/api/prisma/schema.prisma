@@ -214,10 +214,12 @@ model Course {
   gradeLevel Int
   createdAt  DateTime @default(now())
 
-  school  School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  subject Subject  @relation(fields: [subjectId], references: [id], onDelete: Restrict)
-  classes Class[]
-  lessons Lesson[]
+  school   School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  subject  Subject   @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+  classes  Class[]
+  lessons  Lesson[]
+  topics   Topic[]
+  missions Mission[]
 
   @@unique([schoolId, subjectId, gradeLevel])
 }
@@ -242,6 +244,7 @@ model Lesson {
 
   course  Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
   sources LessonSource[]
+  topic   Topic?
 
   @@unique([courseId, fingerprint])
   @@index([courseId, position])
@@ -350,12 +353,19 @@ model Topic {
   curriculumRef String?
   posX          Int
   posY          Int
+  /// set for skills created from a course lesson ("Gamify with AI")
+  courseId      String?
+  lessonId      String? @unique
 
   subject       Subject             @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+  course        Course?             @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lesson        Lesson?             @relation(fields: [lessonId], references: [id], onDelete: SetNull)
   prerequisites TopicPrerequisite[] @relation("TopicPrereqTopic")
   dependents    TopicPrerequisite[] @relation("TopicPrereqPrereq")
   missions      Mission[]
   progress      TopicProgress[]
+
+  @@index([courseId])
 }
 
 model TopicPrerequisite {
@@ -391,14 +401,22 @@ model Mission {
   classroomCourseWorkId String?
   aiGenerated           Boolean         @default(false)
   createdAt             DateTime        @default(now())
+  /// course missions: the template has courseId + classId null; each section gets an APPROVED copy (parentMissionId = template)
+  courseId              String?
+  parentMissionId       String?
 
-  topic       Topic        @relation(fields: [topicId], references: [id], onDelete: Cascade)
-  class       Class?       @relation(fields: [classId], references: [id], onDelete: Cascade)
-  createdBy   User         @relation(fields: [createdById], references: [id])
-  submissions Submission[]
+  topic         Topic        @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  class         Class?       @relation(fields: [classId], references: [id], onDelete: Cascade)
+  course        Course?      @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  parentMission Mission?     @relation("MissionCopies", fields: [parentMissionId], references: [id], onDelete: Cascade)
+  copies        Mission[]    @relation("MissionCopies")
+  createdBy     User         @relation(fields: [createdById], references: [id])
+  submissions   Submission[]
 
   @@index([classId, status])
   @@index([topicId])
+  @@unique([parentMissionId, classId])
+  @@index([courseId, status])
 }
 
 model Submission {

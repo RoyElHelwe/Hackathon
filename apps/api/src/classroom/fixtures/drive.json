@@ -1,0 +1,5 @@
+{
+  "drive-angles-ws": "Angles worksheet. An angle is formed by two rays that share an endpoint. Acute angles are smaller than 90 degrees, right angles are exactly 90 degrees and obtuse angles are between 90 and 180 degrees. Use a protractor: put its centre on the vertex, line up one ray with 0 and read where the other ray crosses the scale. Exercise: measure the angles of a door opening, a laptop screen and a ramp.",
+  "drive-area-notes": "Area of a triangle. The area of a triangle is half of the base times the height: A = (b x h) / 2. The height is always perpendicular to the base. Two triangles with the same base and the same height have the same area, even if their shapes are different. Example: a triangular garden bed with a base of 4 m and a height of 3 m has an area of 6 square metres.",
+  "drive-similar-slides": "Similar triangles. Two triangles are similar when their angles are equal; then their sides are proportional. If a 1.5 m tall person casts a 2 m shadow at the same moment a building casts a 20 m shadow, the building is 15 m tall. Similar triangles let us measure heights and distances we cannot reach."
+}

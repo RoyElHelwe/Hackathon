@@ -18,8 +18,14 @@ export class MissionsController {
 
   @Can('read', 'mission')
   @Get()
-  list(@Auth() a: AuthContext, @Query('classId') classId?: string, @Query('status') status?: string, @Query('topicId') topicId?: string) {
-    return this.missions.list(a, { classId, status, topicId });
+  list(
+    @Auth() a: AuthContext,
+    @Query('classId') classId?: string,
+    @Query('status') status?: string,
+    @Query('topicId') topicId?: string,
+    @Query('courseId') courseId?: string,
+  ) {
+    return this.missions.list(a, { classId, status, topicId, courseId });
   }
 
   @Can('read', 'mission')
