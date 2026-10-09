@@ -28,12 +28,14 @@ interface Props {
   classroomLinked: boolean;
   onChange: (m: Mission) => void;
   onRemove: (id: string) => void;
+  /** course template: approval publishes to every section */
+  courseMode?: boolean;
 }
 
 type I18n = { en: string; ar?: string; fr?: string };
 
 /** One AI draft in the mission studio: inline editing, safety badge, approve & publish. */
-export function MissionDraftCard({ mission: m, index, className, classroomLinked, onChange, onRemove }: Props) {
+export function MissionDraftCard({ mission: m, index, className, classroomLinked, onChange, onRemove, courseMode = false }: Props) {
   const t = useTranslations('teacher.studio');
   const td = useTranslations('common.difficulty');
   const l = useL();
@@ -259,6 +261,7 @@ export function MissionDraftCard({ mission: m, index, className, classroomLinked
           title={title}
           className={className}
           classroomLinked={classroomLinked}
+          courseMode={courseMode}
           open={publishOpen}
           onOpenChange={setPublishOpen}
           onSafety={(s) => onChange({ ...latest.current, safetyCheck: s })}

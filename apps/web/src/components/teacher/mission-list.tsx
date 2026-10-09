@@ -9,10 +9,10 @@ import { Skeleton, Tabs, TabsContent, TabsList, TabsTrigger } from '@/components
 import { useApi, useL } from '@/lib/hooks';
 import type { Mission } from '@/lib/types';
 
-/** Existing drafts / published missions of a class. */
-export function MissionList({ classId, editingIds, onOpen }: { classId: string; editingIds: string[]; onOpen: (m: Mission) => void }) {
+/** Existing drafts / published missions of a class, or of a course (its mission templates). */
+export function MissionList({ classId, courseId, editingIds, onOpen }: { classId?: string; courseId?: string; editingIds: string[]; onOpen: (m: Mission) => void }) {
   const t = useTranslations('teacher.studio');
-  const { data, isLoading, error, refetch } = useApi<Mission[]>(`/missions?classId=${classId}`);
+  const { data, isLoading, error, refetch } = useApi<Mission[]>(courseId ? `/missions?courseId=${courseId}` : `/missions?classId=${classId}`);
   if (isLoading) return <Skeleton className="h-40" />;
   if (error) return <ErrorState message={error.message} onRetry={() => refetch()} />;
   const drafts = (data ?? []).filter((m) => m.status === 'DRAFT');

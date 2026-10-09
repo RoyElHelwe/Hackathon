@@ -207,7 +207,15 @@
     "inClassroom": "In Classroom",
     "submissionsN": "{n, plural, one {# submission} other {# submissions}}",
     "noClasses": "No classes yet",
-    "noClassesBody": "Import a class from Google Classroom to start creating missions."
+    "noClassesBody": "Import a class from Google Classroom to start creating missions.",
+    "courseTitle": "Missions · {course}",
+    "courseSubtitle": "Drafts Bousla wrote from your gamified lessons. Approve one to publish it to every section of the course.",
+    "backToCourse": "Back to lessons",
+    "allSections": "all {n, plural, one {# section} other {# sections}} of {course}",
+    "courseDraftsTitle": "{n, plural, =0 {No drafts to review} one {# draft to review} other {# drafts to review}}",
+    "courseNoDraftsBody": "Press “Gamify with AI” on a lesson and its missions will wait here for you.",
+    "courseLibraryTitle": "All missions of {course}",
+    "skillGroup": "Skill: {name}"
   },
   "safety": {
     "checking": "Running safety check…",
@@ -230,7 +238,9 @@
     "safetyNote": "A final safety check runs before publishing.",
     "cancel": "Cancel",
     "confirm": "Publish now",
-    "error": "We couldn't publish this mission. Please try again."
+    "error": "We couldn't publish this mission. Please try again.",
+    "postHintCourse": "Creates an assignment in every section’s Google Classroom, linking back to Tajriba. Scores sync to each gradebook when validated.",
+    "notLinkedCourse": "No section of this course is linked to Google Classroom."
   },
   "review": {
     "title": "Review queue",
@@ -406,7 +416,7 @@
     "statusNotGamified": "Not gamified",
     "statusReady": "Ready",
     "statusFailed": "Failed",
-    "statusGamifying": "Gamifying…",
+    "statusGamifying": "Bousla is reading the lesson…",
     "changedInClassroom": "Changed in Classroom",
     "openInClassroom": "Open in Classroom",
     "attachment": {
@@ -419,6 +429,26 @@
       "link": "Link",
       "form": "Form",
       "file": "File"
-    }
+    },
+    "gamifyCta": "Gamify with AI",
+    "regenerateCta": "Regenerate",
+    "retryCta": "Try again",
+    "gamifyStarted": "Bousla is reading “{title}”. This takes about a minute.",
+    "gamifyDone": "“{title}” is ready. Review its missions.",
+    "gamifyFailed": "Bousla couldn’t gamify “{title}”.",
+    "gamifyStartError": "We couldn’t start. Please try again.",
+    "gamifyError": {
+      "AI_UNAVAILABLE": "Bousla couldn’t read this lesson right now. Please try again in a minute.",
+      "INTERRUPTED": "This was interrupted. Please try again.",
+      "FAILED": "Something went wrong while reading this lesson. Please try again."
+    },
+    "skill": "Skill: {name}",
+    "missionsToReview": "{n, plural, one {# mission to review} other {# missions to review}}",
+    "missionsLive": "{n, plural, one {# mission live} other {# missions live}}",
+    "openMissions": "Open missions",
+    "changedRegenerate": "Updated in Classroom — regenerate?",
+    "regenerateTitle": "Regenerate missions for “{title}”?",
+    "regenerateBody": "{n, plural, one {Bousla will write new drafts. Your # unapproved draft will be replaced.} other {Bousla will write new drafts. Your # unapproved drafts will be replaced.}} Published missions stay as they are.",
+    "cancel": "Cancel"
   }
 }

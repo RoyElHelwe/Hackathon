@@ -22,6 +22,9 @@ export interface Mission {
   key: string | null;
   topicId: string;
   classId: string | null;
+  /** course missions: the template has courseId + classId null; section copies point to it */
+  courseId?: string | null;
+  parentMissionId?: string | null;
   status: 'DRAFT' | 'APPROVED' | 'ARCHIVED';
   audience: 'STUDENT' | 'FAMILY' | 'SQUAD';
   difficulty: 'EASY' | 'MEDIUM' | 'HARD';

@@ -11,12 +11,15 @@ import {
   Image as ImageIcon,
   Link2,
   Presentation,
+  Loader2,
   RefreshCw,
+  Sparkles,
+  Wand2,
   type LucideIcon,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
-import { use, useState } from 'react';
+import { use, useEffect, useRef, useState } from 'react';
 import { PageHeader } from '@/components/app/adult-shell';
 import { EmptyState, ErrorState, PageSkeleton } from '@/components/app/states';
 import { SubjectChip, subjectLabel } from '@/components/director/subject-chip';
@@ -27,9 +30,10 @@ import type { CourseLesson, CourseSummary, LessonMaterial, LessonStatus, LessonS
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/misc';
 import { api } from '@/lib/api';
-import { useApi, useInvalidate } from '@/lib/hooks';
+import { useApi, useInvalidate, useL } from '@/lib/hooks';
 
 type AttachmentKind = 'pdf' | 'doc' | 'slides' | 'sheet' | 'video' | 'image' | 'link' | 'form' | 'file';
 
@@ -79,8 +83,27 @@ export default function CoursePage({ params }: { params: Promise<{ id: string }>
   const locale = useLocale();
   const invalidate = useInvalidate();
   const course = useApi<CourseSummary>(`/courses/${id}`);
-  const lessons = useApi<CourseLesson[]>(`/courses/${id}/lessons`);
+  // Gamifying runs in the background on the server: poll every 3 s while any lesson is still being read.
+  const lessons = useApi<CourseLesson[]>(`/courses/${id}/lessons`, {
+    refetchInterval: (q) => (q.state.data?.some((l) => l.status === 'GAMIFYING') ? 3000 : false),
+  });
   const [syncing, setSyncing] = useState(false);
+  const [starting, setStarting] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState<CourseLesson | null>(null);
+
+  // Tell the teacher when a background run finishes.
+  const prevStatus = useRef<Map<string, LessonStatus> | null>(null);
+  useEffect(() => {
+    if (!lessons.data) return;
+    const prev = prevStatus.current;
+    for (const l of lessons.data) {
+      if (prev?.get(l.id) !== 'GAMIFYING') continue;
+      if (l.status === 'READY') toast(t('gamifyDone', { title: l.title }));
+      if (l.status === 'FAILED') toast(t('gamifyFailed', { title: l.title }), 'error');
+    }
+    if (prev && lessons.data.some((l) => prev.get(l.id) === 'GAMIFYING' && l.status !== 'GAMIFYING')) void invalidate(`/courses/${id}`, '/courses');
+    prevStatus.current = new Map(lessons.data.map((l) => [l.id, l.status]));
+  }, [lessons.data, id, invalidate, t]);
 
   if (course.isLoading) return <PageSkeleton />;
   if (course.error || !course.data) return <ErrorState message={course.error?.message} onRetry={() => course.refetch()} />;
@@ -104,6 +127,22 @@ export default function CoursePage({ params }: { params: Promise<{ id: string }>
       await invalidate(`/courses/${id}`, `/courses/${id}/lessons`, '/courses', '/classes');
     }
   };
+
+  const gamify = async (lesson: CourseLesson) => {
+    setConfirming(null);
+    setStarting(lesson.id);
+    try {
+      await api(`/lessons/${lesson.id}/gamify`, { method: 'POST', body: {} });
+      toast(t('gamifyStarted', { title: lesson.title }), 'info');
+    } catch (e) {
+      toast(errMessage(e, t('gamifyStartError')), 'error');
+    } finally {
+      setStarting(null);
+      await lessons.refetch();
+    }
+  };
+  // Regenerating replaces unapproved drafts: ask first when there are some.
+  const onGamify = (lesson: CourseLesson) => (lesson.draftCount > 0 ? setConfirming(lesson) : void gamify(lesson));
 
   return (
     <div>
@@ -154,17 +193,51 @@ export default function CoursePage({ params }: { params: Promise<{ id: string }>
       ) : (
         <ol className="space-y-3" data-testid="lesson-list">
           {lessons.data.map((l, i) => (
-            <LessonRow key={l.id} lesson={l} index={i + 1} />
+            <LessonRow key={l.id} lesson={l} index={i + 1} courseId={id} canEdit={c.canEdit} starting={starting === l.id} onGamify={onGamify} />
           ))}
         </ol>
       )}
+
+      <Dialog open={!!confirming} onOpenChange={(open) => !open && setConfirming(null)}>
+        <DialogContent data-testid="regenerate-dialog">
+          <DialogTitle>{t('regenerateTitle', { title: confirming?.title ?? '' })}</DialogTitle>
+          <DialogDescription className="mt-2">{t('regenerateBody', { n: confirming?.draftCount ?? 0 })}</DialogDescription>
+          <div className="mt-6 flex justify-end gap-2">
+            <DialogClose asChild>
+              <Button type="button" variant="ghost">
+                {t('cancel')}
+              </Button>
+            </DialogClose>
+            <Button type="button" onClick={() => confirming && gamify(confirming)} data-testid="regenerate-confirm">
+              <Wand2 /> {t('regenerateCta')}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
-function LessonRow({ lesson, index }: { lesson: CourseLesson; index: number }) {
+function LessonRow({
+  lesson,
+  index,
+  courseId,
+  canEdit,
+  starting,
+  onGamify,
+}: {
+  lesson: CourseLesson;
+  index: number;
+  courseId: string;
+  canEdit: boolean;
+  starting: boolean;
+  onGamify: (l: CourseLesson) => void;
+}) {
   const t = useTranslations('teacher.courses');
   const locale = useLocale();
+  const l = useL();
+  const gamifying = lesson.status === 'GAMIFYING';
+  const errorKey = ['AI_UNAVAILABLE', 'INTERRUPTED', 'FAILED'].includes(lesson.gamifyError ?? '') ? lesson.gamifyError! : 'FAILED';
   const url = lesson.sources.find((s) => s.classroomUrl)?.classroomUrl ?? null;
   const posted = new Date(lesson.postedAt).toLocaleDateString(locale === 'ar' ? 'ar-LB' : 'en-GB', { day: 'numeric', month: 'short' });
   return (
@@ -186,13 +259,42 @@ function LessonRow({ lesson, index }: { lesson: CourseLesson; index: number }) {
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-1.5">
-              {lesson.status === 'READY' && lesson.contentChangedAt && <Badge variant="sunny">{t('changedInClassroom')}</Badge>}
+              {lesson.status === 'READY' && lesson.contentChangedAt && <Badge variant="sunny">{t('changedRegenerate')}</Badge>}
               <Badge variant={STATUS_VARIANT[lesson.status]} data-testid="lesson-status">
+                {gamifying && <Loader2 className="animate-spin" aria-hidden />}
                 {t(STATUS_KEY[lesson.status])}
               </Badge>
+              {canEdit && (
+                <Button
+                  size="sm"
+                  variant={lesson.status === 'READY' ? 'outline' : 'default'}
+                  onClick={() => onGamify(lesson)}
+                  disabled={gamifying || starting}
+                  loading={starting}
+                  data-testid="gamify-lesson"
+                >
+                  <Wand2 /> {lesson.status === 'READY' ? t('regenerateCta') : lesson.status === 'FAILED' ? t('retryCta') : t('gamifyCta')}
+                </Button>
+              )}
             </div>
           </div>
           {lesson.description && <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{lesson.description}</p>}
+          {lesson.status === 'FAILED' && (
+            <p className="mt-2 rounded-[12px] bg-coral-soft px-3 py-2 text-sm font-semibold text-danger" role="alert" data-testid="gamify-error">
+              {t(`gamifyError.${errorKey}`)}
+            </p>
+          )}
+          {lesson.topic && lesson.status !== 'GAMIFYING' && (
+            <div className="mt-3 flex flex-wrap items-center gap-2 rounded-[14px] bg-violet-soft px-3 py-2 text-sm" data-testid="lesson-skill">
+              <Sparkles className="size-4 shrink-0 text-primary" aria-hidden />
+              <span className="font-bold">{t('skill', { name: l(lesson.topic.name) })}</span>
+              {(lesson.draftCount > 0 || lesson.approvedCount > 0) && (
+                <Link href={`/teacher/missions?courseId=${courseId}`} className="ms-auto font-bold text-primary hover:underline" data-testid="lesson-missions-link">
+                  {lesson.draftCount > 0 ? t('missionsToReview', { n: lesson.draftCount }) : t('missionsLive', { n: lesson.approvedCount })}
+                </Link>
+              )}
+            </div>
+          )}
           <div className="mt-3 flex flex-wrap items-center gap-2">
             {lesson.materials.map((m, i) => {
               const kind = attachmentKind(m);

@@ -22,10 +22,12 @@ interface Props {
   onOpenChange: (o: boolean) => void;
   onPublished: (r: ApproveResult) => void;
   onSafety: (s: SafetyResult) => void;
+  /** course template: publishing goes to every section (and every section's Classroom) */
+  courseMode?: boolean;
 }
 
 /** "Approve & publish": optional Google Classroom post + due date. */
-export function PublishDialog({ mission, title, className, classroomLinked, open, onOpenChange, onPublished, onSafety }: Props) {
+export function PublishDialog({ mission, title, className, classroomLinked, open, onOpenChange, onPublished, onSafety, courseMode = false }: Props) {
   const t = useTranslations('teacher.publish');
   const [post, setPost] = useState(classroomLinked);
   const [due, setDue] = useState('');
@@ -67,7 +69,7 @@ export function PublishDialog({ mission, title, className, classroomLinked, open
               <Label htmlFor="post-to-classroom" className="mb-0.5">
                 {t('postLabel')}
               </Label>
-              <p className="text-sm text-muted-foreground">{classroomLinked ? t('postHint') : t('notLinked')}</p>
+              <p className="text-sm text-muted-foreground">{classroomLinked ? t(courseMode ? 'postHintCourse' : 'postHint') : t(courseMode ? 'notLinkedCourse' : 'notLinked')}</p>
             </div>
             <Switch id="post-to-classroom" checked={post && classroomLinked} onCheckedChange={setPost} disabled={!classroomLinked} data-testid="post-to-classroom" />
           </div>

@@ -212,8 +212,15 @@ export interface CourseLesson {
   position: number;
   postedAt: string;
   status: LessonStatus;
+  /** error code when status is FAILED (AI_UNAVAILABLE | INTERRUPTED | FAILED) */
+  gamifyError: string | null;
   contentChangedAt: string | null;
   sources: { classId: string; classroomUrl: string | null }[];
+  /** the skill created by "Gamify with AI" */
+  topic: { id: string; name: I18nText } | null;
+  /** course mission templates of this lesson's skill */
+  draftCount: number;
+  approvedCount: number;
 }
 
 export interface LessonSyncResult {

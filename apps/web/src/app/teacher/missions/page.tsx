@@ -6,6 +6,7 @@ import { use, useCallback, useRef, useState } from 'react';
 import { PageHeader } from '@/components/app/adult-shell';
 import { EmptyState, ErrorState, PageSkeleton, Thinking } from '@/components/app/states';
 import { BouslaSays } from '@/components/bousla';
+import { CourseStudio } from '@/components/teacher/course-studio';
 import { errMessage } from '@/components/teacher/helpers';
 import { MissionDraftCard } from '@/components/teacher/mission-draft-card';
 import { MissionList } from '@/components/teacher/mission-list';
@@ -22,15 +23,21 @@ import type { ClassSummary, Mission } from '@/lib/types';
 
 type Audience = 'STUDENT' | 'FAMILY';
 
-export default function MissionStudioPage({ searchParams }: { searchParams: Promise<{ classId?: string }> }) {
+export default function MissionStudioPage({ searchParams }: { searchParams: Promise<{ classId?: string; courseId?: string }> }) {
   const sp = use(searchParams);
+  // Course mode: review the mission templates Bousla wrote from the course's lessons (generation happens on lessons).
+  if (sp.courseId) return <CourseStudio courseId={sp.courseId} />;
+  return <ClassStudio initialClassId={sp.classId ?? null} />;
+}
+
+function ClassStudio({ initialClassId }: { initialClassId: string | null }) {
   const t = useTranslations('teacher.studio');
   const l = useL();
   const invalidate = useInvalidate();
   const classes = useApi<ClassSummary[]>('/classes');
   const subjects = useApi<Subject[]>('/subjects');
 
-  const [pickedClass, setPickedClass] = useState<string | null>(sp.classId ?? null);
+  const [pickedClass, setPickedClass] = useState<string | null>(initialClassId);
   const classId = pickedClass ?? classes.data?.[0]?.id ?? null;
   const cls = classes.data?.find((c) => c.id === classId);
   const dash = useApi<TeacherDashboard>(classId ? `/dashboards/teacher/${classId}` : null);

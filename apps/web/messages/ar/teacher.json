@@ -207,7 +207,15 @@
     "inClassroom": "في Classroom",
     "submissionsN": "{n, plural, =0 {لا تسليمات} one {تسليم واحد} two {تسليمان} few {# تسليمات} many {# تسليماً} other {# تسليم}}",
     "noClasses": "لا صفوف بعد",
-    "noClassesBody": "استورد صفاً من Google Classroom لتبدأ بإنشاء المهمّات."
+    "noClassesBody": "استورد صفاً من Google Classroom لتبدأ بإنشاء المهمّات.",
+    "courseTitle": "المهمّات · {course}",
+    "courseSubtitle": "مسوّدات كتبتها بوصلة من دروسك المحوّلة إلى لعبة. وافق على إحداها لتُنشر في كل شعب المقرّر.",
+    "backToCourse": "العودة إلى الدروس",
+    "allSections": "كل شعب {course} ({n})",
+    "courseDraftsTitle": "{n, plural, =0 {لا مسوّدات للمراجعة} one {مسوّدة واحدة للمراجعة} two {مسوّدتان للمراجعة} few {# مسوّدات للمراجعة} many {# مسوّدة للمراجعة} other {# مسوّدة للمراجعة}}",
+    "courseNoDraftsBody": "اضغط «حوّله إلى لعبة بالذكاء الاصطناعي» على أي درس وستنتظرك مهمّاته هنا.",
+    "courseLibraryTitle": "كل مهمّات {course}",
+    "skillGroup": "المهارة: {name}"
   },
   "safety": {
     "checking": "جارٍ فحص السلامة…",
@@ -230,7 +238,9 @@
     "safetyNote": "يُجرى فحص سلامة أخير قبل النشر.",
     "cancel": "إلغاء",
     "confirm": "انشر الآن",
-    "error": "تعذّر نشر هذه المهمّة. حاول مجدداً."
+    "error": "تعذّر نشر هذه المهمّة. حاول مجدداً.",
+    "postHintCourse": "يُنشئ واجباً في Google Classroom لكل شعبة برابط إلى تجربة. تنتقل العلامات إلى سجلّ كل شعبة عند الاعتماد.",
+    "notLinkedCourse": "لا توجد شعبة في هذا المقرّر مرتبطة بـ Google Classroom."
   },
   "review": {
     "title": "قائمة المراجعة",
@@ -406,7 +416,7 @@
     "statusNotGamified": "غير محوَّل إلى لعبة",
     "statusReady": "جاهز",
     "statusFailed": "فشل",
-    "statusGamifying": "جارٍ التحويل…",
+    "statusGamifying": "بوصلة تقرأ الدرس…",
     "changedInClassroom": "تغيّر في Classroom",
     "openInClassroom": "افتح في Classroom",
     "attachment": {
@@ -419,6 +429,26 @@
       "link": "رابط",
       "form": "نموذج",
       "file": "ملف"
-    }
+    },
+    "gamifyCta": "حوّله إلى لعبة بالذكاء الاصطناعي",
+    "regenerateCta": "إعادة التوليد",
+    "retryCta": "حاول مجدداً",
+    "gamifyStarted": "بوصلة تقرأ «{title}». يستغرق ذلك دقيقة تقريباً.",
+    "gamifyDone": "«{title}» جاهز. راجع مهمّاته.",
+    "gamifyFailed": "لم تتمكّن بوصلة من تحويل «{title}» إلى لعبة.",
+    "gamifyStartError": "تعذّر البدء. حاول مجدداً.",
+    "gamifyError": {
+      "AI_UNAVAILABLE": "لم تتمكّن بوصلة من قراءة هذا الدرس الآن. حاول مجدداً بعد دقيقة.",
+      "INTERRUPTED": "توقّفت العملية. حاول مجدداً.",
+      "FAILED": "حدث خطأ أثناء قراءة هذا الدرس. حاول مجدداً."
+    },
+    "skill": "المهارة: {name}",
+    "missionsToReview": "{n, plural, one {مهمّة واحدة للمراجعة} two {مهمّتان للمراجعة} few {# مهمّات للمراجعة} many {# مهمّة للمراجعة} other {# مهمّة للمراجعة}}",
+    "missionsLive": "{n, plural, one {مهمّة واحدة منشورة} two {مهمّتان منشورتان} few {# مهمّات منشورة} many {# مهمّة منشورة} other {# مهمّة منشورة}}",
+    "openMissions": "افتح المهمّات",
+    "changedRegenerate": "تحدّث في Classroom — إعادة التوليد؟",
+    "regenerateTitle": "إعادة توليد مهمّات «{title}»؟",
+    "regenerateBody": "{n, plural, one {ستكتب بوصلة مسوّدات جديدة. ستُستبدل مسوّدتك غير المعتمدة.} two {ستكتب بوصلة مسوّدات جديدة. ستُستبدل مسوّدتاك غير المعتمدتين.} few {ستكتب بوصلة مسوّدات جديدة. ستُستبدل # مسوّدات غير معتمدة.} many {ستكتب بوصلة مسوّدات جديدة. ستُستبدل # مسوّدة غير معتمدة.} other {ستكتب بوصلة مسوّدات جديدة. ستُستبدل # مسوّدة غير معتمدة.}} تبقى المهمّات المنشورة كما هي.",
+    "cancel": "إلغاء"
   }
 }
