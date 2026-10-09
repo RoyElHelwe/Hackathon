@@ -23,6 +23,8 @@ export interface SceneConfig {
   onMove: (x: number, y: number, dir: Dir, moving: boolean) => void;
   onZone: (zone: Zone | null) => void;
   onReady: (api: SceneApi) => void;
+  /** localizes map labels ("Study Hall" → "قاعة الدراسة") */
+  translate?: (label: string) => string;
 }
 
 const FLOORS: Record<string, [number, number]> = {
@@ -62,6 +64,7 @@ interface Avatar {
 
 /** Builds the Phaser scene class for one campus map (courtyard, study room or exam room). */
 export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
+  const tr = (label: string) => cfg.translate?.(label) ?? label;
   return class CampusScene extends Phaser.Scene {
     private self: Avatar | null = null;
     private selfId: string | null = null;
@@ -133,7 +136,7 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
       const r = this.add.rectangle(z.x + z.w / 2, z.y + z.h / 2, z.w, z.h, color, 0.22).setStrokeStyle(2, color, 0.9).setDepth(1);
       if (door) {
         this.tweens.add({ targets: r, alpha: { from: 0.55, to: 1 }, duration: 900, yoyo: true, repeat: -1 });
-        this.label(z.x + z.w / 2, z.y - 12, `🚪 ${z.label}`, 13, '#ffffff', z.kind === 'exam_door' ? '#2b8fd6' : '#1aa884').setDepth(6);
+        this.label(z.x + z.w / 2, z.y - 12, `🚪 ${tr(z.label)}`, 13, '#ffffff', z.kind === 'exam_door' ? '#2b8fd6' : '#1aa884').setDepth(6);
       }
     }
 
@@ -145,7 +148,7 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
         case 'rug':
           g.fillStyle(C.violet, cfg.dark ? 0.18 : 0.09).fillRoundedRect(f.x, f.y, f.w, f.h, 24);
           g.lineStyle(2, C.violet, 0.18).strokeRoundedRect(f.x, f.y, f.w, f.h, 24);
-          if (f.label) this.label(cx, f.y + 16, f.label, 14, cfg.dark ? '#cfc6ff' : '#6c4cf1').setDepth(1);
+          if (f.label) this.label(cx, f.y + 16, tr(f.label), 14, cfg.dark ? '#cfc6ff' : '#6c4cf1').setDepth(1);
           break;
         case 'table':
         case 'desk':
@@ -184,7 +187,7 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
         case 'board':
           g.fillStyle(0x1f5f4a, 1).fillRoundedRect(f.x, f.y, f.w, f.h, 8);
           g.lineStyle(4, C.woodDark, 1).strokeRoundedRect(f.x, f.y, f.w, f.h, 8);
-          if (f.label) this.label(cx, cy, f.label, 15, '#ffffff').setDepth(4);
+          if (f.label) this.label(cx, cy, tr(f.label), 15, '#ffffff').setDepth(4);
           break;
         case 'lamp':
           g.fillStyle(C.sunny, 0.25).fillCircle(cx, cy, f.w);

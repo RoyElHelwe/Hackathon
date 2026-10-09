@@ -103,7 +103,7 @@ function LiveView({ attempt }: { attempt: AttemptView }) {
         <p className="rounded-[12px] bg-violet-soft p-3 text-sm font-semibold" data-testid="spectating">
           👀 {t('watching')}
         </p>
-        <CampusCanvas room={room} map="exam" interactive={false} className="aspect-[3/2] w-full" />
+        <CampusCanvas room={room} map="exam" interactive={false} className="aspect-[18/13] w-full" />
         <div className="flex flex-wrap items-center gap-2">
           {!voice.enabled ? (
             <Button onClick={() => voice.enable(false)} data-testid="listen-live">

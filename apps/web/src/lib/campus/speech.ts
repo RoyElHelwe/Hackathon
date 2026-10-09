@@ -62,9 +62,13 @@ export function useSpeechToText(locale: string) {
       }
       setTranscript((finalText.current + interim).trim());
     };
-    // Chrome stops after silences; restart while the student still wants to talk.
+    // Chrome stops after silences; restart while the student still wants to talk (but never in a tight loop).
+    let restarts: number[] = [];
     r.onend = () => {
-      if (wanted.current && rec.current === r) {
+      const now = Date.now();
+      restarts = restarts.filter((x) => now - x < 3000);
+      if (wanted.current && rec.current === r && restarts.length < 3) {
+        restarts.push(now);
         try {
           r.start();
           return;
@@ -75,7 +79,8 @@ export function useSpeechToText(locale: string) {
       setListening(false);
     };
     r.onerror = (e) => {
-      if (e?.error === 'not-allowed' || e?.error === 'service-not-allowed') {
+      // "no-speech"/"aborted" just restart; anything else means voice typing can't work here → typed answers.
+      if (e?.error && e.error !== 'no-speech' && e.error !== 'aborted') {
         wanted.current = false;
         setSupported(false);
       }

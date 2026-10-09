@@ -1,6 +1,7 @@
 'use client';
 
 import { EMOTE_EMOJI, MAPS, type CampusMap, type Zone } from '@tajriba/shared';
+import { useTranslations } from 'next-intl';
 import { useEffect, useRef } from 'react';
 import { cn } from '@/lib/cn';
 import type { useRoom } from '@/lib/campus/use-room';
@@ -24,6 +25,9 @@ interface Props {
  * room events without React re-renders.
  */
 export function CampusCanvas({ room, map, interactive = true, selfSpeaking, onZone, onApi, className }: Props) {
+  const t = useTranslations('campus.mapLabels');
+  const trRef = useRef((label: string) => (t.has(label.replace(/ /g, '_')) ? t(label.replace(/ /g, '_')) : label));
+  trRef.current = (label: string) => (t.has(label.replace(/ /g, '_')) ? t(label.replace(/ /g, '_')) : label);
   const host = useRef<HTMLDivElement>(null);
   const api = useRef<SceneApi | null>(null);
   const roomRef = useRef(room);
@@ -47,6 +51,7 @@ export function CampusCanvas({ room, map, interactive = true, selfSpeaking, onZo
         map: MAPS[map],
         interactive,
         dark,
+        translate: (label) => trRef.current(label),
         onMove: (x, y, dir, moving) => roomRef.current.move(x, y, dir, moving),
         onZone: (z) => zoneRef.current?.(z),
         onReady: (a) => {

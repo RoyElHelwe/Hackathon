@@ -288,5 +288,18 @@
     "examsTitle": "Exam results",
     "noExams": "No released exam results yet.",
     "score": "{score}/100"
+  },
+  "mapLabels": {
+    "Study_Hall": "Study Hall",
+    "Exam_Wing": "Exam Wing",
+    "Tajriba_Campus": "Tajriba Campus",
+    "Courtyard": "Courtyard",
+    "Garden": "Garden",
+    "Discussion_table": "Discussion table",
+    "Ideas_board": "Ideas board",
+    "Table": "Table",
+    "Board": "Board",
+    "Interview_desk": "Interview desk",
+    "Your_seat": "Your seat"
   }
 }

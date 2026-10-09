@@ -288,5 +288,18 @@
     "examsTitle": "نتائج الامتحانات",
     "noExams": "لا نتائج امتحانات منشورة بعد.",
     "score": "{score}/100"
+  },
+  "mapLabels": {
+    "Study_Hall": "قاعة الدراسة",
+    "Exam_Wing": "جناح الامتحانات",
+    "Tajriba_Campus": "حرم تجربة",
+    "Courtyard": "الساحة",
+    "Garden": "الحديقة",
+    "Discussion_table": "طاولة النقاش",
+    "Ideas_board": "لوح الأفكار",
+    "Table": "الطاولة",
+    "Board": "اللوح",
+    "Interview_desk": "طاولة المقابلة",
+    "Your_seat": "مقعدك"
   }
 }

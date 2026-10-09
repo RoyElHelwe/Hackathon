@@ -320,8 +320,8 @@ function Interview({ attempt: initial, activated: initiallyActivated, onChange }
         </p>
       )}
 
-      <div className="grid gap-3 md:grid-cols-[1fr_1.1fr]">
-        <CampusCanvas room={room} map="exam" interactive={false} className="aspect-[3/2] w-full md:aspect-auto md:h-full md:min-h-[260px]" selfSpeaking={voice.speaking} />
+      <div className="grid items-start gap-3 md:grid-cols-[1fr_1.1fr]">
+        <CampusCanvas room={room} map="exam" interactive={false} className="aspect-[18/13] w-full" selfSpeaking={voice.speaking} />
         <Card className="relative flex flex-col items-center gap-3 p-4 text-center">
           <div className="relative">
             <Bousla mood={mood} size={120} />
