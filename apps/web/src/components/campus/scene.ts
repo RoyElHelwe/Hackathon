@@ -1,4 +1,4 @@
-import type { CampusMap, Furniture, PlayerState, Zone } from '@tajriba/shared';
+import { avatarColor, type CampusMap, type Furniture, type PlayerState, type Zone } from '@tajriba/shared';
 
 type PhaserNS = typeof import('phaser');
 type Container = import('phaser').GameObjects.Container;
@@ -14,6 +14,37 @@ export interface SceneApi {
   speaking(userId: string, on: boolean): void;
   positions(): Map<string, { x: number; y: number }>;
   selfPos(): { x: number; y: number } | null;
+  /** jump my avatar somewhere (Exam Hall room switching) */
+  teleport(x: number, y: number): void;
+  /** Exam Hall: live overlays of every student's room */
+  setRooms(rooms: HallRoomView[]): void;
+}
+
+/** What the Exam Hall shows in one student's room. */
+export interface HallRoomView {
+  roomIndex: number;
+  zone: Zone;
+  seat: { x: number; y: number };
+  studentId: string;
+  name: string;
+  /** e.g. "Q2/4 · 03:12" */
+  caption: string;
+  emoji: string | null;
+  state: 'live' | 'waiting' | 'done' | 'missed';
+  online: boolean;
+  speaking: boolean;
+  focused: boolean;
+  listening: boolean;
+}
+
+interface RoomOverlay {
+  frame: import('phaser').GameObjects.Rectangle;
+  title: import('phaser').GameObjects.Text;
+  caption: import('phaser').GameObjects.Text;
+  emoji: import('phaser').GameObjects.Text;
+  headset: import('phaser').GameObjects.Text;
+  puppet: Avatar | null;
+  key: string;
 }
 
 export interface SceneConfig {
@@ -75,6 +106,7 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
     private lastSent = 0;
     private lastPos = { x: 0, y: 0, moving: false };
     private zoneId: string | null = null;
+    private rooms = new Map<number, RoomOverlay>();
 
     constructor() {
       super('campus');
@@ -97,7 +129,9 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
       for (const z of map.zones) this.drawZone(z);
       for (const f of map.furniture) this.drawFurniture(f);
       for (const w of map.walls) {
-        this.add.rectangle(w.x + w.w / 2, w.y + w.h / 2, w.w, w.h, cfg.dark ? 0x2d2850 : C.wall).setDepth(2);
+        const glass = map.id === 'hall' && (w.w === 8 || w.h === 8);
+        if (glass) this.add.rectangle(w.x + w.w / 2, w.y + w.h / 2, w.w, w.h, cfg.dark ? 0x5fb6f0 : 0x9fd8ff, 0.85).setStrokeStyle(1, C.sky, 1).setDepth(2);
+        else this.add.rectangle(w.x + w.w / 2, w.y + w.h / 2, w.w, w.h, cfg.dark ? 0x2d2850 : C.wall).setDepth(2);
         this.solid(w.x, w.y, w.w, w.h);
       }
 
@@ -234,16 +268,55 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
       const { width, height } = this.scale.gameSize;
       const { map } = cfg;
       const fit = Math.min(width / map.width, height / map.height);
-      if (map.id !== 'campus' || fit >= 0.9) {
+      const roams = map.id === 'campus' || map.id === 'hall';
+      if (!roams || fit >= 0.9) {
         cam.stopFollow();
         cam.setZoom(Math.min(1.4, fit));
         cam.removeBounds();
         cam.centerOn(map.width / 2, map.height / 2);
       } else {
-        cam.setZoom(Math.max(0.6, Math.min(1, fit * 1.6)));
+        // the hall fills the view (no empty band under a short hall), never zoomed out below half size
+        const cover = Math.max(width / map.width, height / map.height);
+        cam.setZoom(map.id === 'hall' ? Math.max(0.5, Math.min(1.2, cover)) : Math.max(0.6, Math.min(1, fit * 1.6)));
         cam.setBounds(0, 0, map.width, map.height);
         if (this.self) cam.startFollow(this.self.c, true, 0.15, 0.15);
       }
+    }
+
+    // ---------- Exam Hall overlays ----------
+
+    private roomOverlay(v: HallRoomView): RoomOverlay {
+      const z = v.zone;
+      const frame = this.add.rectangle(z.x + z.w / 2, z.y + z.h / 2, z.w, z.h, C.sky, 0.08).setStrokeStyle(4, C.violet, 0).setDepth(0.6);
+      const title = this.label(z.x + 10, z.y + 20, '', 13, cfg.dark ? '#ffffff' : '#14112b').setOrigin(0, 0.5).setDepth(6);
+      const caption = this.label(z.x + z.w - 10, z.y + 20, '', 12, '#ffffff', '#2b8fd6').setOrigin(1, 0.5).setDepth(6);
+      const emoji = this.add.text(v.seat.x + 26, v.seat.y - 30, '', { fontSize: '26px' }).setOrigin(0.5).setDepth(12);
+      const headset = this.add.text(z.x + z.w - 18, z.y + z.h - 18, '🎧', { fontSize: '20px' }).setOrigin(0.5).setDepth(12).setVisible(false);
+      this.tweens.add({ targets: emoji, y: emoji.y - 5, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+      return { frame, title, caption, emoji, headset, puppet: null, key: '' };
+    }
+
+    private updateRoom(o: RoomOverlay, v: HallRoomView) {
+      const tint = { live: C.sky, waiting: 0x9a96b8, done: C.mint, missed: C.coral }[v.state];
+      o.frame.setFillStyle(tint, v.state === 'live' ? 0.12 : 0.07);
+      o.frame.setStrokeStyle(4, C.violet, v.focused ? 1 : 0);
+      o.title.setText(`#${v.roomIndex} ${v.name}`);
+      o.caption.setText(v.caption).setVisible(!!v.caption);
+      o.emoji.setText(v.emoji ?? '');
+      o.headset.setVisible(v.listening);
+      const key = `${v.studentId}:${v.online}`;
+      if (o.key !== key) {
+        o.key = key;
+        o.puppet?.c.destroy();
+        o.puppet = null;
+        if (v.online) {
+          o.puppet = this.makeAvatar({ userId: v.studentId, name: v.name, role: 'STUDENT', color: avatarColor(v.studentId), x: v.seat.x, y: v.seat.y, dir: 'up', moving: false, spectator: false }, false);
+          o.puppet.c.setScale(0.2);
+          this.tweens.add({ targets: o.puppet.c, scale: 1, duration: 300, ease: 'Back.easeOut' });
+        }
+      }
+      o.puppet?.ring.setVisible(v.speaking);
+      o.puppet?.c.setAlpha(v.state === 'live' ? 1 : 0.55);
     }
 
     // ---------- loop ----------
@@ -373,6 +446,36 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
           return m;
         },
         selfPos: () => (this.self ? { x: this.self.c.x, y: this.self.c.y } : null),
+        teleport: (x, y) => {
+          const self = this.self;
+          if (!self) return;
+          this.target = null;
+          (self.c.body as import('phaser').Physics.Arcade.Body).reset(x, y);
+          self.c.setPosition(x, y);
+          this.look(self, 'down');
+          this.lastPos = { x, y, moving: false };
+          cfg.onMove(Math.round(x), Math.round(y), 'down', false);
+          const pop = this.add.circle(x, y, 26, C.violet, 0.35).setDepth(9);
+          this.tweens.add({ targets: pop, scale: { from: 0.4, to: 1.8 }, alpha: 0, duration: 420, onComplete: () => pop.destroy() });
+        },
+        setRooms: (views) => {
+          const seen = new Set<number>();
+          for (const v of views) {
+            seen.add(v.roomIndex);
+            let o = this.rooms.get(v.roomIndex);
+            if (!o) {
+              o = this.roomOverlay(v);
+              this.rooms.set(v.roomIndex, o);
+            }
+            this.updateRoom(o, v);
+          }
+          for (const [idx, o] of this.rooms) {
+            if (seen.has(idx)) continue;
+            for (const obj of [o.frame, o.title, o.caption, o.emoji, o.headset]) obj.destroy();
+            o.puppet?.c.destroy();
+            this.rooms.delete(idx);
+          }
+        },
       };
     }
   };

@@ -1,7 +1,7 @@
 'use client';
 
 import type { ExamQuestion } from '@tajriba/shared';
-import { Eye, Plus, RefreshCw, Rocket, Save, Trash2 } from 'lucide-react';
+import { DoorOpen, Eye, Plus, RefreshCw, Rocket, Save, Trash2 } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -72,10 +72,21 @@ export default function TeacherExamPage() {
           </span>
         }
         actions={
-          graded > 0 ? (
-            <Button onClick={() => act('release', () => api(`${path}/release-all`, { method: 'POST' }), t('detail.released', { n: graded }))} loading={busy === 'release'} data-testid="release-all">
-              {t('detail.releaseAll', { n: graded })}
-            </Button>
+          e.attempts?.length || graded > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {!!e.attempts?.length && (e.status === 'OPEN' || e.status === 'SCHEDULED') && (
+                <Button asChild variant="secondary" data-testid="open-hall">
+                  <Link href={`/teacher/exams/${e.id}/hall`}>
+                    <DoorOpen /> {t('hall.open')}
+                  </Link>
+                </Button>
+              )}
+              {graded > 0 && (
+                <Button onClick={() => act('release', () => api(`${path}/release-all`, { method: 'POST' }), t('detail.released', { n: graded }))} loading={busy === 'release'} data-testid="release-all">
+                  {t('detail.releaseAll', { n: graded })}
+                </Button>
+              )}
+            </div>
           ) : undefined
         }
       />

@@ -29,7 +29,7 @@ export interface Furniture extends Rect {
   label?: string;
 }
 
-export type ZoneKind = 'lobby' | 'study_door' | 'exam_door' | 'garden' | 'stage' | 'study_room' | 'exam_desk';
+export type ZoneKind = 'lobby' | 'study_door' | 'exam_door' | 'garden' | 'stage' | 'study_room' | 'exam_desk' | 'hall_room';
 
 export interface Zone extends Rect {
   id: string;
@@ -37,8 +37,10 @@ export interface Zone extends Rect {
   label: string;
 }
 
+export type CampusMapId = 'campus' | 'study' | 'exam' | 'hall';
+
 export interface CampusMap {
-  id: 'campus' | 'study' | 'exam';
+  id: CampusMapId;
   width: number;
   height: number;
   /** floor color token: violet | mint | sunny | sky | coral */
@@ -169,6 +171,90 @@ export const EXAM_ROOM_MAP: CampusMap = {
 
 export const MAPS = { campus: CAMPUS_MAP, study: STUDY_ROOM_MAP, exam: EXAM_ROOM_MAP } as const;
 
+// ---------- Exam Hall: one glass room per student, built from the exam's room numbers ----------
+
+export const HALL_ROOM = { w: 260, h: 190, door: 80, corridor: 110, margin: 64, maxCols: 6 } as const;
+
+/** One student's room in the hall: its zone (the interior), where the student and Bousla sit, and its door. */
+export interface HallRoom {
+  roomIndex: number;
+  zone: Zone;
+  seat: { x: number; y: number };
+  bousla: { x: number; y: number };
+  /** just inside the door: where a teacher lands when jumping to the room */
+  entry: { x: number; y: number };
+}
+
+function hallCols(n: number): number {
+  return Math.max(1, Math.min(HALL_ROOM.maxCols, n, Math.ceil(Math.sqrt(n * 1.5))));
+}
+
+/** Rooms of the hall, in room-number order. Rows of rooms, each row below its own corridor (doors face up). */
+export function hallRooms(roomIndexes: number[]): HallRoom[] {
+  const sorted = [...new Set(roomIndexes)].sort((a, b) => a - b);
+  const cols = hallCols(sorted.length);
+  const { w, h, corridor, margin } = HALL_ROOM;
+  return sorted.map((roomIndex, i) => {
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    const x = margin + col * w;
+    const y = margin + corridor + row * (h + corridor);
+    const cx = x + w / 2;
+    return {
+      roomIndex,
+      zone: { id: `room-${roomIndex}`, kind: 'hall_room', x: x + 8, y: y + 8, w: w - 16, h: h - 16, label: `#${roomIndex}` },
+      seat: { x: cx - 50, y: y + h - 52 },
+      bousla: { x: cx + 50, y: y + h - 58 },
+      entry: { x: cx, y: y + 40 },
+    };
+  });
+}
+
+/** The whole hall map (the API uses it to keep positions inside, the web draws it). */
+export function examHallMap(roomIndexes: number[]): CampusMap {
+  const rooms = hallRooms(roomIndexes);
+  const n = Math.max(1, rooms.length);
+  const cols = hallCols(n);
+  const rows = Math.ceil(n / cols);
+  const { w, h, door, corridor, margin } = HALL_ROOM;
+  const width = margin * 2 + cols * w;
+  const height = margin * 2 + rows * (h + corridor) + corridor / 2;
+  const t = 8; // glass wall thickness
+  const walls: Rect[] = [...border(width, height)];
+  const furniture: Furniture[] = [];
+  for (const r of rooms) {
+    const x = r.zone.x - 8;
+    const y = r.zone.y - 8;
+    const side = (w - door) / 2;
+    walls.push(
+      { x, y, w: side, h: t },
+      { x: x + side + door, y, w: side, h: t },
+      { x, y, w: t, h },
+      { x: x + w - t, y, w: t, h },
+      { x, y: y + h - t, w, h: t },
+    );
+    furniture.push(
+      { kind: 'rug', x: x + 20, y: y + 50, w: w - 40, h: h - 70 },
+      { kind: 'desk', x: x + w / 2 - 40, y: y + h - 110, w: 80, h: 40, solid: true },
+      { kind: 'bousla', x: r.bousla.x - 20, y: r.bousla.y - 20, w: 40, h: 40, solid: true },
+    );
+  }
+  return {
+    id: 'hall',
+    width,
+    height,
+    floor: 'sky',
+    walls,
+    furniture,
+    zones: rooms.map((r) => r.zone),
+    spawns: [
+      { x: width / 2, y: margin + corridor / 2 },
+      { x: width / 2 - 50, y: margin + corridor / 2 },
+      { x: width / 2 + 50, y: margin + corridor / 2 },
+    ],
+  };
+}
+
 export function inRect(r: Rect, x: number, y: number): boolean {
   return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
 }
@@ -224,8 +310,8 @@ export type Emote = (typeof EMOTES)[number];
 export const EMOTE_EMOJI: Record<Emote, string> = { wave: '👋', laugh: '😂', dance: '💃', mindblown: '🤯', clap: '👏', think: '🤔' };
 export const REACTIONS = ['❤️', '🔥', '⭐', '🎉', '💡', '👍', '😮', '🙌'] as const;
 
-/** Rooms: the school courtyard, a study session room, or an exam attempt room (students + teacher spectators). */
-export type RoomRef = { kind: 'campus' } | { kind: 'study'; id: string } | { kind: 'exam'; id: string };
+/** Rooms: the school courtyard, a study session room, an exam attempt room (students + teacher spectators), or an exam's hall (teachers). */
+export type RoomRef = { kind: 'campus' } | { kind: 'study' | 'exam' | 'hall'; id: string };
 
 export function roomKey(ref: RoomRef, schoolId?: string): string {
   if (ref.kind === 'campus') return `campus:${schoolId ?? ''}`;
@@ -234,9 +320,9 @@ export function roomKey(ref: RoomRef, schoolId?: string): string {
 
 export function parseRoom(room: string): RoomRef | null {
   if (room === 'campus') return { kind: 'campus' };
-  const m = /^(study|exam):([A-Za-z0-9_-]{1,64})$/.exec(room);
+  const m = /^(study|exam|hall):([A-Za-z0-9_-]{1,64})$/.exec(room);
   if (!m) return null;
-  return { kind: m[1] as 'study' | 'exam', id: m[2] };
+  return { kind: m[1] as 'study' | 'exam' | 'hall', id: m[2] };
 }
 
 export const roomName = z.string().min(1).max(80);
@@ -258,6 +344,8 @@ export const signalMsg = z.object({
   signal: z.object({ type: z.string().max(20).optional(), sdp: z.string().max(20_000).optional(), candidate: z.unknown().optional() }).passthrough(),
 });
 export const transcriptMsg = z.object({ room: roomName, text: z.string().max(2000) });
+/** A spectator starts/stops listening to an exam room (the student's browser only sends audio while this is on). */
+export const listenMsg = z.object({ room: roomName, on: z.boolean() });
 
 export interface PlayerState {
   userId: string;
@@ -270,11 +358,13 @@ export interface PlayerState {
   moving: boolean;
   spectator: boolean;
   speaking?: boolean;
+  /** spectators only: currently hearing the room */
+  listening?: boolean;
 }
 
 export interface RoomSnapshot {
   room: string;
-  map: CampusMap['id'];
+  map: CampusMapId;
   self: PlayerState;
   players: PlayerState[];
 }

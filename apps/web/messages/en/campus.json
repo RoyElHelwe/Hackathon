@@ -180,7 +180,8 @@
     "transcript": "Our conversation",
     "you": "You",
     "bousla": "Bousla",
-    "back": "Back to campus"
+    "back": "Back to campus",
+    "listeningNow": "{name} is listening now 🎧"
   },
   "teacher": {
     "navExams": "Exams",
@@ -283,6 +284,24 @@
       "duration": "{min} min",
       "recordings": "{n, plural, =0 {No recording} one {# recording} other {# recordings}}",
       "replay": "Replay"
+    },
+    "hall": {
+      "title": "Exam Hall",
+      "back": "Back to the exam",
+      "subtitle": "{live} of {total} students in their room now. Walk into a room to hear it.",
+      "open": "Open the Exam Hall",
+      "audioOn": "Turn on hall audio",
+      "audioActive": "Hall audio on",
+      "audioHint": "Turn on hall audio, then walk into a room to hear the student and Bousla. The student sees when you are listening.",
+      "bouslaVoice": "Bousla's voice",
+      "keys": "Arrows/WASD walk · 1–9 jump · [ ] previous/next",
+      "corridor": "In the corridor — walk into a room or pick a student",
+      "inRoom": "In {name}'s room",
+      "listeningTo": "Listening to {name}",
+      "pickRoom": "Walk into a room (or pick a student above) to see the conversation and Bousla's private scores.",
+      "speaking": "Speaking",
+      "empty": "Publish the exam to open the rooms.",
+      "error": "You can't enter this hall."
     }
   },
   "parent": {

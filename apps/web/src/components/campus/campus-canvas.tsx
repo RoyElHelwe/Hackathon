@@ -11,7 +11,8 @@ type Room = ReturnType<typeof useRoom>;
 
 interface Props {
   room: Room;
-  map: CampusMap['id'];
+  /** a fixed map id, or a map built at runtime (the Exam Hall) — keep the object stable (useMemo) */
+  map: CampusMap['id'] | CampusMap;
   interactive?: boolean;
   /** local mic level → speaking ring on my avatar */
   selfSpeaking?: boolean;
@@ -24,7 +25,8 @@ interface Props {
  * The 2D campus (Phaser 3, loaded only in the browser). Movement is sent to the room; other players are driven by
  * room events without React re-renders.
  */
-export function CampusCanvas({ room, map, interactive = true, selfSpeaking, onZone, onApi, className }: Props) {
+export function CampusCanvas({ room, map: mapProp, interactive = true, selfSpeaking, onZone, onApi, className }: Props) {
+  const map = typeof mapProp === 'string' ? MAPS[mapProp as keyof typeof MAPS] : mapProp;
   const t = useTranslations('campus.mapLabels');
   const trRef = useRef((label: string) => (t.has(label.replace(/ /g, '_')) ? t(label.replace(/ /g, '_')) : label));
   trRef.current = (label: string) => (t.has(label.replace(/ /g, '_')) ? t(label.replace(/ /g, '_')) : label);
@@ -48,7 +50,7 @@ export function CampusCanvas({ room, map, interactive = true, selfSpeaking, onZo
       const { createCampusScene } = await import('./scene');
       const dark = document.documentElement.classList.contains('dark');
       const Scene = createCampusScene(Phaser, {
-        map: MAPS[map],
+        map,
         interactive,
         dark,
         translate: (label) => trRef.current(label),
@@ -128,7 +130,7 @@ export function CampusCanvas({ room, map, interactive = true, selfSpeaking, onZo
     <div
       ref={host}
       className={cn('relative overflow-hidden rounded-[20px] border-2 border-border bg-violet-soft [&_canvas]:block', className)}
-      data-testid={`campus-canvas-${map}`}
+      data-testid={`campus-canvas-${map.id}`}
       role="application"
       aria-label="2D campus"
     />

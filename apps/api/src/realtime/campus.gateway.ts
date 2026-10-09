@@ -12,7 +12,7 @@ import {
   clampToMap,
   emoteMsg,
   joinRoomMsg,
-  MAPS,
+  listenMsg,
   moveMsg,
   PlayerState,
   PRESENCE_GRACE_MS,
@@ -111,8 +111,7 @@ export class CampusGateway implements OnGatewayInit, OnGatewayDisconnect {
     const previous = data.rooms.get(msg.room);
     if (previous && previous.key !== grant.key) this.detach(client, previous, 'leave');
 
-    const map = MAPS[grant.map];
-    const spawn = spawnFor(map, grant.spawnIndex);
+    const spawn = spawnFor(grant.mapDef, grant.spawnIndex);
     const initial: PlayerState = {
       userId: data.ident.userId,
       name: firstName(data.ident.name),
@@ -129,7 +128,7 @@ export class CampusGateway implements OnGatewayInit, OnGatewayDisconnect {
     await client.join(grant.key);
 
     if (isNew) client.to(grant.key).emit('player:joined', { room: msg.room, player: state });
-    if (grant.refId) {
+    if (grant.refId && (grant.kind === 'study' || grant.kind === 'exam')) {
       const type = grant.spectator ? 'SPECTATOR_JOINED' : isNew ? 'JOIN' : 'REJOIN';
       void this.sessionLog.log(grant.kind === 'study' ? 'STUDY' : 'EXAM', grant.refId, data.ident.userId, type);
       void this.touch(grant, data.ident.userId, true);
@@ -161,7 +160,7 @@ export class CampusGateway implements OnGatewayInit, OnGatewayDisconnect {
     const msg = this.parse(moveMsg, body);
     const ctx = msg && this.inRoom(client, msg.room);
     if (!msg || !ctx || ctx.state.spectator) return;
-    const pos = clampToMap(MAPS[ctx.grant.map], msg.x, msg.y);
+    const pos = clampToMap(ctx.grant.mapDef, msg.x, msg.y);
     Object.assign(ctx.state, pos, { dir: msg.dir ?? ctx.state.dir, moving: msg.moving ?? false });
     client.to(ctx.grant.key).volatile.emit('player:moved', { room: msg.room, userId: ctx.state.userId, ...pos, dir: ctx.state.dir, moving: ctx.state.moving });
     if (ctx.grant.refId && this.bus.presence.shouldWriteLastSeen(ctx.grant.key, ctx.state.userId, LAST_SEEN_EVERY_MS)) {
@@ -207,6 +206,23 @@ export class CampusGateway implements OnGatewayInit, OnGatewayDisconnect {
     }
   }
 
+  /**
+   * A spectating teacher starts/stops hearing an exam room (walking into / out of it in the Exam Hall, or "Listen").
+   * The student's browser only sends its microphone to spectators that are listening, and sees who is.
+   */
+  @SubscribeMessage('spectate:listen')
+  listen(@ConnectedSocket() client: Socket, @MessageBody() body: unknown): Ack {
+    const msg = this.parse(listenMsg, body);
+    const ctx = msg && this.inRoom(client, msg.room);
+    if (!msg || !ctx || ctx.grant.kind !== 'exam' || !ctx.state.spectator) return { ok: false, error: 'forbidden' };
+    if (!!ctx.state.listening !== msg.on) {
+      ctx.state.listening = msg.on;
+      client.to(ctx.grant.key).emit('player:listening', { room: msg.room, userId: ctx.state.userId, listening: msg.on });
+      if (ctx.grant.refId) void this.sessionLog.log('EXAM', ctx.grant.refId, ctx.state.userId, 'SPECTATOR_LISTENING', { on: msg.on });
+    }
+    return { ok: true };
+  }
+
   /** The student's live speech-to-text, shown to spectating teachers. */
   @SubscribeMessage('exam:transcript')
   transcript(@ConnectedSocket() client: Socket, @MessageBody() body: unknown) {
@@ -243,7 +259,7 @@ export class CampusGateway implements OnGatewayInit, OnGatewayDisconnect {
     const last = this.bus.presence.leaveSocket(grant.key, userId, client.id);
     if (!last) return;
     const gone = () => {
-      this.bus.toRoom(grant.key, 'player:left', { room: roomName(grant), userId });
+      this.bus.toRoom(grant.key, 'player:left', { room: grant.name, userId });
       if (grant.refId) {
         void this.sessionLog.log(this.kind(grant), grant.refId, userId, grant.spectator ? 'SPECTATOR_LEFT' : 'LEAVE', { why });
         void this.touch(grant, userId, false, true);
@@ -258,6 +274,7 @@ export class CampusGateway implements OnGatewayInit, OnGatewayDisconnect {
     }
   }
 
+  /** Only study and exam rooms have a refId (hall and courtyard are not logged). */
   private kind(grant: RoomGrant): 'STUDY' | 'EXAM' {
     return grant.kind === 'study' ? 'STUDY' : 'EXAM';
   }
@@ -293,8 +310,4 @@ function firstName(name: string): string {
   const parts = name.trim().split(/\s+/);
   const short = parts[0]?.endsWith('.') && parts[1] ? `${parts[0]} ${parts[1]}` : parts[0];
   return short?.slice(0, 24) || 'Friend';
-}
-
-function roomName(grant: RoomGrant): string {
-  return grant.kind === 'campus' ? 'campus' : `${grant.kind}:${grant.refId}`;
 }

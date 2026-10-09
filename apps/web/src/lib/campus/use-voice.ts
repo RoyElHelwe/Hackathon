@@ -25,11 +25,19 @@ async function iceServers(): Promise<RTCIceServer[]> {
   return iceCache;
 }
 
-/** Who calls whom: the one with a mic calls spectators; between two speakers the smaller id calls (no glare). */
+/**
+ * Who calls whom: the one with a mic calls spectators — but only while they are listening (walked into the room / clicked
+ * "Listen"), so audio never flows to a teacher who isn't hearing the room. Between two speakers the smaller id calls (no glare).
+ */
 function shouldInitiate(me: { userId: string; publishes: boolean }, other: PlayerState): boolean {
   if (!me.publishes) return false;
-  if (other.spectator) return true;
+  if (other.spectator) return !!other.listening;
   return me.userId < other.userId;
+}
+
+/** A spectator that stopped listening gets hung up on. */
+function wanted(me: { publishes: boolean }, other: PlayerState): boolean {
+  return !(me.publishes && other.spectator && !other.listening);
 }
 
 /**
@@ -164,10 +172,10 @@ export function useVoice(opts: { room: string | null; selfId: string | null; pub
   // Call new people / hang up on people who left.
   useEffect(() => {
     if (!enabled || !joined || !selfId) return;
-    const present = new Set(peers.map((p) => p.userId));
+    const present = new Set(peers.filter((p) => wanted({ publishes }, p)).map((p) => p.userId));
     for (const id of [...peersRef.current.keys()]) if (!present.has(id)) closePeer(id);
     for (const p of peers) {
-      if (peersRef.current.has(p.userId)) continue;
+      if (peersRef.current.has(p.userId) || !present.has(p.userId)) continue;
       if (!publishes && p.spectator) continue;
       if (shouldInitiate({ userId: selfId, publishes }, p)) void call(p.userId);
     }

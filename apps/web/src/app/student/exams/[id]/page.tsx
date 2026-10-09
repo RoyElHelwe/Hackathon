@@ -1,7 +1,7 @@
 'use client';
 
 import { questionCountFor } from '@tajriba/shared';
-import { ArrowLeft, Eye, Keyboard, Mic, Send, Square, Volume2, VolumeX } from 'lucide-react';
+import { ArrowLeft, Eye, Headphones, Keyboard, Mic, Send, Square, Volume2, VolumeX } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useFormatter, useTranslations } from 'next-intl';
 import Link from 'next/link';
@@ -227,6 +227,7 @@ function Interview({ attempt: initial, activated: initiallyActivated, onChange }
   const tts = useTextToSpeech(locale);
   const left = useCountdown(attempt.endsAt);
   const observed = room.players.some((p) => p.spectator);
+  const listener = room.players.find((p) => p.spectator && p.listening);
   const lastAi = [...attempt.turns].reverse().find((x) => x.role === 'AI');
   const { enable, enabled } = voice;
 
@@ -247,6 +248,12 @@ function Interview({ attempt: initial, activated: initiallyActivated, onChange }
       if (canListen && !typing) listen();
     });
   }, [activated, lastAi, spokenIdx, thinking, speak, listen, canListen, typing]);
+
+  // Speaking ring for watching teachers (Exam Hall + live view).
+  const { speaking: emitSpeaking } = room;
+  useEffect(() => {
+    emitSpeaking(voice.speaking);
+  }, [voice.speaking, emitSpeaking]);
 
   // Live transcript for a watching teacher.
   const { transcript: sendTranscript } = room;
@@ -317,10 +324,16 @@ function Interview({ attempt: initial, activated: initiallyActivated, onChange }
           </span>
         )}
       </div>
-      {observed && (
-        <p className="flex items-center gap-2 rounded-[12px] bg-violet-soft px-3 py-2 text-sm font-bold text-violet" data-testid="observed">
-          <Eye className="size-4" /> {t('exam.observed')}
+      {listener ? (
+        <p className="flex items-center gap-2 rounded-[12px] bg-mint-soft px-3 py-2 text-sm font-bold text-success" data-testid="teacher-listening">
+          <Headphones className="size-4" /> {t('exam.listeningNow', { name: listener.name })}
         </p>
+      ) : (
+        observed && (
+          <p className="flex items-center gap-2 rounded-[12px] bg-violet-soft px-3 py-2 text-sm font-bold text-violet" data-testid="observed">
+            <Eye className="size-4" /> {t('exam.observed')}
+          </p>
+        )
       )}
 
       <div className="grid items-start gap-3 md:grid-cols-[1fr_1.1fr]">

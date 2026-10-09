@@ -12,7 +12,8 @@ export type RoomEvent =
   | { type: 'left'; userId: string }
   | { type: 'emote'; userId: string; emote: Emote }
   | { type: 'reaction'; userId: string; emoji: string }
-  | { type: 'speaking'; userId: string; speaking: boolean };
+  | { type: 'speaking'; userId: string; speaking: boolean }
+  | { type: 'listening'; userId: string; listening: boolean };
 
 export type RoomStatus = 'idle' | 'connecting' | 'joined' | 'reconnecting' | 'error';
 
@@ -98,6 +99,11 @@ export function useRoom(room: string | null, opts: { spectate?: boolean } = {}) 
       setPlayers((p) => (p[d.userId] ? { ...p, [d.userId]: { ...p[d.userId], speaking: d.speaking } } : p));
       fire({ type: 'speaking', userId: d.userId, speaking: d.speaking });
     };
+    const onListening = (d: { room: string; userId: string; listening: boolean }) => {
+      if (!mine(d)) return;
+      setPlayers((p) => (p[d.userId] ? { ...p, [d.userId]: { ...p[d.userId], listening: d.listening } } : p));
+      fire({ type: 'listening', userId: d.userId, listening: d.listening });
+    };
     const onConnect = () => join();
     const onDisconnect = () => alive && setStatus('reconnecting');
     const onConnectError = () => {
@@ -115,6 +121,7 @@ export function useRoom(room: string | null, opts: { spectate?: boolean } = {}) 
     s.on('player:emote', onEmote);
     s.on('player:reaction', onReaction);
     s.on('player:speaking', onSpeaking);
+    s.on('player:listening', onListening);
     if (s.connected) join();
     else s.connect();
 
@@ -129,6 +136,7 @@ export function useRoom(room: string | null, opts: { spectate?: boolean } = {}) 
       s.off('player:emote', onEmote);
       s.off('player:reaction', onReaction);
       s.off('player:speaking', onSpeaking);
+      s.off('player:listening', onListening);
       if (s.connected) s.emit('room:leave', { room });
       setStatus('idle');
     };
@@ -149,6 +157,8 @@ export function useRoom(room: string | null, opts: { spectate?: boolean } = {}) 
       reaction: (emoji: string) => room && s().emit('reaction', { room, emoji }),
       speaking: (speaking: boolean) => room && s().emit('speaking', { room, speaking }),
       transcript: (text: string) => room && s().volatile.emit('exam:transcript', { room, text }),
+      /** spectators: start/stop hearing this exam room */
+      listen: (on: boolean) => room && s().emit('spectate:listen', { room, on }),
     };
   }, [room]);
 

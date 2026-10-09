@@ -98,8 +98,10 @@ test.describe('Tajriba Campus', () => {
     await rana.page.goto(examUrl);
     await rana.page.getByTestId('room-lea').getByTestId('watch-live').click();
     await expect(rana.page.getByTestId('spectating')).toBeVisible();
-    await rana.page.getByTestId('listen-live').click();
     await expect(lea.page.getByTestId('observed')).toBeVisible();
+    // "Listen" now really connects: Lea is told her teacher is listening.
+    await rana.page.getByTestId('listen-live').click();
+    await expect(lea.page.getByTestId('teacher-listening')).toContainText('Rana');
 
     // Lea answers (typed fallback — headless has no speech recognition).
     await lea.page.getByTestId('type-instead').click();
@@ -108,6 +110,25 @@ test.describe('Tajriba Campus', () => {
     await expect(lea.page.getByTestId('question-progress')).toContainText('2');
     await expect(lea.page.getByTestId('bousla-emoji').last()).toBeVisible();
     await expect(rana.page.getByTestId('teacher-transcript')).toContainText('garden bed');
+
+    // The Exam Hall: one glass room per student; jumping into Lea's room = hearing it + seeing her transcript.
+    const attemptUrl = rana.page.url();
+    await rana.page.goto(examUrl);
+    await rana.page.getByTestId('open-hall').click();
+    await expect(rana.page.getByTestId('campus-canvas-hall')).toBeVisible();
+    await expect(rana.page.getByTestId('hall-rooms')).toContainText('Karim');
+    await rana.page.getByTestId('hall-audio').click();
+    await expect(async () => {
+      await rana.page.getByTestId('hall-row-lea').click();
+      await expect(rana.page.getByTestId('hall-focus')).toContainText('Lea', { timeout: 1500 });
+    }).toPass({ timeout: 20_000 });
+    await expect(rana.page.getByTestId('hall-panel')).toContainText('garden bed');
+    await expect(lea.page.getByTestId('teacher-listening')).toBeVisible();
+    // walking to another room stops listening to Lea
+    await rana.page.getByTestId('hall-row-karim').click();
+    await expect(rana.page.getByTestId('hall-focus')).toContainText('Karim');
+    await expect(lea.page.getByTestId('teacher-listening')).toHaveCount(0);
+    await rana.page.goto(attemptUrl);
 
     await lea.page.getByTestId('typed-answer').fill("I don't know");
     await lea.page.getByTestId('send-answer').click();

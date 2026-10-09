@@ -25,6 +25,11 @@ function connect(cookie: string): Promise<Socket> {
 }
 const emit = <T = Record<string, unknown>>(s: Socket, ev: string, body: unknown) => s.timeout(5000).emitWithAck(ev, body) as Promise<T>;
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+function collect(s: Socket, ev: string) {
+  const got: unknown[] = [];
+  s.on(ev, (d) => got.push(d));
+  return got;
+}
 
 beforeAll(async () => {
   ctx = await createTestApp();
@@ -247,6 +252,37 @@ describe('AI voice-interview exams', () => {
     const asLea = (await ctx.http().get(`/exams/${examId}`).set('Cookie', await ctx.as('lea')).expect(200)).body;
     expect(asLea.questions).toBeUndefined();
     expect(asLea.questionCount).toBe(3);
+  });
+
+  it('exam hall: only the class staff walk in; spectators listen on/off and the student is told', async () => {
+    const rana = await connect(await ctx.as('rana'));
+    const hall = await emit<{ ok: boolean; snapshot: { map: string; self: { x: number; y: number } }; publishes: boolean }>(rana, 'room:join', { room: `hall:${examId}` });
+    expect(hall).toMatchObject({ ok: true, publishes: false, snapshot: { map: 'hall' } });
+    for (const who of ['lea', 'hassan', 'mona']) {
+      const s = await connect(await ctx.as(who));
+      expect(await emit(s, 'room:join', { room: `hall:${examId}` })).toEqual({ ok: false, error: 'forbidden' });
+    }
+    expect(await emit(rana, 'room:join', { room: 'hall:nope' })).toEqual({ ok: false, error: 'forbidden' });
+
+    // Lea is in her room; Ms. Rana spectates it and starts / stops listening.
+    const lea = await connect(await ctx.as('lea'));
+    await emit(lea, 'room:join', { room: `exam:${leaAttempt}` });
+    const heard = collect(lea, 'player:listening');
+    // listening needs a spectator seat in that room first
+    expect(await emit(rana, 'spectate:listen', { room: `exam:${leaAttempt}`, on: true })).toEqual({ ok: false, error: 'forbidden' });
+    await emit(rana, 'room:join', { room: `exam:${leaAttempt}`, spectate: true });
+    expect(await emit(rana, 'spectate:listen', { room: `exam:${leaAttempt}`, on: true })).toEqual({ ok: true });
+    expect(await emit(rana, 'spectate:listen', { room: `exam:${leaAttempt}`, on: true })).toEqual({ ok: true }); // idempotent
+    expect(await emit(rana, 'spectate:listen', { room: `exam:${leaAttempt}`, on: false })).toEqual({ ok: true });
+    await wait(100);
+    expect(heard).toEqual([
+      expect.objectContaining({ listening: true }),
+      expect.objectContaining({ listening: false }),
+    ]);
+    // a student cannot pretend to listen
+    expect(await emit(lea, 'spectate:listen', { room: `exam:${leaAttempt}`, on: true })).toEqual({ ok: false, error: 'forbidden' });
+    const events = await ctx.prisma.sessionEvent.findMany({ where: { kind: 'EXAM', refId: leaAttempt, type: 'SPECTATOR_LISTENING' } });
+    expect(events).toHaveLength(2);
   });
 
   it('student interview: start → answers → follow-up → finish; scores hidden until release', async () => {
