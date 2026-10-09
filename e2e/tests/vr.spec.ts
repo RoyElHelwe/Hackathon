@@ -157,3 +157,29 @@ test.describe('VR campus with laptop classmates (emulated Quest 2)', () => {
     await karimCtx.close();
   });
 });
+
+test.describe('VR exam room (emulated Quest 2)', () => {
+  test.beforeAll(() => reseed());
+
+  test('Bousla interviews Lea in VR; a spoken answer becomes text (server path), she sends it, the next question comes', async ({ page }) => {
+    await loginAs(page, 'lea', '/student/campus');
+    const exams = (await (await page.request.get('/api/exams/mine')).json()) as { attemptId: string; title: string }[];
+    const exam = exams.find((e) => e.title === 'Geometry voice check-in')!;
+    // the 2D exam room offers VR
+    await page.goto(`/student/exams/${exam.attemptId}`);
+    await expect(page.getByTestId('exam-vr')).toHaveAttribute('href', `/vr?scene=exam:${exam.attemptId}`);
+
+    await page.goto(`/vr?scene=exam:${exam.attemptId}&emulate=1&stt=server`);
+    type Exam = { start(): Promise<void>; transcribe(bytes: string): Promise<void>; send(): Promise<void>; status?: string; question?: number; draft: string };
+    const ex = () => page.evaluate(() => window.__tajribaVR?.exam as Exam | undefined);
+    await expect.poll(async () => (await ex())?.status).toBe('NOT_STARTED');
+    await enterVR(page);
+    await page.evaluate(() => (window.__tajribaVR!.exam as Exam).start());
+    await expect.poll(async () => (await ex())?.status).toBe('IN_PROGRESS');
+    await page.evaluate(() => (window.__tajribaVR!.exam as Exam).transcribe('fake opus answer'));
+    await expect.poll(async () => (await ex())?.draft ?? '').toMatch(/similar triangles/i);
+    await page.evaluate(() => (window.__tajribaVR!.exam as Exam).send());
+    await expect.poll(async () => (await ex())?.question).toBe(1);
+    expect(await page.evaluate(() => window.__tajribaVR?.session)).toBe('immersive-vr');
+  });
+});

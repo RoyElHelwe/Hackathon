@@ -424,6 +424,13 @@ export class ExamRoomService implements OnModuleInit, OnModuleDestroy {
     return this.prisma.examAttempt.findUniqueOrThrow({ where: { id: attemptId }, include: { exam: true } });
   }
 
+  /** The student's own attempt, while the interview runs (the VR exam transcribes answers only then). */
+  async runningAttempt(a: AuthContext, attemptId: string) {
+    const att = await this.load(a, attemptId, 'write');
+    if (att.status !== 'IN_PROGRESS') throw new ConflictException({ message: 'This exam is not running.', code: 'NOT_RUNNING' });
+    return att;
+  }
+
   private async load(a: AuthContext, attemptId: string, action: 'read' | 'write') {
     const att = await this.prisma.examAttempt.findUnique({ where: { id: attemptId }, include: { exam: true } });
     if (!att) throw new NotFoundException();

@@ -4,7 +4,6 @@
   "enter": "Enter VR",
   "desktopHint": "Drag to look around. On a Meta Quest, open this page and press “Enter VR”.",
   "notSupported": "This browser can't do VR — you can still explore it here in 3D.",
-  "soon": "Coming soon!",
   "hub": {
     "hello": "Where do we go today?",
     "go": "Go",
@@ -99,5 +98,27 @@
     "micOff": "Mic off",
     "nextCard": "Next card",
     "endSure": "Sure? End"
+  },
+  "exam": {
+    "loading": "Opening your exam room…",
+    "intro": "{n} questions · {min} minutes. Bousla asks, you answer out loud.",
+    "recorded": "Your voice is recorded for your teacher.",
+    "start": "I'm ready!",
+    "doneTitle": "All done!",
+    "doneBody": "Your teacher will share your result soon.",
+    "home": "VR home",
+    "thinking": "Bousla is thinking…",
+    "youSaid": "You said: “{text}”",
+    "send": "Send",
+    "again": "Say it again",
+    "listening": "Turning your voice into text…",
+    "talking": "Listening… let go when you're done.",
+    "holdHint": "Hold the trigger on the button and answer out loud.",
+    "holdHintServer": "Hold the trigger on the button and answer out loud — Tajriba writes it down.",
+    "hold": "Hold to answer",
+    "release": "Let go to stop",
+    "heardNothing": "I didn't catch that — try again a bit closer to the mic.",
+    "noMic": "The microphone is blocked. Allow it in the browser settings.",
+    "error": "Something went wrong — try again."
   }
 }

@@ -9,24 +9,11 @@ import { Button } from '@/components/ui/button';
 import { VRNavCtx, parseScene, sceneParam, type VRScene } from './nav';
 import { HubScene } from './scenes/hub';
 import { CampusScene } from './scenes/campus';
+import { ExamScene } from './scenes/exam';
 import { ShadowLab } from './scenes/shadow-lab';
 import { StudyScene } from './scenes/study';
 import { XRStage, useVRStore, useVRSupported } from './stage';
 import { vrTest } from './test-hook';
-import { Panel, VButton, VText } from './kit';
-
-/** Placeholder for experiences that are not built yet. */
-function Soon({ onBack }: { onBack: () => void }) {
-  const t = useTranslations('vr');
-  return (
-    <Panel width={0.8} height={0.4} position={[0, 1.4, -1.4]}>
-      <VText size={0.06} bold position={[0, 0.07, 0]}>
-        {t('soon')}
-      </VText>
-      <VButton label={t('hub.home')} onClick={onBack} position={[0, -0.09, 0]} />
-    </Panel>
-  );
-}
 
 /**
  * Tajriba VR: one page, one XR session, several experiences (hub, Shadow Lab, campus, study room, exam room).
@@ -72,7 +59,7 @@ export default function VRApp() {
           ) : scene.kind === 'study' ? (
             <StudyScene key={`study-${scene.id}`} id={scene.id} />
           ) : (
-            <Soon onBack={() => go({ kind: 'hub' })} />
+            <ExamScene key={`exam-${scene.id}`} id={scene.id} />
           )}
         </XRStage>
 

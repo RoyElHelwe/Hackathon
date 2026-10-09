@@ -50,7 +50,7 @@ function Glow({ r, color, label }: { r: Rect; color: string; label?: string }) {
   );
 }
 
-function Piece({ f, label, needleAngle }: { f: Furniture; label: (s: string) => string; needleAngle?: number | null }) {
+function Piece({ f, label, needleAngle, screens }: { f: Furniture; label: (s: string) => string; needleAngle?: number | null; screens?: boolean }) {
   const c = center(f);
   const w = f.w * M;
   const d = f.h * M;
@@ -84,7 +84,7 @@ function Piece({ f, label, needleAngle }: { f: Furniture; label: (s: string) => 
               </mesh>
             )),
           )}
-          {f.kind === 'desk' && (
+          {f.kind === 'desk' && screens && (
             <mesh position={[c.x, 0.95, c.z - d / 4]}>
               <boxGeometry args={[0.55, 0.36, 0.03]} />
               <meshStandardMaterial color={VC.sky} emissive={VC.sky} emissiveIntensity={0.3} />
@@ -232,7 +232,7 @@ export function MapWorld({
         <Box key={i} r={w} h={WALL_H} color={VC.wall} />
       ))}
       {map.furniture.map((f, i) => (
-        <Piece key={i} f={f} label={label} needleAngle={bouslaNeedle} />
+        <Piece key={i} f={f} label={label} needleAngle={bouslaNeedle} screens={map.id === 'campus'} />
       ))}
       {map.zones
         .filter((z) => z.kind === 'study_door' || z.kind === 'exam_door')

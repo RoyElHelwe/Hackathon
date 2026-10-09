@@ -1,4 +1,6 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import { createExamBody, CreateExamBody, examAnswerBody, examReviewBody, updateExamBody, UpdateExamBody } from '@tajriba/shared';
 import { z } from 'zod';
 import { AuthContext } from '../common/auth-context';
@@ -6,12 +8,14 @@ import { Auth, Can } from '../common/decorators';
 import { ZodPipe } from '../common/zod.pipe';
 import { ExamRoomService } from './exam-room.service';
 import { ExamsService } from './exams.service';
+import { AnswerAudio, ExamTranscribeService, MAX_ANSWER_AUDIO_BYTES } from './exam-transcribe.service';
 
 @Controller()
 export class ExamsController {
   constructor(
     private readonly exams: ExamsService,
     private readonly room: ExamRoomService,
+    private readonly transcriber: ExamTranscribeService,
   ) {}
 
   // ---- teacher ----
@@ -90,6 +94,14 @@ export class ExamsController {
   @Post('exam-attempts/:id/answer')
   answer(@Auth() a: AuthContext, @Param('id') id: string, @Body(new ZodPipe(examAnswerBody)) body: { text: string }) {
     return this.room.answer(a, id, body.text);
+  }
+
+  /** VR exam: spoken answer (audio) → text, for headsets without speech recognition. The student then sends it. */
+  @Can('write', 'exam_attempt')
+  @Post('exam-attempts/:id/transcribe')
+  @UseInterceptors(FileInterceptor('audio', { storage: memoryStorage(), limits: { fileSize: MAX_ANSWER_AUDIO_BYTES, files: 1 } }))
+  transcribe(@Auth() a: AuthContext, @Param('id') id: string, @UploadedFile() file: AnswerAudio | undefined) {
+    return this.transcriber.transcribe(a, id, file);
   }
 
   @Can('write', 'exam_attempt')

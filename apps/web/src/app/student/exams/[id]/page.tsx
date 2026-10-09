@@ -78,9 +78,14 @@ export default function ExamRoomPage() {
             <li>🔒 {t('exam.ruleHidden')}</li>
           </ul>
           {a.exam.status === 'OPEN' ? (
-            <Button variant="kid" size="lg" onClick={start} loading={starting} data-testid="start-interview">
-              <Mic /> {t('exam.start')}
-            </Button>
+            <div className="flex flex-wrap justify-center gap-2">
+              <Button variant="kid" size="lg" onClick={start} loading={starting} data-testid="start-interview">
+                <Mic /> {t('exam.start')}
+              </Button>
+              <Button asChild variant="kidSunny" size="lg" data-testid="exam-vr">
+                <Link href={`/vr?scene=exam:${a.id}`}>🥽 {t('exam.inVr')}</Link>
+              </Button>
+            </div>
           ) : a.exam.status === 'SCHEDULED' ? (
             <p className="font-bold text-primary">{t('exam.notOpen', { date: when(a.exam.opensAt) })}</p>
           ) : (
