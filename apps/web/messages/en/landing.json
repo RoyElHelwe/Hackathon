@@ -130,5 +130,10 @@
   "ctaBody": "Sign in with your school Google account. Your classes are already waiting.",
   "footerTag": "Learn by living.",
   "footer": "Built for the Experia Education Hackathon · Beirut 2026",
-  "madeIn": "Made with 🌲 in Lebanon"
+  "madeIn": "Made with 🌲 in Lebanon",
+  "arzinoStage": {
+    "hint": "Need a hint?",
+    "explain": "Let me show you",
+    "win": "Yalla, validated!"
+  }
 }

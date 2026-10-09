@@ -368,10 +368,7 @@ function MeetArzino({ t }: { t: T }) {
             </Reveal>
           </div>
           <Reveal delay={0.1}>
-            <div className="overflow-hidden rounded-[26px] border-2 border-border bg-white shadow-[0_6px_0_var(--border)]">
-              {/* eslint-disable-next-line @next/next/no-img-element -- static artwork, sized by its container */}
-              <img src="/arzino/turnaround.webp" alt={t('arzinoTitle')} width={1600} height={900} loading="lazy" className="block h-auto w-full" />
-            </div>
+            <ArzinoStage t={t} />
           </Reveal>
         </div>
         <div className="mt-12 grid grid-cols-5 gap-x-2 gap-y-5 sm:gap-4 lg:grid-cols-10">
@@ -386,6 +383,33 @@ function MeetArzino({ t }: { t: T }) {
         </div>
       </div>
     </section>
+  );
+}
+
+/** Arzino front and centre on a cedar stage, with the three things he does floating around him. */
+function ArzinoStage({ t }: { t: T }) {
+  const bubbles: { mood: ArzinoMood; key: 'hint' | 'explain' | 'win'; pos: string; tone: string; delay: number }[] = [
+    { mood: 'thinking', key: 'hint', pos: 'start-2 top-6 sm:start-4', tone: 'border-med/40 text-med-ink dark:text-white', delay: 0 },
+    { mood: 'teaching', key: 'explain', pos: 'end-2 top-24 sm:end-4', tone: 'border-flame/50 text-flame-d dark:text-white', delay: 0.6 },
+    { mood: 'party', key: 'win', pos: 'bottom-6 start-6 sm:start-10', tone: 'border-cedar/50 text-cedar-ink dark:text-white', delay: 1.2 },
+  ];
+  return (
+    <div className="relative mx-auto aspect-square w-full max-w-[520px] overflow-hidden rounded-[32px] border-2 border-border bg-card shadow-[0_6px_0_var(--border)]">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_58%,var(--cedar-soft)_0,var(--cedar-soft)_38%,transparent_39%)]" />
+      <div className="absolute inset-0 flex items-end justify-center pb-[12%]">
+        <Arzino mood="welcome" size={300} className="size-[62%]!" />
+      </div>
+      {bubbles.map((b) => (
+        <FloatChip key={b.key} delay={b.delay} className={cn('absolute', b.pos)}>
+          <div className={cn('flex items-center gap-2 rounded-[18px] border-2 bg-card py-1.5 pe-3.5 ps-1.5 shadow-[0_4px_0_var(--border)]', b.tone)}>
+            <span className="flex size-12 items-end justify-center rounded-[14px] bg-muted sm:size-14">
+              <Arzino mood={b.mood} size={56} animate={false} className="size-11! sm:size-13!" />
+            </span>
+            <span className="text-sm font-black sm:text-base">{t(`arzinoStage.${b.key}`)}</span>
+          </div>
+        </FloatChip>
+      ))}
+    </div>
   );
 }
 
