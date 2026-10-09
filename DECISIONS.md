@@ -75,3 +75,11 @@ Non-obvious choices made while building Tajriba. CLAUDE.md is the spec; this fil
 - **Type**: Nunito 600–900 everywhere, Noto Kufi Arabic for Arabic (replaces Baloo Bhaijaan 2 + Tajawal) to match the design's rounded, heavy Duolingo-like look.
 - "42 School" wording removed from the product; peer review is described in our own words.
 - The redesign brief every screen follows is `docs/arzino-design/REDESIGN-BRIEF.md`.
+
+## 3D Arzino in the campus (2026-10-09)
+- **Source**: `arzi_rigged.fbx` (git-ignored, 21 MB: 9-bone rig, one textured mesh, clips Idle/Walk/Run/Sit/Wave/Celebrate). Converted in headless Chromium with three.js (FBXLoader → GLTFExporter) and optimized with gltf-transform (webp textures 1024 px, quantized geometry): `apps/web/public/arzino/arzino-3d.glb`, **526 KB**.
+- **Disappointed** was not in the file: it is baked on the same rig from the Idle pose (body slumps forward, books tip, arms hang, a small head shake and a sigh), 3.4 s.
+- **Rendering**: the 2D Phaser campus stays the source of truth (movement, collisions, zones, labels, bubbles, Exam Hall overlays). A transparent three.js canvas (`components/campus/arzino-3d.ts`) is laid over it; each frame the scene passes every character's feet position on screen, facing (from the real direction of travel) and state. Orthographic camera in screen pixels, models tilted 0.42 rad so the map reads as seen from above. If WebGL or the model fails, the flat avatars stay.
+- **States**: moving → Walk, Shift (or a remote speed > 275 px/s) → Run, standing still for 1.2 s on a sofa/bench/exam seat or after the 🪑 emote → Sit (clip plays once and holds), 👋 → Wave, 😂💃🤯👏 and the ❤️🔥⭐🎉🙌👍💡 reactions → Celebrate, 😞 → Disappointed. Exam Hall: a live interview sits, a finished one celebrates, a missed one is disappointed.
+- **Coaches**: every Arzino in a room is a 3D model: idles, turns toward you (never fully away), waves when you come near (once per 12 s), and celebrates / looks disappointed with you.
+- New emotes `sit` 🪑 and `sad` 😞 (shared enum, keys 7–8). Own emotes and reactions are now echoed locally by the room hook (the server only relays to the others), so you see your own bubble and animation.

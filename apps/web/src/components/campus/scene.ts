@@ -1,4 +1,5 @@
 import { avatarColor, type CampusMap, type Decor, type Furniture, type PlayerState, type Rect, type Zone } from '@tajriba/shared';
+import { animForEmoji, DIR_FACING, facingFor, type ArzinoAnim, type ArzinoLayer } from './arzino-3d';
 
 type PhaserNS = typeof import('phaser');
 type Container = import('phaser').GameObjects.Container;
@@ -6,6 +7,7 @@ type Graphics = import('phaser').GameObjects.Graphics;
 type Text = import('phaser').GameObjects.Text;
 type Arc = import('phaser').GameObjects.Arc;
 type Dir = PlayerState['dir'];
+
 
 export interface SceneApi {
   setSelf(p: PlayerState | null): void;
@@ -55,6 +57,7 @@ interface RoomOverlay {
   headset: Text;
   puppet: Avatar | null;
   key: string;
+  state?: HallRoomView['state'];
 }
 
 export interface SceneConfig {
@@ -68,6 +71,8 @@ export interface SceneConfig {
   translate?: (label: string) => string;
   /** the page's resolved font stack (next/font gives Nunito a generated family name) */
   font?: string;
+  /** live 3D Arzinos over the map; null until loaded (or when WebGL/the model is unavailable → 2D avatars stay) */
+  layer?: () => ArzinoLayer | null;
 }
 
 // ---------- palette (Arzino / Lebanon: cedar, flag red, Mediterranean blue, white stone, red tile roofs) ----------
@@ -181,16 +186,48 @@ function rng(seed: string) {
 const ARZINO_POSE: Record<CampusMap['id'], string> = { campus: 'welcome', study: 'reading', exam: 'teaching', hall: 'teaching' };
 
 interface Avatar {
+  id: string;
   c: Container;
   figure: Container;
   body: Arc;
   pupils: Arc[];
   ring: Arc;
+  ringWrap: Container;
   tween?: import('phaser').Tweens.Tween;
   dir: Dir;
   moving: boolean;
   phase: number;
+  // ---- 3D state ----
+  /** radians, from the actual direction of travel (smoother than the 4-way dir) */
+  face: number;
+  /** px/s, measured from movement (remote players) or the key state (me) */
+  speed: number;
+  last: { x: number; y: number; t: number };
+  /** when this avatar last stopped moving (auto-sit after a moment on a seat) */
+  stillSince: number;
+  /** sat down with the 🪑 emote; standing up = moving again */
+  sitting: boolean;
+  /** Exam Hall puppet: forced state */
+  pose?: ArzinoAnim;
 }
+
+/** An Arzino coach standing in a room (sticker in 2D, a live 3D model when the layer is ready). */
+interface Coach {
+  id: string;
+  x: number;
+  y: number;
+  size: number;
+  sprite: import('phaser').GameObjects.Image | Graphics;
+  near: boolean;
+  lastWave: number;
+}
+
+const WALK = 210;
+const RUN = 340;
+/** a remote player moving faster than this (px/s) is running */
+const RUN_SEEN = 275;
+/** 3D figure height in world px (2D avatars are ~46 px tall with the sprout) */
+const FIG = 72;
 
 /** Builds the Phaser scene class for one campus map (courtyard, study room, exam room or Exam Hall). */
 export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
@@ -211,6 +248,9 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
     private lastPos = { x: 0, y: 0, moving: false };
     private zoneId: string | null = null;
     private rooms = new Map<number, RoomOverlay>();
+    private coaches: Coach[] = [];
+    private three = false;
+    private seats: Rect[] = [];
 
     constructor() {
       super('campus');
@@ -229,6 +269,11 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
       for (const d of map.decor ?? []) this.drawDecor(d);
       for (const z of map.zones) this.drawZone(z);
       for (const f of map.furniture) this.drawFurniture(f);
+      // where a standing-still Arzino sits down: sofas, benches and the exam seat
+      this.seats = [
+        ...map.furniture.filter((f) => f.kind === 'sofa' || f.kind === 'bench'),
+        ...map.zones.filter((z) => z.kind === 'exam_desk'),
+      ];
       this.solids = this.physics.add.staticGroup();
       for (const f of map.furniture) if (f.solid) this.solid(f.x, f.y, f.w, f.h);
       for (const w of map.walls) {
@@ -242,7 +287,7 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
 
       if (cfg.interactive && this.input.keyboard) {
         // No key capture: typing in inputs/textareas elsewhere on the page must keep working.
-        this.keys = this.input.keyboard.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT', false) as Record<string, import('phaser').Input.Keyboard.Key>;
+        this.keys = this.input.keyboard.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,SHIFT', false) as Record<string, import('phaser').Input.Keyboard.Key>;
         this.input.on('pointerdown', (p: import('phaser').Input.Pointer) => {
           this.target = { x: p.worldX, y: p.worldY };
         });
@@ -751,6 +796,8 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
       }
       obj.setDepth(sortDepth(base));
       this.tweens.add({ targets: obj, y: '-=5', duration: 1300, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+      this.coaches.push({ id: `coach:${this.coaches.length}`, x: cx, y: base - 2, size: Math.round(h * 0.95), sprite: obj, near: false, lastWave: -1e9 });
+      if (this.three) obj.setVisible(false);
     }
 
     /** Pre-scales a big sticker on a canvas (smooth downscale), so it stays crisp without mipmaps. */
@@ -781,7 +828,8 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
       parts.push(this.add.ellipse(0, 17, 32, 10, 0x000000, P.shadow + 0.04));
       if (isSelf) parts.push(this.add.ellipse(0, 17, 42, 15).setStrokeStyle(3, BRAND.cedar, 0.9));
       const ring = this.add.circle(0, 0, 22).setStrokeStyle(3.5, BRAND.cedar, 1).setVisible(false);
-      parts.push(ring);
+      const ringWrap = this.add.container(0, 0, [ring]);
+      parts.push(ringWrap);
 
       const body = this.add.circle(0, 0, 15, color).setStrokeStyle(3, edge, 1);
       const shine = this.add.ellipse(-5, -8, 10, 6, 0xffffff, 0.35);
@@ -807,7 +855,98 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
 
       const c = this.add.container(p.x, p.y, parts).setDepth(10 + p.y / 1000);
       this.tweens.add({ targets: ring, scale: { from: 0.95, to: 1.2 }, alpha: { from: 1, to: 0.45 }, duration: 480, yoyo: true, repeat: -1 });
-      return { c, figure, body, pupils: [pupilL, pupilR], ring, dir: p.dir, moving: false, phase: Math.random() * 10 };
+      const now = this.time.now;
+      const a: Avatar = {
+        id: p.userId, c, figure, body, pupils: [pupilL, pupilR], ring, ringWrap, dir: p.dir, moving: false, phase: Math.random() * 10,
+        face: DIR_FACING[p.dir], speed: 0, last: { x: p.x, y: p.y, t: now }, stillSince: now, sitting: false,
+      };
+      if (this.three) this.to3d(a);
+      return a;
+    }
+
+    // ---------- 3D Arzinos ----------
+
+    /** hide the flat figure; the speaking ring lies flat around the feet */
+    private to3d(a: Avatar) {
+      a.figure.setVisible(false);
+      a.ringWrap.setPosition(0, 16).setScale(1.45, 0.5);
+    }
+
+    private enable3d() {
+      this.three = true;
+      for (const a of this.avatars()) this.to3d(a);
+      for (const o of this.rooms.values()) if (o.puppet) this.to3d(o.puppet);
+      for (const k of this.coaches) k.sprite.setVisible(false);
+    }
+
+    private *avatars() {
+      if (this.self) yield this.self;
+      yield* this.others.values();
+    }
+
+    private onSeat(a: Avatar) {
+      const { x, y } = a.c;
+      return this.seats.some((r) => x > r.x - 26 && x < r.x + r.w + 26 && y > r.y - 30 && y < r.y + r.h + 34);
+    }
+
+    private baseAnim(a: Avatar, now: number): ArzinoAnim {
+      if (a.pose) return a.pose;
+      if (a.moving) return a.speed > RUN_SEEN ? 'Run' : 'Walk';
+      if (a.sitting || (now - a.stillSince > 1200 && this.onSeat(a))) return 'Sit';
+      return 'Idle';
+    }
+
+    /** a one-shot animation for this avatar (and the coaches react to me) */
+    private act(a: Avatar, emoji: string) {
+      const L = cfg.layer?.();
+      const anim = animForEmoji(emoji);
+      if (!anim) return;
+      if (anim === 'sit') {
+        a.sitting = !a.sitting;
+        return;
+      }
+      L?.play(a.id, anim);
+      if (a === this.self && (anim === 'Celebrate' || anim === 'Disappointed')) {
+        for (const k of this.coaches) {
+          if (Math.hypot(k.x - a.c.x, k.y - a.c.y) < 320) this.time.delayedCall(250, () => cfg.layer?.()?.play(k.id, anim));
+        }
+      }
+    }
+
+    /** Hand every character's screen position, facing and state to the 3D layer, then draw it. */
+    private sync3d(now: number, delta: number) {
+      const L = cfg.layer?.();
+      if (!L) return;
+      if (!this.three) this.enable3d();
+      const cam = this.cameras.main;
+      const z = cam.zoom;
+      const view = cam.worldView;
+      const put = (id: string, x: number, y: number, size: number, facing: number, base: ArzinoAnim) =>
+        L.sync(id, { x: (x - view.x) * z, y: (y - view.y) * z, size: size * z, facing, base });
+      for (const a of this.avatars()) put(a.id, a.c.x, a.c.y + 17 * a.c.scaleY, FIG * a.c.scaleY, a.face, this.baseAnim(a, now));
+      for (const o of this.rooms.values()) {
+        const a = o.puppet;
+        if (a) put(`hall:${a.id}`, a.c.x, a.c.y + 17 * a.c.scaleY, FIG * 0.85 * a.c.scaleY, Math.PI, this.baseAnim(a, now));
+      }
+      const me = this.self;
+      for (const k of this.coaches) {
+        let facing = 0;
+        if (me) {
+          const dx = me.c.x - k.x;
+          const dy = me.c.y - k.y;
+          const d = Math.hypot(dx, dy);
+          // turn toward me, but never show the room our back
+          if (d < 260) facing = Math.max(-1.6, Math.min(1.6, facingFor(dx, dy)));
+          const near = d < 170;
+          if (near && !k.near && now - k.lastWave > 12000) {
+            k.lastWave = now;
+            L.play(k.id, 'Wave');
+          }
+          k.near = near;
+        }
+        put(k.id, k.x, k.y, k.size, facing, 'Idle');
+      }
+      L.render(delta);
     }
 
     private look(a: Avatar, dir: Dir) {
@@ -873,6 +1012,7 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
       const key = `${v.studentId}:${v.online}`;
       if (o.key !== key) {
         o.key = key;
+        if (o.puppet) cfg.layer?.()?.remove(`hall:${o.puppet.id}`);
         o.puppet?.c.destroy();
         o.puppet = null;
         if (v.online) {
@@ -883,6 +1023,15 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
       }
       o.puppet?.ring.setVisible(v.speaking);
       o.puppet?.c.setAlpha(v.state === 'live' ? 1 : 0.55);
+      if (o.puppet) {
+        // live interview: seated at the desk; finished: a little celebration, then standing by
+        const pose: ArzinoAnim = v.state === 'live' ? 'Sit' : 'Idle';
+        const prev = o.state;
+        o.puppet.pose = pose;
+        if (prev && prev !== v.state && v.state === 'done') this.time.delayedCall(50, () => cfg.layer?.()?.play(`hall:${o.puppet?.id}`, 'Celebrate'));
+        if (prev && prev !== v.state && v.state === 'missed') this.time.delayedCall(50, () => cfg.layer?.()?.play(`hall:${o.puppet?.id}`, 'Disappointed'));
+      }
+      o.state = v.state;
     }
 
     /** emoji in a speech bubble that pops above the avatar, then floats away */
@@ -904,13 +1053,25 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
 
     // ---------- loop ----------
 
-    update() {
+    update(_time: number, delta: number) {
       const now = this.time.now;
-      for (const a of this.others.values()) this.bob(a, now);
+      for (const a of this.others.values()) {
+        this.bob(a, now);
+        // remote players: no update for a while = standing still
+        if (a.moving && now - a.last.t > 400) {
+          a.moving = false;
+          a.stillSince = now;
+        }
+      }
+      this.steer(now);
+      this.sync3d(now, delta);
+    }
+
+    private steer(now: number) {
       const self = this.self;
       if (!self || !cfg.interactive) return;
       const body = self.c.body as import('phaser').Physics.Arcade.Body;
-      const speed = 210;
+      const speed = this.keys.SHIFT?.isDown ? RUN : WALK;
       let vx = 0;
       let vy = 0;
       const typing = typeof document !== 'undefined' && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '');
@@ -935,7 +1096,11 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
       const len = Math.hypot(vx, vy) || 1;
       body.setVelocity((vx / len) * speed, (vy / len) * speed);
       const moving = !!(vx || vy);
+      if (moving && !self.moving) self.sitting = false;
+      if (!moving && self.moving) self.stillSince = now;
       self.moving = moving;
+      self.speed = moving ? speed : 0;
+      if (moving) self.face = facingFor(vx, vy);
       this.bob(self, now);
       if (moving) {
         const dir: Dir = Math.abs(vx) > Math.abs(vy) ? (vx < 0 ? 'left' : 'right') : vy < 0 ? 'up' : 'down';
@@ -962,6 +1127,7 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
     private api(): SceneApi {
       return {
         setSelf: (p) => {
+          if (this.self) cfg.layer?.()?.remove(this.self.id);
           this.self?.c.destroy();
           this.self = null;
           this.selfId = p?.userId ?? null;
@@ -986,6 +1152,7 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
           if (p.spectator) {
             existing?.c.destroy();
             this.others.delete(p.userId);
+            cfg.layer?.()?.remove(p.userId);
             return;
           }
           if (existing) {
@@ -1003,23 +1170,38 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
           a.tween?.stop();
           a.tween = this.tweens.add({ targets: a.c, x, y, duration: 110, ease: 'Linear', onUpdate: () => a.c.setDepth(10 + a.c.y / 1000) });
           if (dir !== a.dir) this.look(a, dir);
+          const now = this.time.now;
+          const dx = x - a.last.x;
+          const dy = y - a.last.y;
+          const dist = Math.hypot(dx, dy);
+          const dt = Math.max(16, now - a.last.t);
+          a.speed = a.speed * 0.5 + ((dist / dt) * 1000) * 0.5;
+          a.face = dist > 1.5 ? facingFor(dx, dy) : DIR_FACING[dir];
+          a.last = { x, y, t: now };
+          if (moving && !a.moving) a.sitting = false;
+          if (!moving && a.moving) a.stillSince = now;
           a.moving = moving;
         },
         remove: (id) => {
           const a = this.others.get(id);
           if (!a) return;
           this.others.delete(id);
+          cfg.layer?.()?.remove(id);
           this.tweens.add({ targets: a.c, scale: 0, alpha: 0, duration: 250, onComplete: () => a.c.destroy() });
         },
         clearOthers: () => {
-          for (const a of this.others.values()) a.c.destroy();
+          for (const a of this.others.values()) {
+            a.c.destroy();
+            cfg.layer?.()?.remove(a.id);
+          }
           this.others.clear();
         },
         emote: (id, emoji) => {
           const a = id === this.selfId ? this.self : this.others.get(id);
           if (!a) return;
-          this.bubble(a.c.x, a.c.y - 30, emoji);
-          this.tweens.add({ targets: a.figure, scale: { from: 1, to: 1.18 }, duration: 160, yoyo: true, repeat: 1 });
+          this.bubble(a.c.x, a.c.y - (this.three ? 62 : 30), emoji);
+          if (this.three) this.act(a, emoji);
+          else this.tweens.add({ targets: a.figure, scale: { from: 1, to: 1.18 }, duration: 160, yoyo: true, repeat: 1 });
         },
         speaking: (id, on) => {
           const a = id === this.selfId ? this.self : this.others.get(id);
@@ -1057,6 +1239,7 @@ export function createCampusScene(Phaser: PhaserNS, cfg: SceneConfig) {
           for (const [idx, o] of this.rooms) {
             if (seen.has(idx)) continue;
             for (const obj of [o.frame, o.title.c, o.caption.c, o.emoji, o.headset]) obj.destroy();
+            if (o.puppet) cfg.layer?.()?.remove(`hall:${o.puppet.id}`);
             o.puppet?.c.destroy();
             this.rooms.delete(idx);
           }

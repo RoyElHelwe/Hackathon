@@ -149,18 +149,31 @@ export function useRoom(room: string | null, opts: { spectate?: boolean } = {}) 
     };
   }, []);
 
+  const selfId = useRef<string | null>(null);
+  selfId.current = snapshot?.self?.userId ?? null;
+
   const actions = useMemo(() => {
     const s = () => getSocket();
+    // the server only relays emotes to the others: show mine locally too
+    const echo = (e: RoomEvent) => selfId.current && fire(e);
     return {
       move: (x: number, y: number, dir: PlayerState['dir'], moving: boolean) => room && s().emit('move', { room, x, y, dir, moving }),
-      emote: (emote: Emote) => room && s().emit('emote', { room, emote }),
-      reaction: (emoji: string) => room && s().emit('reaction', { room, emoji }),
+      emote: (emote: Emote) => {
+        if (!room) return;
+        s().emit('emote', { room, emote });
+        echo({ type: 'emote', userId: selfId.current ?? '', emote });
+      },
+      reaction: (emoji: string) => {
+        if (!room) return;
+        s().emit('reaction', { room, emoji });
+        echo({ type: 'reaction', userId: selfId.current ?? '', emoji });
+      },
       speaking: (speaking: boolean) => room && s().emit('speaking', { room, speaking }),
       transcript: (text: string) => room && s().volatile.emit('exam:transcript', { room, text }),
       /** spectators: start/stop hearing this exam room */
       listen: (on: boolean) => room && s().emit('spectate:listen', { room, on }),
     };
-  }, [room]);
+  }, [room, fire]);
 
   const others = useMemo(() => Object.values(players), [players]);
 

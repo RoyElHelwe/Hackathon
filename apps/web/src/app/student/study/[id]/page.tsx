@@ -6,7 +6,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Arzino, ArzinoSays } from '@/components/arzino';
 import { CampusCanvas } from '@/components/campus/campus-canvas';
 import { EmoteBar } from '@/components/campus/emote-bar';
@@ -216,18 +216,9 @@ function StudyRoom({ session, myId, withMic, names }: { session: StudySessionDet
     }
   };
 
-  const onEmote = room.emote;
-  const localEmote = useMemo(
-    () => (e: Parameters<typeof onEmote>[0]) => {
-      onEmote(e);
-      scene.current?.emote(myId, { wave: '👋', laugh: '😂', dance: '💃', mindblown: '🤯', clap: '👏', think: '🤔' }[e]);
-    },
-    [onEmote, myId],
-  );
-  const localReaction = (emoji: string) => {
-    room.reaction(emoji);
-    scene.current?.emote(myId, emoji);
-  };
+  // the room echoes my own emotes and reactions to the scene
+  const localEmote = room.emote;
+  const localReaction = room.reaction;
 
   const partnerFirst = partner?.name.split(' ')[0] ?? '';
   const micButton = (testId?: string) => (

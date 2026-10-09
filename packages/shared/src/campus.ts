@@ -343,9 +343,9 @@ export function avatarColor(userId: string): string {
 
 // ---------- Realtime protocol (Socket.IO) ----------
 
-export const EMOTES = ['wave', 'laugh', 'dance', 'mindblown', 'clap', 'think'] as const;
+export const EMOTES = ['wave', 'laugh', 'dance', 'mindblown', 'clap', 'think', 'sit', 'sad'] as const;
 export type Emote = (typeof EMOTES)[number];
-export const EMOTE_EMOJI: Record<Emote, string> = { wave: '👋', laugh: '😂', dance: '💃', mindblown: '🤯', clap: '👏', think: '🤔' };
+export const EMOTE_EMOJI: Record<Emote, string> = { wave: '👋', laugh: '😂', dance: '💃', mindblown: '🤯', clap: '👏', think: '🤔', sit: '🪑', sad: '😞' };
 export const REACTIONS = ['❤️', '🔥', '⭐', '🎉', '💡', '👍', '😮', '🙌'] as const;
 
 /** Rooms: the school courtyard, a study session room, an exam attempt room (students + teacher spectators), or an exam's hall (teachers). */

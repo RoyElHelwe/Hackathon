@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/cn';
 import type { useRoom } from '@/lib/campus/use-room';
+import type { ArzinoLayer } from './arzino-3d';
 import type { SceneApi } from './scene';
 
 type Room = ReturnType<typeof useRoom>;
@@ -51,6 +52,8 @@ export function CampusCanvas({ room, map: mapProp, interactive = true, selfSpeak
   trRef.current = (label: string) => (t.has(label.replace(/ /g, '_')) ? t(label.replace(/ /g, '_')) : label);
   const wrap = useRef<HTMLDivElement>(null);
   const host = useRef<HTMLDivElement>(null);
+  const layerHost = useRef<HTMLDivElement>(null);
+  const layer = useRef<ArzinoLayer | null>(null);
   const game = useRef<import('phaser').Game | null>(null);
   const api = useRef<SceneApi | null>(null);
   const roomRef = useRef(room);
@@ -147,12 +150,21 @@ export function CampusCanvas({ room, map: mapProp, interactive = true, selfSpeak
       if (cancelled || !host.current) return;
       const { createCampusScene } = await import('./scene');
       const dark = document.documentElement.classList.contains('dark');
+      // the 3D Arzinos load in parallel; until then (or if WebGL fails) the flat avatars are shown
+      void import('./arzino-3d')
+        .then(({ ArzinoLayer }) => (layerHost.current ? ArzinoLayer.create(layerHost.current, dark) : null))
+        .then((l) => {
+          if (cancelled) l?.dispose();
+          else layer.current = l;
+          if (process.env.NODE_ENV === 'development') (window as Window & { __arzino?: ArzinoLayer | null }).__arzino = l;
+        });
       const Scene = createCampusScene(Phaser, {
         map,
         interactive,
         dark,
         font: getComputedStyle(document.body).fontFamily,
         translate: (label) => trRef.current(label),
+        layer: () => layer.current,
         onMove: (x, y, dir, moving) => roomRef.current.move(x, y, dir, moving),
         onZone: (z) => zoneRef.current?.(z),
         onReady: (a) => {
@@ -183,6 +195,8 @@ export function CampusCanvas({ room, map: mapProp, interactive = true, selfSpeak
       apiCb.current?.(null);
       game.current?.destroy(true);
       game.current = null;
+      layer.current?.dispose();
+      layer.current = null;
     };
   }, [map, interactive]);
 
@@ -237,6 +251,7 @@ export function CampusCanvas({ room, map: mapProp, interactive = true, selfSpeak
       data-fullscreen={full || undefined}
     >
       <div ref={host} className="absolute inset-0 [&_canvas]:block" role="application" aria-label="2D campus" />
+      <div ref={layerHost} className="pointer-events-none absolute inset-0" aria-hidden />
       {typeof children === 'function' ? children({ full, exit }) : children}
       <button
         type="button"
