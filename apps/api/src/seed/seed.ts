@@ -6,6 +6,7 @@ import { averageHash } from '../uploads/phash';
 import type { PrismaClient } from '../generated/prisma/client';
 import { BADGES, MISSIONS, SUBJECTS, TOPICS } from './content';
 import { illustrationJpeg } from './illustrations';
+import { seedCampus } from './campus';
 
 const DAY = 86400_000;
 export const SCHOOL_CODE = 'TRP-2036';
@@ -306,6 +307,16 @@ export async function seed(prisma: PrismaClient, opts: { quiet?: boolean } = {})
   const pendingMembership = await prisma.membership.findFirstOrThrow({ where: { userId: users.pending_teacher, schoolId: school.id } });
   await prisma.notification.create({
     data: { userId: users.director, type: 'MEMBER_PENDING', payload: { membershipId: pendingMembership.id, name: 'Nadine Fakhoury', role: 'TEACHER' }, dedupeKey: `pending:${pendingMembership.id}:${users.director}` },
+  });
+
+  const clsWithCourse = await prisma.class.findUniqueOrThrow({ where: { id: cls.id }, select: { courseId: true } });
+  await seedCampus(prisma, {
+    schoolId: school.id,
+    classId: cls.id,
+    courseId: clsWithCourse.courseId!,
+    teacherId: users.rana,
+    students: { lea: users.lea, karim: users.karim, omar: users.omar },
+    now,
   });
 
   await seedSchoolLife(prisma, { schoolId: school.id, teacherId: users.hassan, topics, missions: Object.fromEntries(Object.entries(missions).map(([k, v]) => [k, v.id])), now, mathSubjectId: subjects.math });

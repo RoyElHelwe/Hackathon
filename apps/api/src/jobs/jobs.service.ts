@@ -3,6 +3,8 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { config } from '../config';
 import { ClassroomService } from '../classroom/classroom.service';
 import { CoursesService } from '../courses/courses.service';
+import { ExamsService } from '../exams/exams.service';
+import { StudySessionsService } from '../study-sessions/study-sessions.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PeerReviewsService } from '../peer-reviews/peer-reviews.service';
 import { StuckService } from '../progress/stuck.service';
@@ -18,6 +20,8 @@ export class JobsService {
     private readonly peers: PeerReviewsService,
     private readonly courses: CoursesService,
     private readonly prisma: PrismaService,
+    private readonly exams: ExamsService,
+    private readonly studySessions: StudySessionsService,
   ) {}
 
   @Cron(CronExpression.EVERY_10_MINUTES)
@@ -44,5 +48,21 @@ export class JobsService {
     if (!config.CRON_ENABLED) return;
     const n = await this.peers.handleTimeouts();
     if (n) this.logger.log(`Peer reviews timed out: ${n}`);
+  }
+
+  /** Opens/closes exam windows, finishes overdue interviews (in-process timers are the fast path). */
+  @Cron(CronExpression.EVERY_MINUTE)
+  async examTick() {
+    if (!config.CRON_ENABLED) return;
+    const r = await this.exams.tick();
+    if (r.opened || r.closed || r.finished) this.logger.log(`Exams: opened ${r.opened}, closed ${r.closed}, finished ${r.finished}`);
+  }
+
+  /** Expires unanswered study invites and ends study sessions nobody has been in for a while. */
+  @Cron(CronExpression.EVERY_MINUTE)
+  async studySweep() {
+    if (!config.CRON_ENABLED) return;
+    const n = await this.studySessions.sweep();
+    if (n) this.logger.log(`Study sessions swept: ${n}`);
   }
 }

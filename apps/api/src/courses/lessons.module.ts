@@ -15,6 +15,6 @@ import { LessonsController } from './lessons.controller';
     LessonContentService,
     LessonGamifyService,
   ],
-  exports: [LessonGamifyService, DRIVE_READER],
+  exports: [LessonGamifyService, LessonContentService, DRIVE_READER],
 })
 export class LessonsModule {}

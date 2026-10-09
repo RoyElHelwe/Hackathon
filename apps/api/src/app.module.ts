@@ -19,6 +19,9 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { ParentsModule } from './parents/parents.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RealtimeModule } from './realtime/realtime.module';
+import { RecordingsModule } from './recordings/recordings.module';
+import { StudySessionsModule } from './study-sessions/study-sessions.module';
+import { ExamsModule } from './exams/exams.module';
 import { ProgressModule } from './progress/progress.module';
 import { SchoolsModule } from './schools/schools.module';
 import { SubjectsModule } from './subjects/subjects.module';
@@ -48,6 +51,9 @@ import { UploadsModule } from './uploads/uploads.module';
     ParentsModule,
     MessagesModule,
     DashboardsModule,
+    RecordingsModule,
+    StudySessionsModule,
+    ExamsModule,
     JobsModule,
   ],
   controllers: [HealthController],
